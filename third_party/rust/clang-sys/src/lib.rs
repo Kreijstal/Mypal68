@@ -1,40 +1,26 @@
-// Copyright 2016 Kyle Mayes
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 //! Rust bindings for `libclang`.
 //!
-//! ## Supported Versions
+//! ## [Documentation](https://docs.rs/clang-sys)
 //!
-//! * 3.5 - [Documentation](https://kylemayes.github.io/clang-sys/3_5/clang_sys)
-//! * 3.6 - [Documentation](https://kylemayes.github.io/clang-sys/3_6/clang_sys)
-//! * 3.7 - [Documentation](https://kylemayes.github.io/clang-sys/3_7/clang_sys)
-//! * 3.8 - [Documentation](https://kylemayes.github.io/clang-sys/3_8/clang_sys)
-//! * 3.9 - [Documentation](https://kylemayes.github.io/clang-sys/3_9/clang_sys)
-//! * 4.0 - [Documentation](https://kylemayes.github.io/clang-sys/4_0/clang_sys)
-//! * 5.0 - [Documentation](https://kylemayes.github.io/clang-sys/5_0/clang_sys)
-//! * 6.0 - [Documentation](https://kylemayes.github.io/clang-sys/6_0/clang_sys)
-//! * 7.0 - [Documentation](https://kylemayes.github.io/clang-sys/7_0/clang_sys)
-//! * 8.0 - [Documentation](https://kylemayes.github.io/clang-sys/8_0/clang_sys)
-//! * 9.0 - [Documentation](https://kylemayes.github.io/clang-sys/9_0/clang_sys)
+//! Note that the documentation on https://docs.rs for this crate assumes usage
+//! of the `runtime` Cargo feature as well as the Cargo feature for the latest
+//! supported version of `libclang` (e.g., `clang_11_0`), neither of which are
+//! enabled by default.
+//!
+//! Due to the usage of the `runtime` Cargo feature, this documentation will
+//! contain some additional types and functions to manage a dynamically loaded
+//! `libclang` instance at runtime.
+//!
+//! Due to the usage of the Cargo feature for the latest supported version of
+//! `libclang`, this documentation will contain constants and functions that are
+//! not available in the oldest supported version of `libclang` (3.5). All of
+//! these types and functions have a documentation comment which specifies the
+//! minimum `libclang` version required to use the item.
 
 #![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::unreadable_literal))]
-
-extern crate glob;
-extern crate libc;
-#[cfg(feature = "runtime")]
-extern crate libloading;
 
 pub mod support;
 
@@ -47,7 +33,7 @@ use libc::*;
 
 pub type CXClientData = *mut c_void;
 pub type CXCursorVisitor = extern "C" fn(CXCursor, CXCursor, CXClientData) -> CXChildVisitResult;
-#[cfg(feature = "gte_clang_3_7")]
+#[cfg(feature = "clang_3_7")]
 pub type CXFieldVisitor = extern "C" fn(CXCursor, CXClientData) -> CXVisitorResult;
 pub type CXInclusionVisitor = extern "C" fn(CXFile, *mut CXSourceLocation, c_uint, CXClientData);
 
@@ -57,6 +43,20 @@ pub type CXInclusionVisitor = extern "C" fn(CXFile, *mut CXSourceLocation, c_uin
 
 /// Defines a C enum as a series of constants.
 macro_rules! cenum {
+    (#[repr($ty:ty)] $(#[$meta:meta])* enum $name:ident {
+        $($(#[$vmeta:meta])* const $variant:ident = $value:expr), +,
+    }) => (
+        pub type $name = $ty;
+
+        $($(#[$vmeta])* pub const $variant: $name = $value;)+
+    );
+    (#[repr($ty:ty)] $(#[$meta:meta])* enum $name:ident {
+        $($(#[$vmeta:meta])* const $variant:ident = $value:expr); +;
+    }) => (
+        pub type $name = $ty;
+
+        $($(#[$vmeta])* pub const $variant: $name = $value;)+
+    );
     ($(#[$meta:meta])* enum $name:ident {
         $($(#[$vmeta:meta])* const $variant:ident = $value:expr), +,
     }) => (
@@ -107,6 +107,47 @@ cenum! {
 }
 
 cenum! {
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    enum CXBinaryOperatorKind {
+        const CXBinaryOperator_Invalid = 0,
+        const CXBinaryOperator_PtrMemD = 1,
+        const CXBinaryOperator_PtrMemI = 2,
+        const CXBinaryOperator_Mul = 3,
+        const CXBinaryOperator_Div = 4,
+        const CXBinaryOperator_Rem = 5,
+        const CXBinaryOperator_Add = 6,
+        const CXBinaryOperator_Sub = 7,
+        const CXBinaryOperator_Shl = 8,
+        const CXBinaryOperator_Shr = 9,
+        const CXBinaryOperator_Cmp = 10,
+        const CXBinaryOperator_LT = 11,
+        const CXBinaryOperator_GT = 12,
+        const CXBinaryOperator_LE = 13,
+        const CXBinaryOperator_GE = 14,
+        const CXBinaryOperator_EQ = 15,
+        const CXBinaryOperator_NE = 16,
+        const CXBinaryOperator_And = 17,
+        const CXBinaryOperator_Xor = 18,
+        const CXBinaryOperator_Or = 19,
+        const CXBinaryOperator_LAnd = 20,
+        const CXBinaryOperator_LOr = 21,
+        const CXBinaryOperator_Assign = 22,
+        const CXBinaryOperator_MulAssign = 23,
+        const CXBinaryOperator_DivAssign = 24,
+        const CXBinaryOperator_RemAssign = 25,
+        const CXBinaryOperator_AddAssign = 26,
+        const CXBinaryOperator_SubAssign = 27,
+        const CXBinaryOperator_ShlAssign = 28,
+        const CXBinaryOperator_ShrAssign = 29,
+        const CXBinaryOperator_AndAssign = 30,
+        const CXBinaryOperator_XorAssign = 31,
+        const CXBinaryOperator_OrAssign = 32,
+        const CXBinaryOperator_Comma = 33,
+    }
+}
+
+cenum! {
     enum CXCallingConv {
         const CXCallingConv_Default = 0,
         const CXCallingConv_C = 1,
@@ -134,6 +175,12 @@ cenum! {
         const CXCallingConv_AArch64VectorCall = 16,
         const CXCallingConv_Invalid = 100,
         const CXCallingConv_Unexposed = 200,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCallingConv_SwiftAsync = 17,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCallingConv_AArch64SVEPCS = 18,
+        /// Only produced by `libclang` 18.0 and later.
+        const CXCallingConv_M68kRTD = 19,
     }
 }
 
@@ -142,6 +189,17 @@ cenum! {
         const CXChildVisit_Break = 0,
         const CXChildVisit_Continue = 1,
         const CXChildVisit_Recurse = 2,
+    }
+}
+
+cenum! {
+    #[repr(c_uchar)]
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    enum CXChoice {
+        const CXChoice_Default = 0,
+        const CXChoice_Enabled = 1,
+        const CXChoice_Disabled = 2,
     }
 }
 
@@ -322,6 +380,18 @@ cenum! {
         const CXCursor_ObjCAvailabilityCheckExpr = 148,
         /// Only produced by `libclang` 7.0 and later.
         const CXCursor_FixedPointLiteral = 149,
+        /// Only produced by `libclang` 12.0 and later.
+        const CXCursor_OMPArrayShapingExpr = 150,
+        /// Only produced by `libclang` 12.0 and later.
+        const CXCursor_OMPIteratorExpr = 151,
+        /// Only produced by `libclang` 12.0 and later.
+        const CXCursor_CXXAddrspaceCastExpr = 152,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_ConceptSpecializationExpr = 153,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_RequiresExpr = 154,
+        /// Only produced by `libclang` 16.0 and later.
+        const CXCursor_CXXParenListInitExpr = 155,
         const CXCursor_UnexposedStmt = 200,
         const CXCursor_LabelStmt = 201,
         const CXCursor_CompoundStmt = 202,
@@ -437,7 +507,62 @@ cenum! {
         const CXCursor_OMPTargetTeamsDistributeSimdDirective = 279,
         /// Only produced by 'libclang' 9.0 and later.
         const CXCursor_BuiltinBitCastExpr = 280,
+        /// Only produced by `libclang` 10.0 and later.
+        const CXCursor_OMPMasterTaskLoopDirective = 281,
+        /// Only produced by `libclang` 10.0 and later.
+        const CXCursor_OMPParallelMasterTaskLoopDirective = 282,
+        /// Only produced by `libclang` 10.0 and later.
+        const CXCursor_OMPMasterTaskLoopSimdDirective = 283,
+        /// Only produced by `libclang` 10.0 and later.
+        const CXCursor_OMPParallelMasterTaskLoopSimdDirective = 284,
+        /// Only produced by `libclang` 10.0 and later.
+        const CXCursor_OMPParallelMasterDirective = 285,
+        /// Only produced by `libclang` 11.0 and later.
+        const CXCursor_OMPDepobjDirective = 286,
+        /// Only produced by `libclang` 11.0 and later.
+        const CXCursor_OMPScanDirective = 287,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPTileDirective = 288,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPCanonicalLoop = 289,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPInteropDirective = 290,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPDispatchDirective = 291,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPMaskedDirective = 292,
+        /// Only produced by `libclang` 13.0 and later.
+        const CXCursor_OMPUnrollDirective = 293,
+        /// Only produced by `libclang` 14.0 and later.
+        const CXCursor_OMPMetaDirective = 294,
+        /// Only produced by `libclang` 14.0 and later.
+        const CXCursor_OMPGenericLoopDirective = 295,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPTeamsGenericLoopDirective = 296,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPTargetTeamsGenericLoopDirective = 297,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPParallelGenericLoopDirective = 298,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPTargetParallelGenericLoopDirective = 299,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPParallelMaskedDirective = 300,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPMaskedTaskLoopDirective = 301,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPMaskedTaskLoopSimdDirective = 302,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPParallelMaskedTaskLoopDirective = 303,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_OMPParallelMaskedTaskLoopSimdDirective = 304,
+        /// Only produced by `libclang` 16.0 and later.
+        const CXCursor_OMPErrorDirective = 305,
+        /// Only produced by `libclang` 18.0 and later.
+        const CXCursor_OMPScopeDirective = 306,
+        #[cfg(not(feature="clang_15_0"))]
         const CXCursor_TranslationUnit = 300,
+        #[cfg(feature="clang_15_0")]
+        const CXCursor_TranslationUnit = 350,
         const CXCursor_UnexposedAttr = 400,
         const CXCursor_IBActionAttr = 401,
         const CXCursor_IBOutletAttr = 402,
@@ -518,13 +643,16 @@ cenum! {
         const CXCursor_StaticAssert = 602,
         /// Only produced by `libclang` 4.0 and later.
         const CXCursor_FriendDecl = 603,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXCursor_ConceptDecl = 604,
         /// Only produced by `libclang` 3.7 and later.
         const CXCursor_OverloadCandidate = 700,
     }
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     enum CXCursor_ExceptionSpecificationKind {
         const CXCursor_ExceptionSpecificationKind_None = 0,
         const CXCursor_ExceptionSpecificationKind_DynamicNone = 1,
@@ -535,7 +663,8 @@ cenum! {
         const CXCursor_ExceptionSpecificationKind_Unevaluated = 6,
         const CXCursor_ExceptionSpecificationKind_Uninstantiated = 7,
         const CXCursor_ExceptionSpecificationKind_Unparsed = 8,
-        #[cfg(feature="gte_clang_9_0")]
+        /// Only available on `libclang` 9.0 and later.
+        #[cfg(feature = "clang_9_0")]
         const CXCursor_ExceptionSpecificationKind_NoThrow = 9,
     }
 }
@@ -619,6 +748,8 @@ cenum! {
         const CXIdxEntity_CXXConversionFunction = 24,
         const CXIdxEntity_CXXTypeAlias = 25,
         const CXIdxEntity_CXXInterface = 26,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXIdxEntity_CXXConcept = 27,
     }
 }
 
@@ -677,7 +808,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     enum CXPrintingPolicyProperty {
         const CXPrintingPolicy_Indentation = 0,
         const CXPrintingPolicy_SuppressSpecifiers = 1,
@@ -734,7 +866,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     enum CXTLSKind {
         const CXTLS_None = 0,
         const CXTLS_Dynamic = 1,
@@ -762,7 +895,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     enum CXTemplateArgumentKind {
         const CXTemplateArgumentKind_Null = 0,
         const CXTemplateArgumentKind_Type = 1,
@@ -837,6 +971,10 @@ cenum! {
         const CXType_UAccum = 37,
         /// Only produced by `libclang` 7.0 and later.
         const CXType_ULongAccum = 38,
+        /// Only produced by `libclang` 11.0 and later.
+        const CXType_BFloat16 = 39,
+        /// Only produced by `libclang` 14.0 and later.
+        const CXType_Ibm128 = 40,
         const CXType_Complex = 100,
         const CXType_Pointer = 101,
         const CXType_BlockPointer = 102,
@@ -973,6 +1111,10 @@ cenum! {
         const CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
         /// Only produced by `libclang` 9.0 and later.
         const CXType_ExtVector = 176,
+        /// Only produced by `libclang` 11.0 and later.
+        const CXType_Atomic = 177,
+        /// Only produced by `libclang` 15.0 and later.
+        const CXType_BTFTagAttributed = 178,        
     }
 }
 
@@ -989,7 +1131,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     enum CXVisibilityKind {
         const CXVisibility_Invalid = 0,
         const CXVisibility_Hidden = 1,
@@ -999,12 +1142,37 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_8_0")]
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
     enum CXTypeNullabilityKind {
         const CXTypeNullability_NonNull = 0,
         const CXTypeNullability_Nullable = 1,
         const CXTypeNullability_Unspecified = 2,
         const CXTypeNullability_Invalid = 3,
+        /// Only produced by `libclang` 12.0 and later.
+        const CXTypeNullability_NullableResult = 4,
+    }
+}
+
+cenum! {
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    enum CXUnaryOperatorKind {
+        const CXUnaryOperator_Invalid = 0,
+        const CXUnaryOperator_PostInc = 1,
+        const CXUnaryOperator_PostDec = 2,
+        const CXUnaryOperator_PreInc = 3,
+        const CXUnaryOperator_PreDec = 4,
+        const CXUnaryOperator_AddrOf = 5,
+        const CXUnaryOperator_Deref = 6,
+        const CXUnaryOperator_Plus = 7,
+        const CXUnaryOperator_Minus = 8,
+        const CXUnaryOperator_Not = 9,
+        const CXUnaryOperator_LNot = 10,
+        const CXUnaryOperator_Real = 11,
+        const CXUnaryOperator_Imag = 12,
+        const CXUnaryOperator_Extension = 13,
+        const CXUnaryOperator_Coawait = 14,
     }
 }
 
@@ -1025,7 +1193,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     enum CX_StorageClass {
         const CX_SC_Invalid = 0,
         const CX_SC_None = 1,
@@ -1119,6 +1288,28 @@ cenum! {
     }
 }
 
+/// Only available on `libclang` 17.0 and later.
+#[cfg(feature = "clang_17_0")]
+#[cfg(not(target_os = "windows"))]
+pub type CXIndexOptions_Flags = c_ushort;
+
+/// Only available on `libclang` 17.0 and later.
+#[cfg(feature = "clang_17_0")]
+#[cfg(target_os = "windows")]
+pub type CXIndexOptions_Flags = c_uint;
+
+/// Only available on `libclang` 17.0 and later.
+#[cfg(feature = "clang_17_0")]
+pub const CXIndexOptions_ExcludeDeclarationsFromPCH: CXIndexOptions_Flags = 1;
+
+/// Only available on `libclang` 17.0 and later.
+#[cfg(feature = "clang_17_0")]
+pub const CXIndexOptions_DisplayDiagnostics: CXIndexOptions_Flags = 2;
+
+/// Only available on `libclang` 17.0 and later.
+#[cfg(feature = "clang_17_0")]
+pub const CXIndexOptions_StorePreamblesInMemory: CXIndexOptions_Flags = 4;
+
 cenum! {
     enum CXNameRefFlags {
         const CXNameRange_WantQualifier = 1;
@@ -1154,7 +1345,8 @@ cenum! {
         const CXObjCPropertyAttr_weak = 512;
         const CXObjCPropertyAttr_strong = 1024;
         const CXObjCPropertyAttr_unsafe_unretained = 2048;
-        #[cfg(feature="gte_clang_3_9")]
+        /// Only available on `libclang` 3.9 and later.
+        #[cfg(feature = "clang_3_9")]
         const CXObjCPropertyAttr_class = 4096;
     }
 }
@@ -1172,7 +1364,8 @@ cenum! {
 }
 
 cenum! {
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     enum CXSymbolRole {
         const CXSymbolRole_None = 0;
         const CXSymbolRole_Declaration = 1;
@@ -1198,20 +1391,30 @@ cenum! {
         const CXTranslationUnit_CXXChainedPCH = 32;
         const CXTranslationUnit_SkipFunctionBodies = 64;
         const CXTranslationUnit_IncludeBriefCommentsInCodeCompletion = 128;
-        #[cfg(feature="gte_clang_3_8")]
+        /// Only available on `libclang` 3.8 and later.
+        #[cfg(feature = "clang_3_8")]
         const CXTranslationUnit_CreatePreambleOnFirstParse = 256;
-        #[cfg(feature="gte_clang_3_9")]
+        /// Only available on `libclang` 3.9 and later.
+        #[cfg(feature = "clang_3_9")]
         const CXTranslationUnit_KeepGoing = 512;
-        #[cfg(feature="gte_clang_5_0")]
+        /// Only available on `libclang` 5.0 and later.
+        #[cfg(feature = "clang_5_0")]
         const CXTranslationUnit_SingleFileParse = 1024;
-        #[cfg(feature="gte_clang_7_0")]
+        /// Only available on `libclang` 7.0 and later.
+        #[cfg(feature = "clang_7_0")]
         const CXTranslationUnit_LimitSkipFunctionBodiesToPreamble = 2048;
-        #[cfg(feature="gte_clang_8_0")]
+        /// Only available on `libclang` 8.0 and later.
+        #[cfg(feature = "clang_8_0")]
         const CXTranslationUnit_IncludeAttributedTypes = 4096;
-        #[cfg(feature="gte_clang_8_0")]
+        /// Only available on `libclang` 8.0 and later.
+        #[cfg(feature = "clang_8_0")]
         const CXTranslationUnit_VisitImplicitAttributes = 8192;
-        #[cfg(feature="gte_clang_9_0")]
+        /// Only available on `libclang` 9.0 and later.
+        #[cfg(feature = "clang_9_0")]
         const CXTranslationUnit_IgnoreNonErrorsFromIncludedFiles = 16384;
+        /// Only available on `libclang` 10.0 and later.
+        #[cfg(feature = "clang_10_0")]
+        const CXTranslationUnit_RetainExcludedConditionalBlocks = 32768;
     }
 }
 
@@ -1234,7 +1437,7 @@ opaque!(CXCompletionString);
 opaque!(CXCursorSet);
 opaque!(CXDiagnostic);
 opaque!(CXDiagnosticSet);
-#[cfg(feature = "gte_clang_3_9")]
+#[cfg(feature = "clang_3_9")]
 opaque!(CXEvalResult);
 opaque!(CXFile);
 opaque!(CXIdxClientASTFile);
@@ -1244,10 +1447,10 @@ opaque!(CXIdxClientFile);
 opaque!(CXIndex);
 opaque!(CXIndexAction);
 opaque!(CXModule);
-#[cfg(feature = "gte_clang_7_0")]
+#[cfg(feature = "clang_7_0")]
 opaque!(CXPrintingPolicy);
 opaque!(CXRemapping);
-#[cfg(feature = "gte_clang_5_0")]
+#[cfg(feature = "clang_5_0")]
 opaque!(CXTargetInfo);
 opaque!(CXTranslationUnit);
 
@@ -1389,7 +1592,8 @@ pub struct CXIdxEntityRefInfo {
     pub referencedEntity: *const CXIdxEntityInfo,
     pub parentEntity: *const CXIdxEntityInfo,
     pub container: *const CXIdxContainerInfo,
-    #[cfg(feature = "gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub role: CXSymbolRole,
 }
 
@@ -1499,6 +1703,21 @@ pub struct CXIdxObjCProtocolRefListInfo {
 
 default!(CXIdxObjCProtocolRefListInfo);
 
+#[cfg(feature = "clang_17_0")]
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct CXIndexOptions {
+    pub Size: c_uint,
+    pub ThreadBackgroundPriorityForIndexing: CXChoice,
+    pub ThreadBackgroundPriorityForEditing: CXChoice,
+    pub flags: CXIndexOptions_Flags,
+    pub PreambleStoragePath: *const c_char,
+    pub InvocationEmissionPath: *const c_char,
+}
+
+#[cfg(feature = "clang_17_0")]
+default!(CXIndexOptions);
+
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct CXPlatformAvailability {
@@ -1549,7 +1768,7 @@ pub struct CXString {
 
 default!(CXString);
 
-#[cfg(feature = "gte_clang_3_8")]
+#[cfg(feature = "clang_3_8")]
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct CXStringSet {
@@ -1557,7 +1776,7 @@ pub struct CXStringSet {
     pub Count: c_uint,
 }
 
-#[cfg(feature = "gte_clang_3_8")]
+#[cfg(feature = "clang_3_8")]
 default!(CXStringSet);
 
 #[derive(Copy, Clone, Debug)]
@@ -1642,25 +1861,45 @@ link! {
     pub fn clang_CXCursorSet_insert(set: CXCursorSet, cursor: CXCursor) -> c_uint;
     pub fn clang_CXIndex_getGlobalOptions(index: CXIndex) -> CXGlobalOptFlags;
     pub fn clang_CXIndex_setGlobalOptions(index: CXIndex, flags: CXGlobalOptFlags);
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     pub fn clang_CXIndex_setInvocationEmissionPathOption(index: CXIndex, path: *const c_char);
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_CXXConstructor_isConvertingConstructor(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_CXXConstructor_isCopyConstructor(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_CXXConstructor_isDefaultConstructor(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_CXXConstructor_isMoveConstructor(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_CXXField_isMutable(cursor: CXCursor) -> c_uint;
     pub fn clang_CXXMethod_isConst(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 16.0 and later.
+    #[cfg(feature = "clang_16_0")]
+    pub fn clang_CXXMethod_isCopyAssignmentOperator(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_CXXMethod_isDefaulted(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 16.0 and later.
+    #[cfg(feature = "clang_16_0")]
+    pub fn clang_CXXMethod_isDeleted(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 16.0 and later.
+    #[cfg(feature = "clang_16_0")]
+    pub fn clang_CXXMethod_isMoveAssignmentOperator(cursor: CXCursor) -> c_uint;
     pub fn clang_CXXMethod_isPureVirtual(cursor: CXCursor) -> c_uint;
     pub fn clang_CXXMethod_isStatic(cursor: CXCursor) -> c_uint;
     pub fn clang_CXXMethod_isVirtual(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_CXXMethod_isExplicit(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     pub fn clang_CXXRecord_isAbstract(cursor: CXCursor) -> c_uint;
     pub fn clang_CompilationDatabase_dispose(database: CXCompilationDatabase);
     pub fn clang_CompilationDatabase_fromDirectory(directory: *const c_char, error: *mut CXCompilationDatabase_Error) -> CXCompilationDatabase;
@@ -1668,97 +1907,141 @@ link! {
     pub fn clang_CompilationDatabase_getCompileCommands(database: CXCompilationDatabase, filename: *const c_char) -> CXCompileCommands;
     pub fn clang_CompileCommand_getArg(command: CXCompileCommand, index: c_uint) -> CXString;
     pub fn clang_CompileCommand_getDirectory(command: CXCompileCommand) -> CXString;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_CompileCommand_getFilename(command: CXCompileCommand) -> CXString;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_CompileCommand_getMappedSourceContent(command: CXCompileCommand, index: c_uint) -> CXString;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_CompileCommand_getMappedSourcePath(command: CXCompileCommand, index: c_uint) -> CXString;
     pub fn clang_CompileCommand_getNumArgs(command: CXCompileCommand) -> c_uint;
     pub fn clang_CompileCommand_getNumMappedSources(command: CXCompileCommand) -> c_uint;
     pub fn clang_CompileCommands_dispose(command: CXCompileCommands);
     pub fn clang_CompileCommands_getCommand(command: CXCompileCommands, index: c_uint) -> CXCompileCommand;
     pub fn clang_CompileCommands_getSize(command: CXCompileCommands) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_Cursor_Evaluate(cursor: CXCursor) -> CXEvalResult;
     pub fn clang_Cursor_getArgument(cursor: CXCursor, index: c_uint) -> CXCursor;
     pub fn clang_Cursor_getBriefCommentText(cursor: CXCursor) -> CXString;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_Cursor_getCXXManglings(cursor: CXCursor) -> *mut CXStringSet;
     pub fn clang_Cursor_getCommentRange(cursor: CXCursor) -> CXSourceRange;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getMangling(cursor: CXCursor) -> CXString;
     pub fn clang_Cursor_getModule(cursor: CXCursor) -> CXModule;
     pub fn clang_Cursor_getNumArguments(cursor: CXCursor) -> c_int;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getNumTemplateArguments(cursor: CXCursor) -> c_int;
     pub fn clang_Cursor_getObjCDeclQualifiers(cursor: CXCursor) -> CXObjCDeclQualifierKind;
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     pub fn clang_Cursor_getObjCManglings(cursor: CXCursor) -> *mut CXStringSet;
     pub fn clang_Cursor_getObjCPropertyAttributes(cursor: CXCursor, reserved: c_uint) -> CXObjCPropertyAttrKind;
-    #[cfg(feature="gte_clang_8_0")]
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
     pub fn clang_Cursor_getObjCPropertyGetterName(cursor: CXCursor) -> CXString;
-    #[cfg(feature="gte_clang_8_0")]
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
     pub fn clang_Cursor_getObjCPropertySetterName(cursor: CXCursor) -> CXString;
     pub fn clang_Cursor_getObjCSelectorIndex(cursor: CXCursor) -> c_int;
-    #[cfg(feature="gte_clang_3_7")]
+    /// Only available on `libclang` 3.7 and later.
+    #[cfg(feature = "clang_3_7")]
     pub fn clang_Cursor_getOffsetOfField(cursor: CXCursor) -> c_longlong;
-    #[cfg(feature="gte_clang_9_0")]
-    pub fn clang_Cursor_isAnonymousRecordDecl(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_9_0")]
-    pub fn clang_Cursor_isInlineNamespace(cursor: CXCursor) -> c_uint;
     pub fn clang_Cursor_getRawCommentText(cursor: CXCursor) -> CXString;
     pub fn clang_Cursor_getReceiverType(cursor: CXCursor) -> CXType;
     pub fn clang_Cursor_getSpellingNameRange(cursor: CXCursor, index: c_uint, reserved: c_uint) -> CXSourceRange;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getStorageClass(cursor: CXCursor) -> CX_StorageClass;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getTemplateArgumentKind(cursor: CXCursor, index: c_uint) -> CXTemplateArgumentKind;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getTemplateArgumentType(cursor: CXCursor, index: c_uint) -> CXType;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getTemplateArgumentUnsignedValue(cursor: CXCursor, index: c_uint) -> c_ulonglong;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_Cursor_getTemplateArgumentValue(cursor: CXCursor, index: c_uint) -> c_longlong;
     pub fn clang_Cursor_getTranslationUnit(cursor: CXCursor) -> CXTranslationUnit;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 12.0 and later.
+    #[cfg(feature = "clang_12_0")]
+    pub fn clang_Cursor_getVarDeclInitializer(cursor: CXCursor) -> CXCursor;
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_Cursor_hasAttrs(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_7")]
+    /// Only available on `libclang` 12.0 and later.
+    #[cfg(feature = "clang_12_0")]
+    pub fn clang_Cursor_hasVarDeclGlobalStorage(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 12.0 and later.
+    #[cfg(feature = "clang_12_0")]
+    pub fn clang_Cursor_hasVarDeclExternalStorage(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 3.7 and later.
+    #[cfg(feature = "clang_3_7")]
     pub fn clang_Cursor_isAnonymous(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 9.0 and later.
+    #[cfg(feature = "clang_9_0")]
+    pub fn clang_Cursor_isAnonymousRecordDecl(cursor: CXCursor) -> c_uint;
     pub fn clang_Cursor_isBitField(cursor: CXCursor) -> c_uint;
     pub fn clang_Cursor_isDynamicCall(cursor: CXCursor) -> c_int;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_Cursor_isExternalSymbol(cursor: CXCursor, language: *mut CXString, from: *mut CXString, generated: *mut c_uint) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_Cursor_isFunctionInlined(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 9.0 and later.
+    #[cfg(feature = "clang_9_0")]
+    pub fn clang_Cursor_isInlineNamespace(cursor: CXCursor) -> c_uint;
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_Cursor_isMacroBuiltin(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_Cursor_isMacroFunctionLike(cursor: CXCursor) -> c_uint;
     pub fn clang_Cursor_isNull(cursor: CXCursor) -> c_int;
     pub fn clang_Cursor_isObjCOptional(cursor: CXCursor) -> c_uint;
     pub fn clang_Cursor_isVariadic(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_EnumDecl_isScoped(cursor: CXCursor) -> c_uint;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_EvalResult_dispose(result: CXEvalResult);
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_EvalResult_getAsDouble(result: CXEvalResult) -> libc::c_double;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_EvalResult_getAsInt(result: CXEvalResult) -> c_int;
-    #[cfg(feature="gte_clang_4_0")]
+    /// Only available on `libclang` 4.0 and later.
+    #[cfg(feature = "clang_4_0")]
     pub fn clang_EvalResult_getAsLongLong(result: CXEvalResult) -> c_longlong;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_EvalResult_getAsStr(result: CXEvalResult) -> *const c_char;
-    #[cfg(feature="gte_clang_4_0")]
+    /// Only available on `libclang` 4.0 and later.
+    #[cfg(feature = "clang_4_0")]
     pub fn clang_EvalResult_getAsUnsigned(result: CXEvalResult) -> c_ulonglong;
-    #[cfg(feature="gte_clang_3_9")]
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
     pub fn clang_EvalResult_getKind(result: CXEvalResult) -> CXEvalResultKind;
-    #[cfg(feature="gte_clang_4_0")]
+    /// Only available on `libclang` 4.0 and later.
+    #[cfg(feature = "clang_4_0")]
     pub fn clang_EvalResult_isUnsignedInt(result: CXEvalResult) -> c_uint;
-    #[cfg(feature="gte_clang_3_6")]
+    /// Only available on `libclang` 3.6 and later.
+    #[cfg(feature = "clang_3_6")]
     pub fn clang_File_isEqual(left: CXFile, right: CXFile) -> c_int;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_File_tryGetRealPathName(file: CXFile) -> CXString;
     pub fn clang_IndexAction_create(index: CXIndex) -> CXIndexAction;
     pub fn clang_IndexAction_dispose(index: CXIndexAction);
@@ -1771,47 +2054,67 @@ link! {
     pub fn clang_Module_getParent(module: CXModule) -> CXModule;
     pub fn clang_Module_getTopLevelHeader(tu: CXTranslationUnit, module: CXModule, index: c_uint) -> CXFile;
     pub fn clang_Module_isSystem(module: CXModule) -> c_int;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_PrintingPolicy_dispose(policy: CXPrintingPolicy);
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_PrintingPolicy_getProperty(policy: CXPrintingPolicy, property: CXPrintingPolicyProperty) -> c_uint;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_PrintingPolicy_setProperty(policy: CXPrintingPolicy, property: CXPrintingPolicyProperty, value: c_uint);
     pub fn clang_Range_isNull(range: CXSourceRange) -> c_int;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_TargetInfo_dispose(info: CXTargetInfo);
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_TargetInfo_getPointerWidth(info: CXTargetInfo) -> c_int;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_TargetInfo_getTriple(info: CXTargetInfo) -> CXString;
     pub fn clang_Type_getAlignOf(type_: CXType) -> c_longlong;
     pub fn clang_Type_getCXXRefQualifier(type_: CXType) -> CXRefQualifierKind;
     pub fn clang_Type_getClassType(type_: CXType) -> CXType;
-    #[cfg(feature="gte_clang_3_9")]
-    pub fn clang_Type_getNamedType(type_: CXType) -> CXType;
-    pub fn clang_Type_getNumTemplateArguments(type_: CXType) -> c_int;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getObjCObjectBaseType(type_: CXType) -> CXType;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getNumObjCProtocolRefs(type_: CXType) -> c_uint;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getObjCProtocolDecl(type_: CXType, index: c_uint) -> CXCursor;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getNumObjCTypeArgs(type_: CXType) -> c_uint;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getObjCTypeArg(type_: CXType, index: c_uint) -> CXType;
-    #[cfg(feature="gte_clang_3_9")]
-    pub fn clang_Type_getObjCEncoding(type_: CXType) -> CXString;
-    pub fn clang_Type_getOffsetOf(type_: CXType, field: *const c_char) -> c_longlong;
-    #[cfg(feature="gte_clang_8_0")]
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
     pub fn clang_Type_getModifiedType(type_: CXType) -> CXType;
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
+    pub fn clang_Type_getNamedType(type_: CXType) -> CXType;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getNullability(type_: CXType) -> CXTypeNullabilityKind;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getNumObjCProtocolRefs(type_: CXType) -> c_uint;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getNumObjCTypeArgs(type_: CXType) -> c_uint;
+    pub fn clang_Type_getNumTemplateArguments(type_: CXType) -> c_int;
+    /// Only available on `libclang` 3.9 and later.
+    #[cfg(feature = "clang_3_9")]
+    pub fn clang_Type_getObjCEncoding(type_: CXType) -> CXString;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getObjCObjectBaseType(type_: CXType) -> CXType;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getObjCProtocolDecl(type_: CXType, index: c_uint) -> CXCursor;
+    /// Only available on `libclang` 8.0 and later.
+    #[cfg(feature = "clang_8_0")]
+    pub fn clang_Type_getObjCTypeArg(type_: CXType, index: c_uint) -> CXType;
+    pub fn clang_Type_getOffsetOf(type_: CXType, field: *const c_char) -> c_longlong;
     pub fn clang_Type_getSizeOf(type_: CXType) -> c_longlong;
     pub fn clang_Type_getTemplateArgumentAsType(type_: CXType, index: c_uint) -> CXType;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 11.0 and later.
+    #[cfg(feature = "clang_11_0")]
+    pub fn clang_Type_getValueType(type_: CXType) -> CXType;
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_Type_isTransparentTagTypedef(type_: CXType) -> c_uint;
-    #[cfg(feature="gte_clang_8_0")]
-    pub fn clang_Type_getNullability(type_: CXType) -> CXTypeNullabilityKind;
-    #[cfg(feature="gte_clang_3_7")]
+    /// Only available on `libclang` 3.7 and later.
+    #[cfg(feature = "clang_3_7")]
     pub fn clang_Type_visitFields(type_: CXType, visitor: CXFieldVisitor, data: CXClientData) -> CXVisitorResult;
     pub fn clang_annotateTokens(tu: CXTranslationUnit, tokens: *mut CXToken, n_tokens: c_uint, cursors: *mut CXCursor);
     pub fn clang_codeCompleteAt(tu: CXTranslationUnit, file: *const c_char, line: c_uint, column: c_uint, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, flags: CXCodeComplete_Flags) -> *mut CXCodeCompleteResults;
@@ -1829,6 +2132,9 @@ link! {
     pub fn clang_constructUSR_ObjCProtocol(protocol: *const c_char) -> CXString;
     pub fn clang_createCXCursorSet() -> CXCursorSet;
     pub fn clang_createIndex(exclude: c_int, display: c_int) -> CXIndex;
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_createIndexWithOptions(options: CXIndexOptions) -> CXIndex;
     pub fn clang_createTranslationUnit(index: CXIndex, file: *const c_char) -> CXTranslationUnit;
     pub fn clang_createTranslationUnit2(index: CXIndex, file: *const c_char, tu: *mut CXTranslationUnit) -> CXErrorCode;
     pub fn clang_createTranslationUnitFromSourceFile(index: CXIndex, file: *const c_char, n_arguments: c_int, arguments: *const *const c_char, n_unsaved: c_uint, unsaved: *mut CXUnsavedFile) -> CXTranslationUnit;
@@ -1847,7 +2153,8 @@ link! {
     pub fn clang_disposeOverriddenCursors(cursors: *mut CXCursor);
     pub fn clang_disposeSourceRangeList(list: *mut CXSourceRangeList);
     pub fn clang_disposeString(string: CXString);
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_disposeStringSet(set: *mut CXStringSet);
     pub fn clang_disposeTokens(tu: CXTranslationUnit, tokens: *mut CXToken, n_tokens: c_uint);
     pub fn clang_disposeTranslationUnit(tu: CXTranslationUnit);
@@ -1860,15 +2167,21 @@ link! {
     pub fn clang_findIncludesInFile(tu: CXTranslationUnit, file: CXFile, cursor: CXCursorAndRangeVisitor) -> CXResult;
     pub fn clang_findReferencesInFile(cursor: CXCursor, file: CXFile, visitor: CXCursorAndRangeVisitor) -> CXResult;
     pub fn clang_formatDiagnostic(diagnostic: CXDiagnostic, flags: CXDiagnosticDisplayOptions) -> CXString;
-    #[cfg(feature="gte_clang_3_7")]
+    /// Only available on `libclang` 3.7 and later.
+    #[cfg(feature = "clang_3_7")]
     pub fn clang_free(buffer: *mut c_void);
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_getAddressSpace(type_: CXType) -> c_uint;
-    #[cfg(feature="gte_clang_4_0")]
+    /// Only available on `libclang` 4.0 and later.
+    #[cfg(feature = "clang_4_0")]
     pub fn clang_getAllSkippedRanges(tu: CXTranslationUnit) -> *mut CXSourceRangeList;
     pub fn clang_getArgType(type_: CXType, index: c_uint) -> CXType;
     pub fn clang_getArrayElementType(type_: CXType) -> CXType;
     pub fn clang_getArraySize(type_: CXType) -> c_longlong;
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_getBinaryOperatorKindSpelling(kind: CXBinaryOperatorKind) -> CXString;
     pub fn clang_getCString(string: CXString) -> *const c_char;
     pub fn clang_getCXTUResourceUsage(tu: CXTranslationUnit) -> CXTUResourceUsage;
     pub fn clang_getCXXAccessSpecifier(cursor: CXCursor) -> CX_CXXAccessSpecifier;
@@ -1882,19 +2195,25 @@ link! {
     pub fn clang_getCompletionChunkCompletionString(string: CXCompletionString, index: c_uint) -> CXCompletionString;
     pub fn clang_getCompletionChunkKind(string: CXCompletionString, index: c_uint) -> CXCompletionChunkKind;
     pub fn clang_getCompletionChunkText(string: CXCompletionString, index: c_uint) -> CXString;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_getCompletionFixIt(results: *mut CXCodeCompleteResults, completion_index: c_uint, fixit_index: c_uint, range: *mut CXSourceRange) -> CXString;
     pub fn clang_getCompletionNumAnnotations(string: CXCompletionString) -> c_uint;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_getCompletionNumFixIts(results: *mut CXCodeCompleteResults, completion_index: c_uint) -> c_uint;
     pub fn clang_getCompletionParent(string: CXCompletionString, kind: *mut CXCursorKind) -> CXString;
     pub fn clang_getCompletionPriority(string: CXCompletionString) -> c_uint;
     pub fn clang_getCursor(tu: CXTranslationUnit, location: CXSourceLocation) -> CXCursor;
     pub fn clang_getCursorAvailability(cursor: CXCursor) -> CXAvailabilityKind;
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_getCursorBinaryOperatorKind(cursor: CXCursor) -> CXBinaryOperatorKind;
     pub fn clang_getCursorCompletionString(cursor: CXCursor) -> CXCompletionString;
     pub fn clang_getCursorDefinition(cursor: CXCursor) -> CXCursor;
     pub fn clang_getCursorDisplayName(cursor: CXCursor) -> CXString;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_getCursorExceptionSpecificationType(cursor: CXCursor) -> CXCursor_ExceptionSpecificationKind;
     pub fn clang_getCursorExtent(cursor: CXCursor) -> CXSourceRange;
     pub fn clang_getCursorKind(cursor: CXCursor) -> CXCursorKind;
@@ -1904,20 +2223,27 @@ link! {
     pub fn clang_getCursorLinkage(cursor: CXCursor) -> CXLinkageKind;
     pub fn clang_getCursorLocation(cursor: CXCursor) -> CXSourceLocation;
     pub fn clang_getCursorPlatformAvailability(cursor: CXCursor, deprecated: *mut c_int, deprecated_message: *mut CXString, unavailable: *mut c_int, unavailable_message: *mut CXString, availability: *mut CXPlatformAvailability, n_availability: c_int) -> c_int;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_getCursorPrettyPrinted(cursor: CXCursor, policy: CXPrintingPolicy) -> CXString;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_getCursorPrintingPolicy(cursor: CXCursor) -> CXPrintingPolicy;
     pub fn clang_getCursorReferenceNameRange(cursor: CXCursor, flags: CXNameRefFlags, index: c_uint) -> CXSourceRange;
     pub fn clang_getCursorReferenced(cursor: CXCursor) -> CXCursor;
     pub fn clang_getCursorResultType(cursor: CXCursor) -> CXType;
     pub fn clang_getCursorSemanticParent(cursor: CXCursor) -> CXCursor;
     pub fn clang_getCursorSpelling(cursor: CXCursor) -> CXString;
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     pub fn clang_getCursorTLSKind(cursor: CXCursor) -> CXTLSKind;
     pub fn clang_getCursorType(cursor: CXCursor) -> CXType;
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_getCursorUnaryOperatorKind(cursor: CXCursor) -> CXUnaryOperatorKind;
     pub fn clang_getCursorUSR(cursor: CXCursor) -> CXString;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_getCursorVisibility(cursor: CXCursor) -> CXVisibilityKind;
     pub fn clang_getDeclObjCTypeEncoding(cursor: CXCursor) -> CXString;
     pub fn clang_getDefinitionSpellingAndExtent(cursor: CXCursor, start: *mut *const c_char, end: *mut *const c_char, start_line: *mut c_uint, start_column: *mut c_uint, end_line: *mut c_uint, end_column: *mut c_uint);
@@ -1939,12 +2265,14 @@ link! {
     pub fn clang_getEnumConstantDeclUnsignedValue(cursor: CXCursor) -> c_ulonglong;
     pub fn clang_getEnumConstantDeclValue(cursor: CXCursor) -> c_longlong;
     pub fn clang_getEnumDeclIntegerType(cursor: CXCursor) -> CXType;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_getExceptionSpecificationType(type_: CXType) -> CXCursor_ExceptionSpecificationKind;
     pub fn clang_getExpansionLocation(location: CXSourceLocation, file: *mut CXFile, line: *mut c_uint, column: *mut c_uint, offset: *mut c_uint);
     pub fn clang_getFieldDeclBitWidth(cursor: CXCursor) -> c_int;
     pub fn clang_getFile(tu: CXTranslationUnit, file: *const c_char) -> CXFile;
-    #[cfg(feature="gte_clang_6_0")]
+    /// Only available on `libclang` 6.0 and later.
+    #[cfg(feature = "clang_6_0")]
     pub fn clang_getFileContents(tu: CXTranslationUnit, file: CXFile, size: *mut size_t) -> *const c_char;
     pub fn clang_getFileLocation(location: CXSourceLocation, file: *mut CXFile, line: *mut c_uint, column: *mut c_uint, offset: *mut c_uint);
     pub fn clang_getFileName(file: CXFile) -> CXString;
@@ -1958,6 +2286,9 @@ link! {
     pub fn clang_getLocation(tu: CXTranslationUnit, file: CXFile, line: c_uint, column: c_uint) -> CXSourceLocation;
     pub fn clang_getLocationForOffset(tu: CXTranslationUnit, file: CXFile, offset: c_uint) -> CXSourceLocation;
     pub fn clang_getModuleForFile(tu: CXTranslationUnit, file: CXFile) -> CXModule;
+    /// Only available on `libclang` 16.0 and later.
+    #[cfg(feature = "clang_16_0")]
+    pub fn clang_getNonReferenceType(type_: CXType) -> CXType;
     pub fn clang_getNullCursor() -> CXCursor;
     pub fn clang_getNullLocation() -> CXSourceLocation;
     pub fn clang_getNullRange() -> CXSourceRange;
@@ -1981,26 +2312,36 @@ link! {
     pub fn clang_getSpecializedCursorTemplate(cursor: CXCursor) -> CXCursor;
     pub fn clang_getSpellingLocation(location: CXSourceLocation, file: *mut CXFile, line: *mut c_uint, column: *mut c_uint, offset: *mut c_uint);
     pub fn clang_getTUResourceUsageName(kind: CXTUResourceUsageKind) -> *const c_char;
-    #[cfg(feature="gte_clang_5_0")]
-    pub fn clang_getTranslationUnitTargetInfo(tu: CXTranslationUnit) -> CXTargetInfo;
     pub fn clang_getTemplateCursorKind(cursor: CXCursor) -> CXCursorKind;
+    pub fn clang_getToken(tu: CXTranslationUnit, location: CXSourceLocation) -> *mut CXToken;
     pub fn clang_getTokenExtent(tu: CXTranslationUnit, token: CXToken) -> CXSourceRange;
     pub fn clang_getTokenKind(token: CXToken) -> CXTokenKind;
     pub fn clang_getTokenLocation(tu: CXTranslationUnit, token: CXToken) -> CXSourceLocation;
     pub fn clang_getTokenSpelling(tu: CXTranslationUnit, token: CXToken) -> CXString;
     pub fn clang_getTranslationUnitCursor(tu: CXTranslationUnit) -> CXCursor;
     pub fn clang_getTranslationUnitSpelling(tu: CXTranslationUnit) -> CXString;
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
+    pub fn clang_getTranslationUnitTargetInfo(tu: CXTranslationUnit) -> CXTargetInfo;
+    /// Only available on `libclang` 17.0 and later.
+    #[cfg(feature = "clang_17_0")]
+    pub fn clang_getUnaryOperatorKindSpelling(kind: CXUnaryOperatorKind) -> CXString;
+    /// Only available on `libclang` 16.0 and later.
+    #[cfg(feature = "clang_16_0")]
+    pub fn clang_getUnqualifiedType(type_: CXType) -> CXType;
     pub fn clang_getTypeDeclaration(type_: CXType) -> CXCursor;
     pub fn clang_getTypeKindSpelling(type_: CXTypeKind) -> CXString;
     pub fn clang_getTypeSpelling(type_: CXType) -> CXString;
     pub fn clang_getTypedefDeclUnderlyingType(cursor: CXCursor) -> CXType;
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_getTypedefName(type_: CXType) -> CXString;
     pub fn clang_hashCursor(cursor: CXCursor) -> c_uint;
     pub fn clang_indexLoc_getCXSourceLocation(location: CXIdxLoc) -> CXSourceLocation;
     pub fn clang_indexLoc_getFileLocation(location: CXIdxLoc, index_file: *mut CXIdxClientFile, file: *mut CXFile, line: *mut c_uint, column: *mut c_uint, offset: *mut c_uint);
     pub fn clang_indexSourceFile(index: CXIndexAction, data: CXClientData, callbacks: *mut IndexerCallbacks, n_callbacks: c_uint, index_flags: CXIndexOptFlags, file: *const c_char, arguments: *const *const c_char, n_arguments: c_int, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, tu: *mut CXTranslationUnit, tu_flags: CXTranslationUnit_Flags) -> CXErrorCode;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_indexSourceFileFullArgv(index: CXIndexAction, data: CXClientData, callbacks: *mut IndexerCallbacks, n_callbacks: c_uint, index_flags: CXIndexOptFlags, file: *const c_char, arguments: *const *const c_char, n_arguments: c_int, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, tu: *mut CXTranslationUnit, tu_flags: CXTranslationUnit_Flags) -> CXErrorCode;
     pub fn clang_indexTranslationUnit(index: CXIndexAction, data: CXClientData, callbacks: *mut IndexerCallbacks, n_callbacks: c_uint, flags: CXIndexOptFlags, tu: CXTranslationUnit) -> c_int;
     pub fn clang_index_getCXXClassDeclInfo(info: *const CXIdxDeclInfo) -> *const CXIdxCXXClassDeclInfo;
@@ -2023,7 +2364,8 @@ link! {
     pub fn clang_isFileMultipleIncludeGuarded(tu: CXTranslationUnit, file: CXFile) -> c_uint;
     pub fn clang_isFunctionTypeVariadic(type_: CXType) -> c_uint;
     pub fn clang_isInvalid(kind: CXCursorKind) -> c_uint;
-    #[cfg(feature="gte_clang_7_0")]
+    /// Only available on `libclang` 7.0 and later.
+    #[cfg(feature = "clang_7_0")]
     pub fn clang_isInvalidDeclaration(cursor: CXCursor) -> c_uint;
     pub fn clang_isPODType(type_: CXType) -> c_uint;
     pub fn clang_isPreprocessing(kind: CXCursorKind) -> c_uint;
@@ -2037,7 +2379,8 @@ link! {
     pub fn clang_loadDiagnostics(file: *const c_char, error: *mut CXLoadDiag_Error, message: *mut CXString) -> CXDiagnosticSet;
     pub fn clang_parseTranslationUnit(index: CXIndex, file: *const c_char, arguments: *const *const c_char, n_arguments: c_int, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, flags: CXTranslationUnit_Flags) -> CXTranslationUnit;
     pub fn clang_parseTranslationUnit2(index: CXIndex, file: *const c_char, arguments: *const *const c_char, n_arguments: c_int, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, flags: CXTranslationUnit_Flags, tu: *mut CXTranslationUnit) -> CXErrorCode;
-    #[cfg(feature="gte_clang_3_8")]
+    /// Only available on `libclang` 3.8 and later.
+    #[cfg(feature = "clang_3_8")]
     pub fn clang_parseTranslationUnit2FullArgv(index: CXIndex, file: *const c_char, arguments: *const *const c_char, n_arguments: c_int, unsaved: *mut CXUnsavedFile, n_unsaved: c_uint, flags: CXTranslationUnit_Flags, tu: *mut CXTranslationUnit) -> CXErrorCode;
     pub fn clang_remap_dispose(remapping: CXRemapping);
     pub fn clang_remap_getFilenames(remapping: CXRemapping, index: c_uint, original: *mut CXString, transformed: *mut CXString);
@@ -2045,7 +2388,8 @@ link! {
     pub fn clang_reparseTranslationUnit(tu: CXTranslationUnit, n_unsaved: c_uint, unsaved: *mut CXUnsavedFile, flags: CXReparse_Flags) -> CXErrorCode;
     pub fn clang_saveTranslationUnit(tu: CXTranslationUnit, file: *const c_char, options: CXSaveTranslationUnit_Flags) -> CXSaveError;
     pub fn clang_sortCodeCompletionResults(results: *mut CXCompletionResult, n_results: c_uint);
-    #[cfg(feature="gte_clang_5_0")]
+    /// Only available on `libclang` 5.0 and later.
+    #[cfg(feature = "clang_5_0")]
     pub fn clang_suspendTranslationUnit(tu: CXTranslationUnit) -> c_uint;
     pub fn clang_toggleCrashRecovery(recovery: c_uint);
     pub fn clang_tokenize(tu: CXTranslationUnit, range: CXSourceRange, tokens: *mut *mut CXToken, n_tokens: *mut c_uint);
@@ -2063,10 +2407,10 @@ link! {
     pub fn clang_Cursor_getParsedComment(C: CXCursor) -> CXComment;
     pub fn clang_FullComment_getAsHTML(comment: CXComment) -> CXString;
     pub fn clang_FullComment_getAsXML(comment: CXComment) -> CXString;
-    pub fn clang_HTMLStartTagComment_isSelfClosing(comment: CXComment) -> c_uint;
     pub fn clang_HTMLStartTag_getAttrName(comment: CXComment, index: c_uint) -> CXString;
     pub fn clang_HTMLStartTag_getAttrValue(comment: CXComment, index: c_uint) -> CXString;
     pub fn clang_HTMLStartTag_getNumAttrs(comment: CXComment) -> c_uint;
+    pub fn clang_HTMLStartTagComment_isSelfClosing(comment: CXComment) -> c_uint;
     pub fn clang_HTMLTagComment_getAsString(comment: CXComment) -> CXString;
     pub fn clang_HTMLTagComment_getTagName(comment: CXComment) -> CXString;
     pub fn clang_InlineCommandComment_getArgText(comment: CXComment, index: c_uint) -> CXString;
@@ -2079,11 +2423,11 @@ link! {
     pub fn clang_ParamCommandComment_getParamName(comment: CXComment) -> CXString;
     pub fn clang_ParamCommandComment_isDirectionExplicit(comment: CXComment) -> c_uint;
     pub fn clang_ParamCommandComment_isParamIndexValid(comment: CXComment) -> c_uint;
+    pub fn clang_TextComment_getText(comment: CXComment) -> CXString;
     pub fn clang_TParamCommandComment_getDepth(comment: CXComment) -> c_uint;
     pub fn clang_TParamCommandComment_getIndex(comment: CXComment, depth: c_uint) -> c_uint;
     pub fn clang_TParamCommandComment_getParamName(comment: CXComment) -> CXString;
     pub fn clang_TParamCommandComment_isParamPositionValid(comment: CXComment) -> c_uint;
-    pub fn clang_TextComment_getText(comment: CXComment) -> CXString;
     pub fn clang_VerbatimBlockLineComment_getText(comment: CXComment) -> CXString;
     pub fn clang_VerbatimLineComment_getText(comment: CXComment) -> CXString;
 }

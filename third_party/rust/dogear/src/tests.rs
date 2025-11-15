@@ -26,7 +26,7 @@ use crate::guid::{Guid, ROOT_GUID, UNFILED_GUID};
 use crate::merge::{to_strings, Merger, StructureCounts};
 use crate::tree::{
     self, Builder, Content, DivergedParent, DivergedParentGuid, Item, Kind, MergeState, Problem,
-    Problems, Tree, Validity,
+    ProblemCounts, Problems, Tree, Validity,
 };
 
 #[derive(Debug)]
@@ -2905,5 +2905,20 @@ fn problems() {
             "menu________ is a user content root, but is in children of unfiled_____",
             "toolbar_____ is a user content root",
         ]
+    );
+
+    assert_eq!(
+        problems.counts(),
+        ProblemCounts {
+            orphans: 1,
+            misparented_roots: 2,
+            multiple_parents_by_children: 3,
+            deleted_parent_guids: 1,
+            missing_parent_guids: 1,
+            non_folder_parent_guids: 1,
+            parent_child_disagreements: 7,
+            deleted_children: 0,
+            missing_children: 2,
+        }
     );
 }

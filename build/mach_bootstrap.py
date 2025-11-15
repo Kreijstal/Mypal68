@@ -11,7 +11,10 @@ import platform
 import subprocess
 import sys
 import uuid
-import __builtin__
+try:
+    import builtins as __builtin__
+except ImportError:
+    import __builtin__
 
 from types import ModuleType
 
@@ -170,11 +173,11 @@ def bootstrap(topsrcdir, mozilla_dir=None):
     if mozilla_dir is None:
         mozilla_dir = topsrcdir
 
-    # Ensure we are running Python 2.7+. We put this check here so we generate a
-    # user-friendly error message rather than a cryptic stack trace on module
-    # import.
-    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
-        print('Python 2.7 or above (but not Python 3) is required to run mach.')
+    # Ensure we are running a supported Python version so we show a friendly
+    # message instead of failing later during imports.
+    major, minor = sys.version_info[:2]
+    if not ((major == 2 and minor >= 7) or (major == 3 and minor >= 6)):
+        print('Python 2.7+ or 3.6+ is required to run mach.')
         print('You are running Python', platform.python_version())
         sys.exit(1)
 
@@ -193,8 +196,9 @@ def bootstrap(topsrcdir, mozilla_dir=None):
     import mach.main
     from mozboot.util import get_state_dir
 
-    from mozbuild.util import patch_main
-    patch_main()
+    if sys.version_info[0] == 2:
+        from mozbuild.util import patch_main
+        patch_main()
 
     def resolve_repository():
         import mozversioncontrol
@@ -343,7 +347,11 @@ def bootstrap(topsrcdir, mozilla_dir=None):
     # Note which process is top-level so that recursive mach invocations can avoid writing
     # telemetry data.
     if 'MACH_MAIN_PID' not in os.environ:
-        os.environ[b'MACH_MAIN_PID'] = str(os.getpid()).encode('ascii')
+        pid = str(os.getpid())
+        if sys.version_info[0] < 3:
+            os.environ[b'MACH_MAIN_PID'] = pid.encode('ascii')
+        else:
+            os.environ['MACH_MAIN_PID'] = pid
 
     driver = mach.main.Mach(os.getcwd())
     driver.populate_context_handler = populate_context
@@ -387,7 +395,7 @@ class ImportHook(object):
         self._modules = set()
 
     def __call__(self, name, globals=None, locals=None, fromlist=None,
-                 level=-1):
+                 level=0):
         # name might be a relative import. Instead of figuring out what that
         # resolves to, which is complex, just rely on the real import.
         # Since we don't know the full module name, we can't check sys.modules,
@@ -437,4 +445,5 @@ class ImportHook(object):
 
 
 # Install our hook
-__builtin__.__import__ = ImportHook(__builtin__.__import__)
+if sys.version_info[0] < 3:
+    __builtin__.__import__ = ImportHook(__builtin__.__import__)

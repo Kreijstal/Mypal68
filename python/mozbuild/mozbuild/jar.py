@@ -18,7 +18,7 @@ import six
 import logging
 from time import localtime
 from MozZipFile import ZipFile
-from cStringIO import StringIO
+from io import BytesIO
 
 from mozbuild.preprocessor import Preprocessor
 from mozbuild.action.buildlist import addEntriesToListFile
@@ -43,12 +43,12 @@ class ZipEntry(object):
     def __init__(self, name, zipfile):
         self._zipfile = zipfile
         self._name = name
-        self._inner = StringIO()
+        self._inner = BytesIO()
 
     def write(self, content):
         '''Append the given content to this zip entry'''
 
-        self._inner.write(content)
+        self._inner.write(ensure_bytes(content))
         return
 
     def close(self):

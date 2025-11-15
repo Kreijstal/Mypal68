@@ -17,6 +17,8 @@ CompilerType = EnumString.subclass(
 
 OS = EnumString.subclass(
     'Android',
+    'Darwin',
+    'AIX',
     'DragonFly',
     'FreeBSD',
     'GNU',
@@ -28,6 +30,7 @@ OS = EnumString.subclass(
 )
 
 Kernel = EnumString.subclass(
+    'AIX',
     'Darwin',
     'DragonFly',
     'FreeBSD',
@@ -97,6 +100,7 @@ CPU_preprocessor_checks = OrderedDict((
 assert sorted(CPU_preprocessor_checks.keys()) == sorted(CPU.POSSIBLE_VALUES)
 
 kernel_preprocessor_checks = {
+    'AIX': '__AIX__',
     'Darwin': '__APPLE__',
     'DragonFly': '__DragonFly__',
     'FreeBSD': '__FreeBSD__',

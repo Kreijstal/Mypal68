@@ -17,6 +17,10 @@ settings are available.
 from __future__ import absolute_import, unicode_literals
 
 import collections
+try:
+    from collections.abc import Mapping, MutableMapping
+except ImportError:
+    from collections import Mapping, MutableMapping
 import os
 import sys
 import six
@@ -24,6 +28,10 @@ from functools import wraps
 from six.moves.configparser import RawConfigParser, NoSectionError
 from six import string_types as str_type
 
+try:
+    basestring
+except NameError:
+    basestring = str
 
 class ConfigException(Exception):
     pass
@@ -144,7 +152,7 @@ def reraise_attribute_error(func):
     return _
 
 
-class ConfigSettings(collections.Mapping):
+class ConfigSettings(Mapping):
     """Interface for configuration settings.
 
     This is the main interface to the configuration.
@@ -190,7 +198,7 @@ class ConfigSettings(collections.Mapping):
     will result in exceptions being raised.
     """
 
-    class ConfigSection(collections.MutableMapping, object):
+    class ConfigSection(MutableMapping, object):
         """Represents an individual config section."""
         def __init__(self, config, name, settings):
             object.__setattr__(self, '_config', config)

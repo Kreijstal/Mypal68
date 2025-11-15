@@ -1,0 +1,74 @@
+language: rust
+cache: cargo
+sudo: required
+dist: trusty
+os:
+  - linux
+  - osx
+
+env:
+  - FEATURES=""
+  - FEATURES="serialize"
+rust:
+  - nightly
+  - beta
+  - stable
+  # minimum stable version
+  - 1.36.0
+
+matrix:
+  allow_failures:
+    - rust: nightly
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - zlib1g-dev
+      - libiberty-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libssl-dev
+
+# Add tarpaulin
+before_cache: |
+  if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin -f
+  fi
+
+# Add clippy
+before_script:
+  - export PATH=$PATH:~/.cargo/bin
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      rustup component add rustfmt-preview
+      rustup component add clippy
+      cargo install --force cargo-audit
+      cargo generate-lockfile
+    fi
+
+script:
+  - echo FEATURES="$FEATURES"
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      cargo audit
+      cargo fmt --all -- --check
+    fi
+  - cargo clean
+  - cargo build --verbose --all --features="$FEATURES"
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == "stable" ]]; then
+      cargo clippy --all-targets --all-features -- -D warnings;
+    fi
+  - cargo test --all-targets --all-features --verbose --all
+  - cargo run --example file_parser examples/sdps/2.sdp
+
+after_success: |
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" && "$TRAVIS_RUST_VERSION" == "nightly" && "$FEATURES" == "serialize" ]]; then
+      cargo tarpaulin --out Xml &&
+      bash <(curl -s https://codecov.io/bash)
+    fi

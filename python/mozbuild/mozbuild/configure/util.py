@@ -83,6 +83,8 @@ class ConfigureOutputHandler(logging.Handler):
         # Python has this feature where it sets the encoding of pipes to
         # ascii, which blatantly fails when trying to print out non-ascii.
         def fix_encoding(fh):
+            if sys.version_info[0] >= 3:
+                return fh
             try:
                 isatty = fh.isatty()
             except AttributeError:
@@ -128,7 +130,7 @@ class ConfigureOutputHandler(logging.Handler):
         try:
             if record.levelno == logging.INFO:
                 stream = self._stdout
-                msg = record.getMessage()
+                msg = _ensure_text(record.getMessage())
                 if (self._stdout_waiting == self.INTERRUPTED and
                         self._same_output):
                     msg = ' ... %s' % msg
@@ -152,7 +154,9 @@ class ConfigureOutputHandler(logging.Handler):
                     self._stdout.write('\n')
                     self._stdout.flush()
                 stream = self._stderr
-                msg = '%s\n' % self.format(record)
+                formatted = _ensure_text(self.format(record))
+                msg = '%s\n' % formatted
+            msg = _ensure_text(msg)
             stream.write(msg)
             stream.flush()
         except (KeyboardInterrupt, SystemExit, IOError):
@@ -207,7 +211,7 @@ class LineIO(object):
         self._errors = errors
 
     def write(self, buf):
-        if self._encoding and isinstance(buf, str):
+        if self._encoding and isinstance(buf, six.binary_type):
             buf = buf.decode(self._encoding, self._errors)
         lines = buf.splitlines()
         if not lines:
@@ -231,3 +235,9 @@ class LineIO(object):
 
     def __exit__(self, *args):
         self.close()
+def _ensure_text(value):
+    if isinstance(value, six.text_type):
+        return value
+    if isinstance(value, six.binary_type):
+        return value.decode('utf-8', 'replace')
+    return six.text_type(value)

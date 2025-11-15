@@ -24,3 +24,4 @@ impl Stream for Incoming {
         Ok(Some(try_ready!(self.inner.poll_accept()).0).into())
     }
 }
+

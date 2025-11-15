@@ -12,6 +12,8 @@ EXPORTS += [
 LIBRARY_DEFINES['MOZ_HAS_MOZGLUE'] = True
 DEFINES['MOZ_MEMORY_IMPL'] = True
 
+os_target = '%s' % CONFIG['OS_TARGET']
+
 if CONFIG['MOZ_REPLACE_MALLOC']:
     EXPORTS += [
         'replace_malloc.h',
@@ -28,7 +30,7 @@ else:
         'fallback.cpp',
     ]
 
-if CONFIG['OS_TARGET'] == 'Darwin' and (CONFIG['MOZ_REPLACE_MALLOC'] or
+if os_target == 'Darwin' and (CONFIG['MOZ_REPLACE_MALLOC'] or
         CONFIG['MOZ_MEMORY']):
     SOURCES += [
         'zone.c',
@@ -36,7 +38,7 @@ if CONFIG['OS_TARGET'] == 'Darwin' and (CONFIG['MOZ_REPLACE_MALLOC'] or
 
 Library('memory')
 
-if CONFIG['OS_TARGET'] == 'Android' and CONFIG['CC_TYPE'] == 'clang':
+if os_target == 'Android' and CONFIG['CC_TYPE'] == 'clang':
     CXXFLAGS += [
         '-Wno-tautological-pointer-compare',
     ]

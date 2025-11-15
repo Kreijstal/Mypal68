@@ -21,6 +21,8 @@ def iter_modules_in_path(*paths):
             continue
 
         path = module.__file__
+        if not path:
+            continue
 
         if path.endswith('.pyc'):
             path = path[:-1]

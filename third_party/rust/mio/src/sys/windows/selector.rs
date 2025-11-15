@@ -101,7 +101,7 @@ impl Selector {
         }
 
         trace!("returning");
-        Ok(false)
+        Ok(ret)
     }
 
     /// Gets a reference to the underlying `CompletionPort` structure.

@@ -54,6 +54,8 @@ set_config('RUSTC', rustc)
 @checking('rustc version', lambda info: info.version)
 def rustc_info(rustc):
     out = check_cmd_output(rustc, '--version', '--verbose').splitlines()
+    out = [line.decode('utf-8', 'replace') if hasattr(line, 'decode') else line
+           for line in out]
     info = dict((s.strip() for s in line.split(':', 1)) for line in out[1:])
     return namespace(
         version=Version(info.get('release', '0')),
@@ -69,6 +71,8 @@ set_config('RUSTC_VERSION', depends(rustc_info)(lambda info: str(info.version)))
 @imports('re')
 def cargo_info(cargo):
     out = check_cmd_output(cargo, '--version', '--verbose').splitlines()
+    out = [line.decode('utf-8', 'replace') if hasattr(line, 'decode') else line
+           for line in out]
     info = dict((s.strip() for s in line.split(':', 1)) for line in out[1:])
     version = info.get('release')
     # Older versions of cargo didn't support --verbose, in which case, they
@@ -151,6 +155,8 @@ def rust_compiler(rustc_info, cargo_info, build_project):
 @imports(_from='__builtin__', _import='ValueError')
 def rust_supported_targets(rustc):
     out = check_cmd_output(rustc, '--print', 'target-list').splitlines()
+    out = [line.decode('utf-8', 'replace') if hasattr(line, 'decode') else line
+           for line in out]
     data = {}
     for t in out:
         try:
@@ -169,7 +175,7 @@ def rust_supported_targets(rustc):
                 info = split_triplet(retry)
             except ValueError:
                 continue
-        key = (info.cpu, info.endianness, info.os)
+        key = (str(info.cpu), str(info.endianness), str(info.os))
         data.setdefault(key, []).append(namespace(rust_target=t, target=info))
     return data
 
@@ -203,8 +209,9 @@ def rust_triple_alias(host_or_target, host_or_target_c_compiler):
         # munging to get the correct option to rustc.
         # We correlate the autoconf-derived targets with the list of targets
         # rustc gives us with --print target-list.
-        candidates = rust_supported_targets.get(
-            (host_or_target.cpu, host_or_target.endianness, host_or_target.os), [])
+        key = (str(host_or_target.cpu), str(host_or_target.endianness),
+               str(host_or_target.os))
+        candidates = rust_supported_targets.get(key, [])
 
         def find_candidate(candidates):
             if len(candidates) == 1:
@@ -321,11 +328,12 @@ def rust_triple_alias(host_or_target, host_or_target_c_compiler):
         os.close(out_fd)
         try:
             source = 'pub extern fn hello() { println!("Hello world"); }'
+            source_bytes = source.encode('utf-8')
             log.debug('Creating `%s` with content:', in_path)
             with LineIO(lambda l: log.debug('| %s', l)) as out:
                 out.write(source)
 
-            os.write(in_fd, source)
+            os.write(in_fd, source_bytes)
             os.close(in_fd)
 
             cmd = [

@@ -1,0 +1,28 @@
+[package]
+name = "synstructure"
+version = "0.12.1"
+authors = ["Nika Layzell <nika@thelayzells.com>"]
+edition = "2018"
+
+description = "Helper methods and macros for custom derives"
+documentation = "https://docs.rs/synstructure"
+repository = "https://github.com/mystor/synstructure"
+readme = "README.md"
+license = "MIT"
+keywords = ["syn", "macros", "derive", "expand_substructure", "enum"]
+
+include = ["src/**/*", "Cargo.toml", "README.md", "LICENSE"]
+
+[dependencies]
+syn = { version = "1", features = ["visit", "extra-traits"] }
+proc-macro2 = "1"
+quote = "1"
+unicode-xid = "0.2"
+
+[dev-dependencies]
+# Used in the documentation as an example trait crate provider. Unfortunately,
+# we need to publish this in order to be able to publish synstructure.
+synstructure_test_traits = { version = "0.1", path = "test_traits" }
+
+[workspace]
+members = ["test_traits", "test_suite", "test_suite/test_macros"]

@@ -133,7 +133,10 @@ def prepare_configure(mozconfig, old_configure_assignments, autoconf):
 @template
 def old_configure_options(*options):
     for opt in options:
-        option(opt, nargs='*', help='Help missing for old configure options')
+        if opt.startswith('--'):
+            option(opt, nargs='*', help='Help missing for old configure options')
+        else:
+            continue
 
     @dependable
     def all_options():
@@ -209,12 +212,13 @@ def old_configure_for(old_configure_path, extra_env=None):
     @imports('os')
     @imports('subprocess')
     @imports('sys')
-    @imports('types')
     @imports(_from='mozbuild.shellutil', _import='quote')
     @imports(_from='mozbuild.shellutil', _import='split')
     @imports(_from='mozbuild.util', _import='encode')
     @imports(_from='tempfile', _import='NamedTemporaryFile')
     @imports(_from='subprocess', _import='CalledProcessError')
+    @imports(_from='six', _import='exec_')
+    @imports(_from='six', _import='string_types')
     def old_configure(prepare_configure, prepare_configure_options, altered_path, extra_env,
                       build_env, old_configure, mozillabuild, autoconf, shell):
         # Use prepare_configure to make lint happy
@@ -260,7 +264,9 @@ def old_configure_for(old_configure_path, extra_env=None):
 
             # Make old-configure append to config.log, where we put our own log.
             # This could be done with a m4 macro, but it's way easier this way
-            script = script.replace('>./config.log', '>>${CONFIG_LOG=./config.log}')
+            script = script.replace(
+                b'>./config.log', b'>>${CONFIG_LOG=./config.log}'
+            )
 
             with NamedTemporaryFile(mode='wb', prefix=os.path.basename(old_configure),
                                     dir=os.path.dirname(old_configure), delete=False) as fh:
@@ -337,7 +343,7 @@ def old_configure_for(old_configure_path, extra_env=None):
             # Every variation of the exec() function I tried led to:
             # SyntaxError: unqualified exec is not allowed in function 'main' it
             # contains a nested function with free variables
-            exec code in raw_config # noqa
+            exec_(code, raw_config) # noqa
 
         # Ensure all the flags known to old-configure appear in the
         # @old_configure_options above.
@@ -353,7 +359,7 @@ def old_configure_for(old_configure_path, extra_env=None):
 
         return namespace(**{
             c: [
-                (k[1:-1], v[1:-1] if isinstance(v, types.StringTypes) else v)
+                (k[1:-1], v[1:-1] if isinstance(v, string_types) else v)
                 for k, v in raw_config[c]
             ]
             for c in ('substs', 'defines')

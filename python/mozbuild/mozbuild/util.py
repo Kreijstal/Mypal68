@@ -20,13 +20,27 @@ import re
 import stat
 import sys
 import time
-from collections import (
-    Iterable,
-    OrderedDict,
-)
-from io import (BytesIO, StringIO)
-
 import six
+try:
+    import builtins
+except ImportError:
+    import __builtin__ as builtins
+
+from collections import OrderedDict
+try:
+    from collections.abc import Iterable, Sequence
+except ImportError:
+    from collections import Iterable, Sequence
+from io import (
+    StringIO,
+    BytesIO,
+)
+
+if not hasattr(builtins, 'basestring'):
+    builtins.basestring = six.string_types
+
+if not hasattr(builtins, 'long'):
+    builtins.long = int
 
 if sys.platform == 'win32':
     _kernel32 = ctypes.windll.kernel32
@@ -210,7 +224,7 @@ class FileAvoidWrite(BytesIO):
     still occur, as well as diff capture if requested.
     """
 
-    def __init__(self, filename, capture_diff=False, dry_run=False, readmode='rU'):
+    def __init__(self, filename, capture_diff=False, dry_run=False, readmode='rb'):
         BytesIO.__init__(self)
         self.name = filename
         assert type(capture_diff) == bool
@@ -759,7 +773,7 @@ class HierarchicalStringList(object):
         self._strings = StrictOrderingOnAppendList()
         self._children = {}
 
-    class StringListAdaptor(collections.Sequence):
+    class StringListAdaptor(Sequence):
         def __init__(self, hsl):
             self._hsl = hsl
 
@@ -1058,8 +1072,6 @@ def TypedNamedTuple(name, fields):
                                     'got %s, expected %s' % (fname,
                                                              type(value), ftype))
 
-            super(TypedTuple, self).__init__(*args, **kwargs)
-
     TypedTuple._fields = fields
 
     return TypedTuple
@@ -1153,14 +1165,13 @@ def group_unified_files(files, unified_prefix, unified_suffix,
     dummy_fill_value = ("dummy",)
 
     def filter_out_dummy(iterable):
-        return itertools.ifilter(lambda x: x != dummy_fill_value,
-                                 iterable)
+        return filter(lambda x: x != dummy_fill_value, iterable)
 
     # From the itertools documentation, slightly modified:
     def grouper(n, iterable):
         "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
         args = [iter(iterable)] * n
-        return itertools.izip_longest(fillvalue=dummy_fill_value, *args)
+        return itertools.zip_longest(fillvalue=dummy_fill_value, *args)
 
     for i, unified_group in enumerate(grouper(files_per_unified_file,
                                               files)):
@@ -1253,11 +1264,16 @@ class EnumString(six.text_type):
                              % (value, self.__class__.__name__))
 
     def __eq__(self, other):
-        if other not in self.POSSIBLE_VALUES:
-            raise EnumStringComparisonError(
-                'Can only compare with %s'
-                % ', '.join("'%s'" % v for v in self.POSSIBLE_VALUES))
-        return super(EnumString, self).__eq__(other)
+        if isinstance(other, EnumString):
+            other_value = six.text_type(other)
+        elif isinstance(other, six.string_types):
+            other_value = six.text_type(other)
+        else:
+            return False
+        return super(EnumString, self).__eq__(other_value)
+
+    def __hash__(self):
+        return super(EnumString, self).__hash__()
 
     def __ne__(self, other):
         return not (self == other)
@@ -1277,18 +1293,17 @@ def _escape_char(c):
     return six.text_type(c.encode('unicode_escape'))
 
 
-if six.PY2:  # Not supported for py3 yet
-    # Mapping table between raw characters below \x80 and their escaped
-    # counterpart, when they differ
-    _INDENTED_REPR_TABLE = {
-        c: e
-        for c, e in map(lambda x: (x, _escape_char(x)),
-                        map(unichr, range(128)))
-        if c != e
-    }
-    # Regexp matching all characters to escape.
-    _INDENTED_REPR_RE = re.compile(
-        '([' + ''.join(_INDENTED_REPR_TABLE.values()) + ']+)')
+# Mapping table between raw characters below \x80 and their escaped
+# counterpart, when they differ
+_INDENTED_REPR_TABLE = {
+    c: e
+    for c, e in map(lambda x: (x, _escape_char(x)),
+                    map(six.unichr, range(128)))
+    if c != e
+}
+# Regexp matching all characters to escape.
+_INDENTED_REPR_RE = re.compile(
+    '([' + ''.join(_INDENTED_REPR_TABLE.values()) + ']+)')
 
 
 def indented_repr(o, indent=4):
@@ -1297,8 +1312,6 @@ def indented_repr(o, indent=4):
     One notable difference with repr is that the returned representation
     assumes `from __future__ import unicode_literals`.
     '''
-    if six.PY3:
-        raise NotImplementedError("indented_repr is not yet supported on py3")
     one_indent = ' ' * indent
 
     def recurse_indented_repr(o, level):
@@ -1318,16 +1331,7 @@ def indented_repr(o, indent=4):
             yield 'b'
             yield repr(o)
         elif isinstance(o, six.text_type):
-            yield "'"
-            # We want a readable string (non escaped unicode), but some
-            # special characters need escaping (e.g. \n, \t, etc.)
-            for i, s in enumerate(_INDENTED_REPR_RE.split(o)):
-                if i % 2:
-                    for c in s:
-                        yield _INDENTED_REPR_TABLE[c]
-                else:
-                    yield s
-            yield "'"
+            yield repr(o)
         elif hasattr(o, '__iter__'):
             yield '[\n'
             for i in o:
@@ -1344,6 +1348,20 @@ def indented_repr(o, indent=4):
 
 def encode(obj, encoding='utf-8'):
     '''Recursively encode unicode strings with the given encoding.'''
+    if six.PY3:
+        if isinstance(obj, dict):
+            return {
+                encode(k, encoding): encode(v, encoding)
+                for k, v in six.iteritems(obj)
+            }
+        if isinstance(obj, bytes):
+            return obj.decode(encoding, 'replace')
+        if isinstance(obj, six.text_type):
+            return obj
+        if isinstance(obj, Iterable):
+            return [encode(i, encoding) for i in obj]
+        return obj
+
     if isinstance(obj, dict):
         return {
             encode(k, encoding): encode(v, encoding)
@@ -1380,7 +1398,11 @@ def patch_main():
     if sys.platform == 'win32':
         import inspect
         import os
-        from multiprocessing import forking
+        try:
+            from multiprocessing import forking
+        except ImportError:
+            # multiprocessing.forking only exists on Python 2.7.
+            return
         global orig_command_line
 
         # Figure out what multiprocessing will assume our main module

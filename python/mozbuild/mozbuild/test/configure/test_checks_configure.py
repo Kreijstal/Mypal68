@@ -657,7 +657,11 @@ Java SDK directory or use '--with-java-bin-path={java-bin-dir}'
         def get_result(cmd, args=[], extra_paths=None):
             return self.get_result(textwrap.dedent('''\
                 option('--disable-compile-environment', help='compile env')
-                compile_environment = depends(when='--enable-compile-environment')(lambda: True)
+                @depends('--disable-compile-environment')
+                def compile_environment(value):
+                    if value:
+                        return False
+                    return True
                 toolchain_prefix = depends(when=True)(lambda: None)
                 include('%(topsrcdir)s/build/moz.configure/util.configure')
                 include('%(topsrcdir)s/build/moz.configure/checks.configure')

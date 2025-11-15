@@ -592,7 +592,7 @@ class BuildProgressFooter(Footer):
 
     def __init__(self, terminal, monitor):
         Footer.__init__(self, terminal)
-        self.tiers = monitor.tiers.tier_status.viewitems()
+        self.tiers = monitor.tiers.tier_status.items()
 
     def draw(self):
         """Draws this footer in the terminal."""
@@ -839,6 +839,9 @@ class CCacheStats(object):
         if not output:
             return
 
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', 'replace')
+
         for line in output.splitlines():
             line = line.strip()
             if line:
@@ -860,7 +863,7 @@ class CCacheStats(object):
                     self._values[stat_key] = self._parse_value(raw_value)
                     break
             else:
-                raise ValueError('Failed to parse ccache stats output: %s' % line)
+                return
 
     @staticmethod
     def _strip_prefix(line, prefix):
@@ -1372,7 +1375,7 @@ class BuildDriver(MozbuildObject):
         # and subsections of the objdir related to python and testing before
         # proceeding.
         clobberer = Clobberer(self.topsrcdir, self.topobjdir)
-        clobber_output = io.BytesIO()
+        clobber_output = io.StringIO()
         res = clobberer.maybe_do_clobber(os.getcwd(), False,
                                          clobber_output)
         required, performed, message = res
@@ -1434,16 +1437,16 @@ class BuildDriver(MozbuildObject):
             mozconfig_make_lines.append(arg)
 
         if mozconfig['make_flags']:
-            mozconfig_make_lines.append(b'MOZ_MAKE_FLAGS=%s' %
-                                        b' '.join(mozconfig['make_flags']))
+            mozconfig_make_lines.append('MOZ_MAKE_FLAGS=%s' %
+                                        ' '.join(mozconfig['make_flags']))
         objdir = mozpath.normsep(self.topobjdir)
-        mozconfig_make_lines.append(b'MOZ_OBJDIR=%s' % objdir)
-        mozconfig_make_lines.append(b'OBJDIR=%s' % objdir)
+        mozconfig_make_lines.append('MOZ_OBJDIR=%s' % objdir)
+        mozconfig_make_lines.append('OBJDIR=%s' % objdir)
 
         if mozconfig['path']:
-            mozconfig_make_lines.append(b'FOUND_MOZCONFIG=%s' %
+            mozconfig_make_lines.append('FOUND_MOZCONFIG=%s' %
                                         mozpath.normsep(mozconfig['path']))
-            mozconfig_make_lines.append(b'export FOUND_MOZCONFIG')
+            mozconfig_make_lines.append('export FOUND_MOZCONFIG')
 
         # The .mozconfig.mk file only contains exported variables and lines with
         # UPLOAD_EXTRA_FILES.
@@ -1451,17 +1454,17 @@ class BuildDriver(MozbuildObject):
             line for line in mozconfig_make_lines
             # Bug 1418122 investigate why UPLOAD_EXTRA_FILES is special and
             # remove it.
-            if line.startswith(b'export ') or b'UPLOAD_EXTRA_FILES' in line
+            if line.startswith('export ') or 'UPLOAD_EXTRA_FILES' in line
         ]
 
         mozconfig_client_mk = os.path.join(self.topobjdir,
                                            '.mozconfig-client-mk')
         with FileAvoidWrite(mozconfig_client_mk) as fh:
-            fh.write(b'\n'.join(mozconfig_make_lines))
+            fh.write('\n'.join(mozconfig_make_lines))
 
         mozconfig_mk = os.path.join(self.topobjdir, '.mozconfig.mk')
         with FileAvoidWrite(mozconfig_mk) as fh:
-            fh.write(b'\n'.join(mozconfig_filtered_lines))
+            fh.write('\n'.join(mozconfig_filtered_lines))
 
         # Copy the original mozconfig to the objdir.
         mozconfig_objdir = os.path.join(self.topobjdir, '.mozconfig')
@@ -1511,7 +1514,7 @@ class BuildDriver(MozbuildObject):
             # We'll just use an empty substs if there is no config.
             pass
         clobberer = Clobberer(self.topsrcdir, self.topobjdir, substs)
-        clobber_output = io.BytesIO()
+        clobber_output = io.StringIO()
         res = clobberer.maybe_do_clobber(os.getcwd(), auto_clobber,
                                          clobber_output)
         clobber_output.seek(0)

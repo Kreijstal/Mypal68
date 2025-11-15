@@ -77,7 +77,8 @@ option("--disable-compile-environment", help="Disable compiler/library checks")
 @depends("--disable-compile-environment")
 def compile_environment(compile_env):
     if compile_env:
-        return True
+        return False
+    return True
 
 
 set_config("COMPILE_ENVIRONMENT", compile_environment)
@@ -177,7 +178,7 @@ option(env="MOZ_PGO", help="Build with profile guided optimizations")
 set_config("MOZ_PGO", depends("MOZ_PGO")(lambda x: bool(x)))
 
 include('build/moz.configure/toolchain.configure',
-        when='--enable-compile-environment')
+        when=compile_environment)
 
 include('build/moz.configure/pkg.configure')
 # Make this assignment here rather than in pkg.configure to avoid
@@ -185,13 +186,13 @@ include('build/moz.configure/pkg.configure')
 add_old_configure_assignment('PKG_CONFIG', pkg_config)
 
 include('build/moz.configure/memory.configure',
-        when='--enable-compile-environment')
+        when=compile_environment)
 include('build/moz.configure/headers.configure',
-        when='--enable-compile-environment')
+        when=compile_environment)
 include('build/moz.configure/warnings.configure',
-        when='--enable-compile-environment')
+        when=compile_environment)
 include('build/moz.configure/flags.configure',
-        when='--enable-compile-environment')
+        when=compile_environment)
 # rust.configure is included by js/moz.configure.
 
 option('--enable-valgrind',
@@ -369,14 +370,14 @@ def check_objdir_backend_reuse(build_env, backends):
 
 option('--disable-gtest-in-build',
        help='Force disable building the gtest libxul during the build.',
-       when='--enable-compile-environment')
+       when=compile_environment)
 
 # Determine whether to build the gtest xul. This happens in automation
 # on Android and Desktop platforms with the exception of:
 #  - Windows PGO, where linking xul-gtest.dll takes too long;
 #  - Android other than x86_64, where gtest is not required.
 @depends('MOZ_PGO', build_project, target, 'MOZ_AUTOMATION', '--disable-gtest-in-build',
-         enable_tests, when='--enable-compile-environment')
+         enable_tests, when=compile_environment)
 def build_gtest(pgo, build_project, target, automation, enabled, enable_tests):
     if not enable_tests or not enabled:
         return None
@@ -674,7 +675,7 @@ def llvm_objdump(host_c_compiler, c_compiler, bindgen_config_paths):
 
 
 llvm_objdump = check_prog('LLVM_OBJDUMP', llvm_objdump, what='llvm-objdump',
-                          when='--enable-compile-environment',
+                          when=compile_environment,
                           paths=toolchain_search_path)
 
 add_old_configure_assignment('LLVM_OBJDUMP', llvm_objdump)

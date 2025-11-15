@@ -66,10 +66,10 @@ class VendorRust(MozbuildObject):
         Ensure that cargo is new enough. cargo 1.37 added support
         for the vendor command.
         '''
-        out = subprocess.check_output([cargo, '--version']).splitlines()[0]
+        out = subprocess.check_output([cargo, '--version']).decode('utf-8').splitlines()[0]
         if not out.startswith('cargo'):
             return False
-        return LooseVersion(out.split()[1]) >= b'1.37'
+        return LooseVersion(out.split()[1]) >= '1.37'
 
     def check_modified_files(self):
         '''
@@ -158,6 +158,8 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         'CC0-1.0',
         'ISC',
         'MIT',
+        'BSD-3-Clause AND Zlib',
+        '(MIT OR Apache-2.0) AND Unicode-3.0',
         'MPL-2.0',
         'Unlicense',
     ]
@@ -222,6 +224,12 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         we will abort if that is detected. We'll handle `/` and OR as
         equivalent and approve is any is in our approved list."""
 
+        if license_string in VendorRust.RUNTIME_LICENSE_WHITELIST:
+            return True
+
+        if package in VendorRust.RUNTIME_LICENSE_PACKAGE_WHITELIST.get(license_string, []):
+            return True
+
         if re.search(r'\s+AND', license_string):
             return False
 
@@ -270,8 +278,8 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
             # pytoml is not sophisticated enough to parse Cargo.toml files
             # with [target.'cfg(...)'.dependencies sections, so we resort
             # to scanning individual lines.
-            with open(toml_file, 'r') as f:
-                license_lines = [l for l in f if l.strip().startswith(b'license')]
+            with open(toml_file, 'r', encoding='utf-8') as f:
+                license_lines = [l for l in f if l.strip().startswith('license')]
                 license_matches = list(
                     filter(lambda x: x, [LICENSE_LINE_RE.match(l) for l in license_lines]))
                 license_file_matches = list(
@@ -311,8 +319,9 @@ to the whitelist of packages whose licenses are suitable.
                         return False
 
                     approved_hash = self.RUNTIME_LICENSE_FILE_PACKAGE_WHITELIST[package]
-                    license_contents = open(os.path.join(
-                        vendor_dir, package, license_file), 'r').read()
+                    with open(os.path.join(
+                            vendor_dir, package, license_file), 'rb') as license_fh:
+                        license_contents = license_fh.read()
                     current_hash = hashlib.sha256(license_contents).hexdigest()
                     if current_hash != approved_hash:
                         self.log(logging.ERROR, 'package_license_file_mismatch', {},
@@ -353,7 +362,7 @@ license file's hash.
 
         output = subprocess.check_output([cargo, 'vendor', vendor_dir],
                                          stderr=subprocess.STDOUT,
-                                         cwd=self.topsrcdir)
+                                         cwd=self.topsrcdir).decode('utf-8')
 
         # Get the snippet of configuration that cargo vendor outputs, and
         # update .cargo/config with it.

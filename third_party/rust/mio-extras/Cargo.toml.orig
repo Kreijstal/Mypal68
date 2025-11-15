@@ -1,0 +1,22 @@
+[package]
+name          = "mio-extras"
+version       = "2.0.5"
+license       = "MIT"
+authors       = ["Carl Lerche <me@carllerche.com>", "David Hotham"]
+description   = "Extra components for use with Mio"
+documentation = "https://docs.rs/mio-extras"
+repository    = "https://github.com/dimbleby/mio-extras"
+readme        = "README.md"
+keywords      = ["io", "async", "non-blocking"]
+categories    = ["asynchronous"]
+exclude       = [".gitignore"]
+
+[dependencies]
+mio = "0.6.14"
+log = "0.4"
+lazycell = "1"
+slab = "0.4"
+
+[[test]]
+name = "test"
+path = "test/mod.rs"

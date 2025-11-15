@@ -6,17 +6,35 @@
 # (mach). It is packaged as a module because everything is a library.
 
 from __future__ import absolute_import, print_function, unicode_literals
-from collections import Iterable
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 import argparse
 import codecs
 import errno
-import imp
+try:
+    import importlib.machinery as _importlib_machinery
+    import importlib.util as _importlib_util
+except ImportError:
+    _importlib_machinery = None
+    _importlib_util = None
+
+try:
+    import imp
+except ImportError:
+    imp = None
 import logging
 import os
 import sys
 import traceback
 import uuid
+import types
+try:
+    basestring
+except NameError:
+    basestring = str
 
 from .base import (
     CommandContext,
@@ -256,19 +274,33 @@ To see more help for a specific command, run:
         if module_name is None:
             # Ensure parent module is present otherwise we'll (likely) get
             # an error due to unknown parent.
-            if b'mach.commands' not in sys.modules:
-                mod = imp.new_module(b'mach.commands')
-                sys.modules[b'mach.commands'] = mod
+            parent_name = 'mach.commands'
+            if parent_name not in sys.modules:
+                sys.modules[parent_name] = types.ModuleType(parent_name)
 
-            module_name = 'mach.commands.%s' % uuid.uuid4().get_hex()
+            module_name = 'mach.commands.%s' % uuid.uuid4().hex
 
         try:
-            imp.load_source(module_name, path)
+            self._load_source(module_name, path)
         except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
 
             raise MissingFileError('%s does not exist' % path)
+
+    def _load_source(self, module_name, path):
+        if _importlib_util:
+            spec = _importlib_util.spec_from_file_location(module_name, path)
+            module = _importlib_util.module_from_spec(spec)
+            loader = spec.loader
+            if loader is None:
+                raise ImportError('Cannot load %s from %s' % (module_name, path))
+            loader.exec_module(module)
+            sys.modules[module_name] = module
+            return module
+        if imp:
+            return imp.load_source(module_name, path)
+        raise ImportError('No supported import machinery available')
 
     def load_commands_from_entry_point(self, group='mach.providers'):
         """Scan installed packages for mach command provider entry points. An

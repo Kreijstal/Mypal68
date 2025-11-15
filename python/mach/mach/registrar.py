@@ -6,6 +6,10 @@ from __future__ import absolute_import, unicode_literals
 
 from .base import MachError
 import time
+try:
+    long
+except NameError:
+    long = int
 
 INVALID_COMMAND_CONTEXT = r'''
 It looks like you tried to run a mach command from an invalid context. The %s

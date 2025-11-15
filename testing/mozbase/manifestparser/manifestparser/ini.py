@@ -44,10 +44,12 @@ def read_ini(fp, variables=None, default='DEFAULT', defaults_only=False,
     key = value = None
     section_names = set()
     if isinstance(fp, basestring):
-        fp = file(fp)
+        fp = open(fp, 'r')
 
     # read the lines
     for (linenum, line) in enumerate(fp.read().splitlines(), start=1):
+        if isinstance(line, bytes):
+            line = line.decode('utf-8', 'replace')
 
         stripped = line.strip()
 

@@ -5,15 +5,15 @@
 use std::fmt;
 use std::mem;
 
-/// See [`repeat_call`](../fn.repeat_call.html) for more information.
-#[deprecated(note="Use std repeat_with() instead", since="0.8")]
+/// See [`repeat_call`](crate::repeat_call) for more information.
+#[derive(Clone)]
+#[deprecated(note = "Use std repeat_with() instead", since = "0.8.0")]
 pub struct RepeatCall<F> {
     f: F,
 }
 
-impl<F> fmt::Debug for RepeatCall<F>
-{
-    debug_fmt_fields!(RepeatCall, );
+impl<F> fmt::Debug for RepeatCall<F> {
+    debug_fmt_fields!(RepeatCall,);
 }
 
 /// An iterator source that produces elements indefinitely by calling
@@ -38,20 +38,22 @@ impl<F> fmt::Debug for RepeatCall<F>
 ///     vec![1, 1, 1, 1, 1]
 /// );
 /// ```
-#[deprecated(note="Use std repeat_with() instead", since="0.8")]
+#[deprecated(note = "Use std repeat_with() instead", since = "0.8.0")]
 pub fn repeat_call<F, A>(function: F) -> RepeatCall<F>
-    where F: FnMut() -> A
+where
+    F: FnMut() -> A,
 {
     RepeatCall { f: function }
 }
 
 impl<A, F> Iterator for RepeatCall<F>
-    where F: FnMut() -> A
+where
+    F: FnMut() -> A,
 {
     type Item = A;
 
     #[inline]
-    fn next(&mut self) -> Option<A> {
+    fn next(&mut self) -> Option<Self::Item> {
         Some((self.f)())
     }
 
@@ -66,7 +68,7 @@ impl<A, F> Iterator for RepeatCall<F>
 /// `unfold` is a general iterator builder: it has a mutable state value,
 /// and a closure with access to the state that produces the next value.
 ///
-/// This more or less equivalent to a regular struct with an `Iterator`
+/// This more or less equivalent to a regular struct with an [`Iterator`]
 /// implementation, and is useful for one-off iterators.
 ///
 /// ```
@@ -75,22 +77,21 @@ impl<A, F> Iterator for RepeatCall<F>
 ///
 /// use itertools::unfold;
 ///
-/// let (mut x1, mut x2) = (1u32, 1u32);
-/// let mut fibonacci = unfold((), move |_| {
+/// let mut fibonacci = unfold((1u32, 1u32), |(x1, x2)| {
 ///     // Attempt to get the next Fibonacci number
-///     let next = x1.saturating_add(x2);
+///     let next = x1.saturating_add(*x2);
 ///
 ///     // Shift left: ret <- x1 <- x2 <- next
-///     let ret = x1;
-///     x1 = x2;
-///     x2 = next;
+///     let ret = *x1;
+///     *x1 = *x2;
+///     *x2 = next;
 ///
 ///     // If addition has saturated at the maximum, we are finished
-///     if ret == x1 && ret > 1 {
-///         return None;
+///     if ret == *x1 && ret > 1 {
+///         None
+///     } else {
+///         Some(ret)
 ///     }
-///
-///     Some(ret)
 /// });
 ///
 /// itertools::assert_equal(fibonacci.by_ref().take(8),
@@ -98,21 +99,23 @@ impl<A, F> Iterator for RepeatCall<F>
 /// assert_eq!(fibonacci.last(), Some(2_971_215_073))
 /// ```
 pub fn unfold<A, St, F>(initial_state: St, f: F) -> Unfold<St, F>
-    where F: FnMut(&mut St) -> Option<A>
+where
+    F: FnMut(&mut St) -> Option<A>,
 {
     Unfold {
-        f: f,
+        f,
         state: initial_state,
     }
 }
 
 impl<St, F> fmt::Debug for Unfold<St, F>
-    where St: fmt::Debug,
+where
+    St: fmt::Debug,
 {
     debug_fmt_fields!(Unfold, state);
 }
 
-/// See [`unfold`](../fn.unfold.html) for more information.
+/// See [`unfold`](crate::unfold) for more information.
 #[derive(Clone)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Unfold<St, F> {
@@ -122,27 +125,21 @@ pub struct Unfold<St, F> {
 }
 
 impl<A, St, F> Iterator for Unfold<St, F>
-    where F: FnMut(&mut St) -> Option<A>
+where
+    F: FnMut(&mut St) -> Option<A>,
 {
     type Item = A;
 
     #[inline]
-    fn next(&mut self) -> Option<A> {
+    fn next(&mut self) -> Option<Self::Item> {
         (self.f)(&mut self.state)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        // no possible known bounds at this point
-        (0, None)
     }
 }
 
 /// An iterator that infinitely applies function to value and yields results.
 ///
-/// This `struct` is created by the [`iterate()`] function. See its documentation for more.
-///
-/// [`iterate()`]: ../fn.iterate.html
+/// This `struct` is created by the [`iterate()`](crate::iterate) function.
+/// See its documentation for more.
 #[derive(Clone)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Iterate<St, F> {
@@ -151,13 +148,15 @@ pub struct Iterate<St, F> {
 }
 
 impl<St, F> fmt::Debug for Iterate<St, F>
-    where St: fmt::Debug,
+where
+    St: fmt::Debug,
 {
     debug_fmt_fields!(Iterate, state);
 }
 
 impl<St, F> Iterator for Iterate<St, F>
-    where F: FnMut(&St) -> St
+where
+    F: FnMut(&St) -> St,
 {
     type Item = St;
 
@@ -178,13 +177,26 @@ impl<St, F> Iterator for Iterate<St, F>
 /// ```
 /// use itertools::iterate;
 ///
-/// itertools::assert_equal(iterate(1, |&i| i * 3).take(5), vec![1, 3, 9, 27, 81]);
+/// itertools::assert_equal(iterate(1, |i| i % 3 + 1).take(5), vec![1, 2, 3, 1, 2]);
 /// ```
+///
+/// **Panics** if compute the next value does.
+///
+/// ```should_panic
+/// # use itertools::iterate;
+/// let mut it = iterate(25u32, |x| x - 10).take_while(|&x| x > 10);
+/// assert_eq!(it.next(), Some(25)); // `Iterate` holds 15.
+/// assert_eq!(it.next(), Some(15)); // `Iterate` holds 5.
+/// it.next(); // `5 - 10` overflows.
+/// ```
+///
+/// You can alternatively use [`core::iter::successors`] as it better describes a finite iterator.
 pub fn iterate<St, F>(initial_value: St, f: F) -> Iterate<St, F>
-    where F: FnMut(&St) -> St
+where
+    F: FnMut(&St) -> St,
 {
     Iterate {
         state: initial_value,
-        f: f,
+        f,
     }
 }

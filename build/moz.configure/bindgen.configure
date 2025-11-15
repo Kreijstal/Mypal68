@@ -16,7 +16,10 @@ def check_cbindgen_version(cbindgen, fatal=False):
     cbindgen_min_version = Version('0.12.0')
 
     # cbindgen x.y.z
-    version = Version(check_cmd_output(cbindgen, '--version').strip().split(" ")[1])
+    output = check_cmd_output(cbindgen, '--version').strip()
+    if hasattr(output, 'decode'):
+        output = output.decode('utf-8', 'replace')
+    version = Version(output.split(" ")[1])
     log.debug("%s has version %s" % (cbindgen, version))
     if version >= cbindgen_min_version:
         return True
@@ -213,7 +216,7 @@ def bindgen_config_paths(clang, libclang, build_project):
 @imports(_from='textwrap', _import='dedent')
 def min_libclang_version(libclang):
     try:
-        lib = CDLL(libclang.encode('utf-8'))
+        lib = CDLL(libclang)
         # We want at least 5.0. The API we test below is enough for that.
         # Just accessing it should throw if not found.
         fun = lib.clang_getAddressSpace
@@ -261,7 +264,7 @@ def basic_bindgen_cflags(target, is_unix, compiler_info, android_cflags,
             '-DOS_WIN=1',
             '-DWIN32=1',
         ],
-    }.get(target.os, [])
+    }.get(str(target.os), [])
 
     if compiler_info.type == 'clang-cl':
         args += [

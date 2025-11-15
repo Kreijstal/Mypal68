@@ -30,7 +30,7 @@ ifeq "$(CWD)" "/"
 CWD   := /.
 endif
 
-PYTHON ?= $(shell which python2.7 > /dev/null 2>&1 && echo python2.7 || echo python)
+PYTHON ?= $(shell command -v python3 > /dev/null 2>&1 && echo python3 || echo python)
 
 ####################################
 # Load mozconfig Options

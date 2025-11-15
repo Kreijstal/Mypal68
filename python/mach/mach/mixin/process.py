@@ -16,6 +16,10 @@ from mozprocess.processhandler import ProcessHandlerMixin
 
 from .logging import LoggingMixin
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 # Perform detection of operating system environment. This is used by command
 # execution. We only do this once to save redundancy. Yes, this can fail module
@@ -102,17 +106,20 @@ class ProcessExecutionMixin(LoggingMixin):
 
         self.log(logging.DEBUG, 'process', {'env': use_env}, 'Environment: {env}')
 
-        # There is a bug in subprocess where it doesn't like unicode types in
-        # environment variables. Here, ensure all unicode are converted to
-        # binary. utf-8 is our globally assumed default. If the caller doesn't
-        # want UTF-8, they shouldn't pass in a unicode instance.
+        # Windows and Python 3 require environment variables to be str. Normalize
+        # everything we forward to subprocess so callers can pass bytes or other
+        # objects without tripping CreateProcess().
         normalized_env = {}
         for k, v in use_env.items():
-            if isinstance(k, unicode):
-                k = k.encode('utf-8', 'strict')
+            if isinstance(k, bytes):
+                k = k.decode('utf-8', 'strict')
+            elif not isinstance(k, str):
+                k = str(k)
 
-            if isinstance(v, unicode):
-                v = v.encode('utf-8', 'strict')
+            if isinstance(v, bytes):
+                v = v.decode('utf-8', 'strict')
+            elif not isinstance(v, str):
+                v = str(v)
 
             normalized_env[k] = v
 

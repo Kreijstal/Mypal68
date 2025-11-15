@@ -84,14 +84,14 @@ def config_status(config, execute=True):
 
     sanitized_config = {}
     sanitized_config['substs'] = {
-        k: sanitized_bools(v) for k, v in config.iteritems()
+        k: sanitized_bools(v) for k, v in config.items()
         if k not in ('DEFINES', 'TOPSRCDIR', 'TOPOBJDIR', 'CONFIG_STATUS_DEPS',
                      'OLD_CONFIGURE_SUBSTS', 'OLD_CONFIGURE_DEFINES')
     }
     for k, v in config['OLD_CONFIGURE_SUBSTS']:
         sanitized_config['substs'][k] = sanitized_bools(v)
     sanitized_config['defines'] = {
-        k: sanitized_bools(v) for k, v in config['DEFINES'].iteritems()
+        k: sanitized_bools(v) for k, v in config['DEFINES'].items()
     }
     for k, v in config['OLD_CONFIGURE_DEFINES']:
         sanitized_config['defines'][k] = sanitized_bools(v)
@@ -113,7 +113,7 @@ def config_status(config, execute=True):
         ''') % {'python': config['PYTHON'], 'encoding': encoding})
         # A lot of the build backend code is currently expecting byte
         # strings and breaks in subtle ways with unicode strings. (bug 1296508)
-        for k, v in sanitized_config.iteritems():
+        for k, v in sanitized_config.items():
             fh.write('%s = encode(%s, encoding)\n' % (k, indented_repr(v)))
         fh.write("__all__ = ['topobjdir', 'topsrcdir', 'defines', "
                  "'substs', 'mozconfig']")
@@ -133,8 +133,9 @@ def config_status(config, execute=True):
 
     # Write out a file so the build backend knows to re-run configure when
     # relevant Python changes.
+    config_status_deps = config.get('CONFIG_STATUS_DEPS') or []
     with open('config_status_deps.in', 'w') as fh:
-        for f in itertools.chain(config['CONFIG_STATUS_DEPS'],
+        for f in itertools.chain(config_status_deps,
                                  iter_modules_in_path(config['TOPOBJDIR'],
                                                       config['TOPSRCDIR'])):
             fh.write('%s\n' % mozpath.normpath(f))

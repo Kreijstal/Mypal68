@@ -12,7 +12,7 @@ from collections import (
     defaultdict,
     namedtuple,
 )
-from StringIO import StringIO
+from io import StringIO
 from itertools import chain
 
 from mozpack.manifests import (

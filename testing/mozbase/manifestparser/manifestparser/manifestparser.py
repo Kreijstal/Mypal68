@@ -196,7 +196,9 @@ class ManifestParser(object):
 
             # otherwise an item
             # apply ancestor defaults, while maintaining current file priority
-            data = dict(self._ancestor_defaults.items() + data.items())
+            combined = dict(self._ancestor_defaults)
+            combined.update(data)
+            data = combined
 
             test = data
             test['name'] = section

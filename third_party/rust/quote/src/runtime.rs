@@ -1,39 +1,66 @@
+use self::get_span::{GetSpan, GetSpanBase, GetSpanInner};
 use crate::{IdentFragment, ToTokens, TokenStreamExt};
-use std::fmt;
-use std::ops::BitOr;
+use core::fmt;
+use core::iter;
+use core::ops::BitOr;
+use proc_macro2::{Group, Ident, Punct, Spacing, TokenTree};
 
-pub use proc_macro2::*;
+#[doc(hidden)]
+pub use alloc::format;
+#[doc(hidden)]
+pub use core::option::Option;
 
-pub struct HasIterator; // True
-pub struct ThereIsNoIteratorInRepetition; // False
+#[doc(hidden)]
+pub type Delimiter = proc_macro2::Delimiter;
+#[doc(hidden)]
+pub type Span = proc_macro2::Span;
+#[doc(hidden)]
+pub type TokenStream = proc_macro2::TokenStream;
 
-impl BitOr<ThereIsNoIteratorInRepetition> for ThereIsNoIteratorInRepetition {
-    type Output = ThereIsNoIteratorInRepetition;
-    fn bitor(self, _rhs: ThereIsNoIteratorInRepetition) -> ThereIsNoIteratorInRepetition {
-        ThereIsNoIteratorInRepetition
+#[doc(hidden)]
+pub struct HasIterator<const B: bool>;
+
+impl BitOr<HasIterator<false>> for HasIterator<false> {
+    type Output = HasIterator<false>;
+    fn bitor(self, _rhs: HasIterator<false>) -> HasIterator<false> {
+        HasIterator::<false>
     }
 }
 
-impl BitOr<ThereIsNoIteratorInRepetition> for HasIterator {
-    type Output = HasIterator;
-    fn bitor(self, _rhs: ThereIsNoIteratorInRepetition) -> HasIterator {
-        HasIterator
+impl BitOr<HasIterator<false>> for HasIterator<true> {
+    type Output = HasIterator<true>;
+    fn bitor(self, _rhs: HasIterator<false>) -> HasIterator<true> {
+        HasIterator::<true>
     }
 }
 
-impl BitOr<HasIterator> for ThereIsNoIteratorInRepetition {
-    type Output = HasIterator;
-    fn bitor(self, _rhs: HasIterator) -> HasIterator {
-        HasIterator
+impl BitOr<HasIterator<true>> for HasIterator<false> {
+    type Output = HasIterator<true>;
+    fn bitor(self, _rhs: HasIterator<true>) -> HasIterator<true> {
+        HasIterator::<true>
     }
 }
 
-impl BitOr<HasIterator> for HasIterator {
-    type Output = HasIterator;
-    fn bitor(self, _rhs: HasIterator) -> HasIterator {
-        HasIterator
+impl BitOr<HasIterator<true>> for HasIterator<true> {
+    type Output = HasIterator<true>;
+    fn bitor(self, _rhs: HasIterator<true>) -> HasIterator<true> {
+        HasIterator::<true>
     }
 }
+
+#[doc(hidden)]
+#[cfg_attr(
+    not(no_diagnostic_namespace),
+    diagnostic::on_unimplemented(
+        message = "repetition contains no interpolated value that is an iterator",
+        label = "none of the values interpolated inside this repetition are iterable"
+    )
+)]
+pub trait CheckHasIterator<const B: bool>: Sized {
+    fn check(self) {}
+}
+
+impl CheckHasIterator<true> for HasIterator<true> {}
 
 /// Extension traits used by the implementation of `quote!`. These are defined
 /// in separate traits, rather than as a single trait due to ambiguity issues.
@@ -41,17 +68,18 @@ impl BitOr<HasIterator> for HasIterator {
 /// These traits expose a `quote_into_iter` method which should allow calling
 /// whichever impl happens to be applicable. Calling that method repeatedly on
 /// the returned value should be idempotent.
+#[doc(hidden)]
 pub mod ext {
-    use super::RepInterp;
-    use super::{HasIterator as HasIter, ThereIsNoIteratorInRepetition as DoesNotHaveIter};
+    use super::{HasIterator, RepInterp};
     use crate::ToTokens;
-    use std::collections::btree_set::{self, BTreeSet};
-    use std::slice;
+    use alloc::collections::btree_set::{self, BTreeSet};
+    use core::slice;
 
     /// Extension trait providing the `quote_into_iter` method on iterators.
+    #[doc(hidden)]
     pub trait RepIteratorExt: Iterator + Sized {
-        fn quote_into_iter(self) -> (Self, HasIter) {
-            (self, HasIter)
+        fn quote_into_iter(self) -> (Self, HasIterator<true>) {
+            (self, HasIterator::<true>)
         }
     }
 
@@ -60,16 +88,17 @@ pub mod ext {
     /// Extension trait providing the `quote_into_iter` method for
     /// non-iterable types. These types interpolate the same value in each
     /// iteration of the repetition.
+    #[doc(hidden)]
     pub trait RepToTokensExt {
         /// Pretend to be an iterator for the purposes of `quote_into_iter`.
         /// This allows repeated calls to `quote_into_iter` to continue
-        /// correctly returning DoesNotHaveIter.
+        /// correctly returning HasIterator<false>.
         fn next(&self) -> Option<&Self> {
             Some(self)
         }
 
-        fn quote_into_iter(&self) -> (&Self, DoesNotHaveIter) {
-            (self, DoesNotHaveIter)
+        fn quote_into_iter(&self) -> (&Self, HasIterator<false>) {
+            (self, HasIterator::<false>)
         }
     }
 
@@ -77,24 +106,25 @@ pub mod ext {
 
     /// Extension trait providing the `quote_into_iter` method for types that
     /// can be referenced as an iterator.
+    #[doc(hidden)]
     pub trait RepAsIteratorExt<'q> {
         type Iter: Iterator;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter);
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>);
     }
 
-    impl<'q, 'a, T: RepAsIteratorExt<'q> + ?Sized> RepAsIteratorExt<'q> for &'a T {
+    impl<'q, T: RepAsIteratorExt<'q> + ?Sized> RepAsIteratorExt<'q> for &T {
         type Iter = T::Iter;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
             <T as RepAsIteratorExt>::quote_into_iter(*self)
         }
     }
 
-    impl<'q, 'a, T: RepAsIteratorExt<'q> + ?Sized> RepAsIteratorExt<'q> for &'a mut T {
+    impl<'q, T: RepAsIteratorExt<'q> + ?Sized> RepAsIteratorExt<'q> for &mut T {
         type Iter = T::Iter;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
             <T as RepAsIteratorExt>::quote_into_iter(*self)
         }
     }
@@ -102,50 +132,39 @@ pub mod ext {
     impl<'q, T: 'q> RepAsIteratorExt<'q> for [T] {
         type Iter = slice::Iter<'q, T>;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
-            (self.iter(), HasIter)
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
+            (self.iter(), HasIterator::<true>)
+        }
+    }
+
+    impl<'q, T: 'q, const N: usize> RepAsIteratorExt<'q> for [T; N] {
+        type Iter = slice::Iter<'q, T>;
+
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
+            (self.iter(), HasIterator::<true>)
         }
     }
 
     impl<'q, T: 'q> RepAsIteratorExt<'q> for Vec<T> {
         type Iter = slice::Iter<'q, T>;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
-            (self.iter(), HasIter)
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
+            (self.iter(), HasIterator::<true>)
         }
     }
 
     impl<'q, T: 'q> RepAsIteratorExt<'q> for BTreeSet<T> {
         type Iter = btree_set::Iter<'q, T>;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
-            (self.iter(), HasIter)
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
+            (self.iter(), HasIterator::<true>)
         }
     }
-
-    macro_rules! array_rep_slice {
-        ($($l:tt)*) => {
-            $(
-                impl<'q, T: 'q> RepAsIteratorExt<'q> for [T; $l] {
-                    type Iter = slice::Iter<'q, T>;
-
-                    fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
-                        (self.iter(), HasIter)
-                    }
-                }
-            )*
-        }
-    }
-
-    array_rep_slice!(
-        0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16
-        17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
-    );
 
     impl<'q, T: RepAsIteratorExt<'q>> RepAsIteratorExt<'q> for RepInterp<T> {
         type Iter = T::Iter;
 
-        fn quote_into_iter(&'q self) -> (Self::Iter, HasIter) {
+        fn quote_into_iter(&'q self) -> (Self::Iter, HasIterator<true>) {
             self.0.quote_into_iter()
         }
     }
@@ -154,6 +173,7 @@ pub mod ext {
 // Helper type used within interpolations to allow for repeated binding names.
 // Implements the relevant traits, and exports a dummy `next()` method.
 #[derive(Copy, Clone)]
+#[doc(hidden)]
 pub struct RepInterp<T>(pub T);
 
 impl<T> RepInterp<T> {
@@ -180,44 +200,161 @@ impl<T: ToTokens> ToTokens for RepInterp<T> {
     }
 }
 
-fn is_ident_start(c: u8) -> bool {
-    (b'a' <= c && c <= b'z') || (b'A' <= c && c <= b'Z') || c == b'_'
+#[doc(hidden)]
+#[inline]
+pub fn get_span<T>(span: T) -> GetSpan<T> {
+    GetSpan(GetSpanInner(GetSpanBase(span)))
 }
 
-fn is_ident_continue(c: u8) -> bool {
-    (b'a' <= c && c <= b'z') || (b'A' <= c && c <= b'Z') || c == b'_' || (b'0' <= c && c <= b'9')
-}
+mod get_span {
+    use core::ops::Deref;
+    use proc_macro2::extra::DelimSpan;
+    use proc_macro2::Span;
 
-fn is_ident(token: &str) -> bool {
-    let mut iter = token.bytes();
-    let first_ok = iter.next().map(is_ident_start).unwrap_or(false);
+    pub struct GetSpan<T>(pub(crate) GetSpanInner<T>);
 
-    first_ok && iter.all(is_ident_continue)
-}
+    pub struct GetSpanInner<T>(pub(crate) GetSpanBase<T>);
 
-pub fn parse(tokens: &mut TokenStream, span: Span, s: &str) {
-    if is_ident(s) {
-        // Fast path, since idents are the most common token.
-        tokens.append(Ident::new(s, span));
-    } else {
-        let s: TokenStream = s.parse().expect("invalid token stream");
-        tokens.extend(s.into_iter().map(|mut t| {
-            t.set_span(span);
-            t
-        }));
+    pub struct GetSpanBase<T>(pub(crate) T);
+
+    impl GetSpan<Span> {
+        #[inline]
+        pub fn __into_span(self) -> Span {
+            ((self.0).0).0
+        }
+    }
+
+    impl GetSpanInner<DelimSpan> {
+        #[inline]
+        pub fn __into_span(&self) -> Span {
+            (self.0).0.join()
+        }
+    }
+
+    impl<T> GetSpanBase<T> {
+        #[allow(clippy::unused_self)]
+        pub fn __into_span(&self) -> T {
+            unreachable!()
+        }
+    }
+
+    impl<T> Deref for GetSpan<T> {
+        type Target = GetSpanInner<T>;
+
+        #[inline]
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl<T> Deref for GetSpanInner<T> {
+        type Target = GetSpanBase<T>;
+
+        #[inline]
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
 }
 
+#[doc(hidden)]
+pub fn push_group(tokens: &mut TokenStream, delimiter: Delimiter, inner: TokenStream) {
+    tokens.append(Group::new(delimiter, inner));
+}
+
+#[doc(hidden)]
+pub fn push_group_spanned(
+    tokens: &mut TokenStream,
+    span: Span,
+    delimiter: Delimiter,
+    inner: TokenStream,
+) {
+    let mut g = Group::new(delimiter, inner);
+    g.set_span(span);
+    tokens.append(g);
+}
+
+#[doc(hidden)]
+pub fn parse(tokens: &mut TokenStream, s: &str) {
+    let s: TokenStream = s.parse().expect("invalid token stream");
+    tokens.extend(iter::once(s));
+}
+
+#[doc(hidden)]
+pub fn parse_spanned(tokens: &mut TokenStream, span: Span, s: &str) {
+    let s: TokenStream = s.parse().expect("invalid token stream");
+    for token in s {
+        tokens.append(respan_token_tree(token, span));
+    }
+}
+
+// Token tree with every span replaced by the given one.
+fn respan_token_tree(mut token: TokenTree, span: Span) -> TokenTree {
+    match &mut token {
+        TokenTree::Group(g) => {
+            let mut tokens = TokenStream::new();
+            for token in g.stream() {
+                tokens.append(respan_token_tree(token, span));
+            }
+            *g = Group::new(g.delimiter(), tokens);
+            g.set_span(span);
+        }
+        other => other.set_span(span),
+    }
+    token
+}
+
+#[doc(hidden)]
+pub fn push_ident(tokens: &mut TokenStream, s: &str) {
+    let span = Span::call_site();
+    push_ident_spanned(tokens, span, s);
+}
+
+#[doc(hidden)]
+pub fn push_ident_spanned(tokens: &mut TokenStream, span: Span, s: &str) {
+    tokens.append(ident_maybe_raw(s, span));
+}
+
+#[doc(hidden)]
+pub fn push_lifetime(tokens: &mut TokenStream, lifetime: &str) {
+    tokens.append(TokenTree::Punct(Punct::new('\'', Spacing::Joint)));
+    tokens.append(TokenTree::Ident(Ident::new(
+        &lifetime[1..],
+        Span::call_site(),
+    )));
+}
+
+#[doc(hidden)]
+pub fn push_lifetime_spanned(tokens: &mut TokenStream, span: Span, lifetime: &str) {
+    tokens.append(TokenTree::Punct({
+        let mut apostrophe = Punct::new('\'', Spacing::Joint);
+        apostrophe.set_span(span);
+        apostrophe
+    }));
+    tokens.append(TokenTree::Ident(Ident::new(&lifetime[1..], span)));
+}
+
 macro_rules! push_punct {
-    ($name:ident $char1:tt) => {
-        pub fn $name(tokens: &mut TokenStream, span: Span) {
+    ($name:ident $spanned:ident $char1:tt) => {
+        #[doc(hidden)]
+        pub fn $name(tokens: &mut TokenStream) {
+            tokens.append(Punct::new($char1, Spacing::Alone));
+        }
+        #[doc(hidden)]
+        pub fn $spanned(tokens: &mut TokenStream, span: Span) {
             let mut punct = Punct::new($char1, Spacing::Alone);
             punct.set_span(span);
             tokens.append(punct);
         }
     };
-    ($name:ident $char1:tt $char2:tt) => {
-        pub fn $name(tokens: &mut TokenStream, span: Span) {
+    ($name:ident $spanned:ident $char1:tt $char2:tt) => {
+        #[doc(hidden)]
+        pub fn $name(tokens: &mut TokenStream) {
+            tokens.append(Punct::new($char1, Spacing::Joint));
+            tokens.append(Punct::new($char2, Spacing::Alone));
+        }
+        #[doc(hidden)]
+        pub fn $spanned(tokens: &mut TokenStream, span: Span) {
             let mut punct = Punct::new($char1, Spacing::Joint);
             punct.set_span(span);
             tokens.append(punct);
@@ -226,8 +363,15 @@ macro_rules! push_punct {
             tokens.append(punct);
         }
     };
-    ($name:ident $char1:tt $char2:tt $char3:tt) => {
-        pub fn $name(tokens: &mut TokenStream, span: Span) {
+    ($name:ident $spanned:ident $char1:tt $char2:tt $char3:tt) => {
+        #[doc(hidden)]
+        pub fn $name(tokens: &mut TokenStream) {
+            tokens.append(Punct::new($char1, Spacing::Joint));
+            tokens.append(Punct::new($char2, Spacing::Joint));
+            tokens.append(Punct::new($char3, Spacing::Alone));
+        }
+        #[doc(hidden)]
+        pub fn $spanned(tokens: &mut TokenStream, span: Span) {
             let mut punct = Punct::new($char1, Spacing::Joint);
             punct.set_span(span);
             tokens.append(punct);
@@ -241,89 +385,74 @@ macro_rules! push_punct {
     };
 }
 
-push_punct!(push_add '+');
-push_punct!(push_add_eq '+' '=');
-push_punct!(push_and '&');
-push_punct!(push_and_and '&' '&');
-push_punct!(push_and_eq '&' '=');
-push_punct!(push_at '@');
-push_punct!(push_bang '!');
-push_punct!(push_caret '^');
-push_punct!(push_caret_eq '^' '=');
-push_punct!(push_colon ':');
-push_punct!(push_colon2 ':' ':');
-push_punct!(push_comma ',');
-push_punct!(push_div '/');
-push_punct!(push_div_eq '/' '=');
-push_punct!(push_dot '.');
-push_punct!(push_dot2 '.' '.');
-push_punct!(push_dot3 '.' '.' '.');
-push_punct!(push_dot_dot_eq '.' '.' '=');
-push_punct!(push_eq '=');
-push_punct!(push_eq_eq '=' '=');
-push_punct!(push_ge '>' '=');
-push_punct!(push_gt '>');
-push_punct!(push_le '<' '=');
-push_punct!(push_lt '<');
-push_punct!(push_mul_eq '*' '=');
-push_punct!(push_ne '!' '=');
-push_punct!(push_or '|');
-push_punct!(push_or_eq '|' '=');
-push_punct!(push_or_or '|' '|');
-push_punct!(push_pound '#');
-push_punct!(push_question '?');
-push_punct!(push_rarrow '-' '>');
-push_punct!(push_larrow '<' '-');
-push_punct!(push_rem '%');
-push_punct!(push_rem_eq '%' '=');
-push_punct!(push_fat_arrow '=' '>');
-push_punct!(push_semi ';');
-push_punct!(push_shl '<' '<');
-push_punct!(push_shl_eq '<' '<' '=');
-push_punct!(push_shr '>' '>');
-push_punct!(push_shr_eq '>' '>' '=');
-push_punct!(push_star '*');
-push_punct!(push_sub '-');
-push_punct!(push_sub_eq '-' '=');
+push_punct!(push_add push_add_spanned '+');
+push_punct!(push_add_eq push_add_eq_spanned '+' '=');
+push_punct!(push_and push_and_spanned '&');
+push_punct!(push_and_and push_and_and_spanned '&' '&');
+push_punct!(push_and_eq push_and_eq_spanned '&' '=');
+push_punct!(push_at push_at_spanned '@');
+push_punct!(push_bang push_bang_spanned '!');
+push_punct!(push_caret push_caret_spanned '^');
+push_punct!(push_caret_eq push_caret_eq_spanned '^' '=');
+push_punct!(push_colon push_colon_spanned ':');
+push_punct!(push_colon2 push_colon2_spanned ':' ':');
+push_punct!(push_comma push_comma_spanned ',');
+push_punct!(push_div push_div_spanned '/');
+push_punct!(push_div_eq push_div_eq_spanned '/' '=');
+push_punct!(push_dot push_dot_spanned '.');
+push_punct!(push_dot2 push_dot2_spanned '.' '.');
+push_punct!(push_dot3 push_dot3_spanned '.' '.' '.');
+push_punct!(push_dot_dot_eq push_dot_dot_eq_spanned '.' '.' '=');
+push_punct!(push_eq push_eq_spanned '=');
+push_punct!(push_eq_eq push_eq_eq_spanned '=' '=');
+push_punct!(push_ge push_ge_spanned '>' '=');
+push_punct!(push_gt push_gt_spanned '>');
+push_punct!(push_le push_le_spanned '<' '=');
+push_punct!(push_lt push_lt_spanned '<');
+push_punct!(push_mul_eq push_mul_eq_spanned '*' '=');
+push_punct!(push_ne push_ne_spanned '!' '=');
+push_punct!(push_or push_or_spanned '|');
+push_punct!(push_or_eq push_or_eq_spanned '|' '=');
+push_punct!(push_or_or push_or_or_spanned '|' '|');
+push_punct!(push_pound push_pound_spanned '#');
+push_punct!(push_question push_question_spanned '?');
+push_punct!(push_rarrow push_rarrow_spanned '-' '>');
+push_punct!(push_larrow push_larrow_spanned '<' '-');
+push_punct!(push_rem push_rem_spanned '%');
+push_punct!(push_rem_eq push_rem_eq_spanned '%' '=');
+push_punct!(push_fat_arrow push_fat_arrow_spanned '=' '>');
+push_punct!(push_semi push_semi_spanned ';');
+push_punct!(push_shl push_shl_spanned '<' '<');
+push_punct!(push_shl_eq push_shl_eq_spanned '<' '<' '=');
+push_punct!(push_shr push_shr_spanned '>' '>');
+push_punct!(push_shr_eq push_shr_eq_spanned '>' '>' '=');
+push_punct!(push_star push_star_spanned '*');
+push_punct!(push_sub push_sub_spanned '-');
+push_punct!(push_sub_eq push_sub_eq_spanned '-' '=');
+
+#[doc(hidden)]
+pub fn push_underscore(tokens: &mut TokenStream) {
+    push_underscore_spanned(tokens, Span::call_site());
+}
+
+#[doc(hidden)]
+pub fn push_underscore_spanned(tokens: &mut TokenStream, span: Span) {
+    tokens.append(Ident::new("_", span));
+}
 
 // Helper method for constructing identifiers from the `format_ident!` macro,
 // handling `r#` prefixes.
-//
-// Directly parsing the input string may produce a valid identifier,
-// although the input string was invalid, due to ignored characters such as
-// whitespace and comments. Instead, we always create a non-raw identifier
-// to validate that the string is OK, and only parse again if needed.
-//
-// The `is_ident` method defined above is insufficient for validation, as it
-// will reject non-ASCII identifiers.
+#[doc(hidden)]
 pub fn mk_ident(id: &str, span: Option<Span>) -> Ident {
     let span = span.unwrap_or_else(Span::call_site);
+    ident_maybe_raw(id, span)
+}
 
-    let is_raw = id.starts_with("r#");
-    let unraw = Ident::new(if is_raw { &id[2..] } else { id }, span);
-    if !is_raw {
-        return unraw;
-    }
-
-    // At this point, the identifier is raw, and the unraw-ed version of it was
-    // successfully converted into an identifier. Try to produce a valid raw
-    // identifier by running the `TokenStream` parser, and unwrapping the first
-    // token as an `Ident`.
-    //
-    // FIXME: When `Ident::new_raw` becomes stable, this method should be
-    // updated to call it when available.
-    match id.parse::<TokenStream>() {
-        Ok(ts) => {
-            let mut iter = ts.into_iter();
-            match (iter.next(), iter.next()) {
-                (Some(TokenTree::Ident(mut id)), None) => {
-                    id.set_span(span);
-                    id
-                }
-                _ => unreachable!("valid raw ident fails to parse"),
-            }
-        }
-        Err(_) => unreachable!("valid raw ident fails to parse"),
+fn ident_maybe_raw(id: &str, span: Span) -> Ident {
+    if let Some(id) = id.strip_prefix("r#") {
+        Ident::new_raw(id, span)
+    } else {
+        Ident::new(id, span)
     }
 }
 
@@ -334,6 +463,7 @@ pub fn mk_ident(id: &str, span: Option<Span>) -> Ident {
 // `Octal`, `LowerHex`, `UpperHex`, and `Binary` to allow for their use within
 // `format_ident!`.
 #[derive(Copy, Clone)]
+#[doc(hidden)]
 pub struct IdentFragmentAdapter<T: IdentFragment>(pub T);
 
 impl<T: IdentFragment> IdentFragmentAdapter<T> {

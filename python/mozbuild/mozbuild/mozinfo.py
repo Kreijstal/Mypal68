@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 import re
 import json
+import six
 
 
 def build_dict(config, env=os.environ):
@@ -26,6 +27,11 @@ def build_dict(config, env=os.environ):
         raise Exception("Missing required environment variables: %s" %
                         ', '.join(missing))
 
+    def as_text(value):
+        if isinstance(value, six.string_types):
+            return six.text_type(value)
+        return value
+
     d = {}
     d['topsrcdir'] = config.topsrcdir
 
@@ -33,7 +39,7 @@ def build_dict(config, env=os.environ):
         d['mozconfig'] = config.mozconfig
 
     # os
-    o = substs["OS_TARGET"]
+    o = as_text(substs["OS_TARGET"])
     known_os = {"Linux": "linux",
                 "WINNT": "win",
                 "Darwin": "mac",
@@ -45,18 +51,20 @@ def build_dict(config, env=os.environ):
         d["os"] = o.lower()
 
     # Widget toolkit, just pass the value directly through.
-    d["toolkit"] = substs.get("MOZ_WIDGET_TOOLKIT")
+    toolkit = substs.get("MOZ_WIDGET_TOOLKIT")
+    if toolkit is not None:
+        d["toolkit"] = as_text(toolkit)
 
     # Application name
     if 'MOZ_APP_NAME' in substs:
-        d["appname"] = substs["MOZ_APP_NAME"]
+        d["appname"] = as_text(substs["MOZ_APP_NAME"])
 
     # Build app name
     if 'MOZ_BUILD_APP' in substs:
-        d["buildapp"] = substs["MOZ_BUILD_APP"]
+        d["buildapp"] = as_text(substs["MOZ_BUILD_APP"])
 
     # processor
-    p = substs["TARGET_CPU"]
+    p = as_text(substs["TARGET_CPU"])
     # do some slight massaging for some values
     # TODO: retain specific values in case someone wants them?
     if p.startswith("arm"):
@@ -93,7 +101,9 @@ def build_dict(config, env=os.environ):
     d['updater'] = substs.get('MOZ_UPDATER') == '1'
     d['artifact'] = substs.get('MOZ_ARTIFACT_BUILDS') == '1'
     d['ccov'] = substs.get('MOZ_CODE_COVERAGE') == '1'
-    d['cc_type'] = substs.get('CC_TYPE')
+    cc_type = substs.get('CC_TYPE')
+    if cc_type is not None:
+        d['cc_type'] = as_text(cc_type)
 
     def guess_platform():
         if d['buildapp'] == 'browser':
@@ -129,7 +139,7 @@ def build_dict(config, env=os.environ):
         d['buildtype_guess'] = guess_buildtype()
 
     if d.get('buildapp', '') == 'mobile/android' and 'MOZ_ANDROID_MIN_SDK_VERSION' in substs:
-        d['android_min_sdk'] = substs['MOZ_ANDROID_MIN_SDK_VERSION']
+        d['android_min_sdk'] = as_text(substs['MOZ_ANDROID_MIN_SDK_VERSION'])
 
     return d
 
@@ -142,7 +152,7 @@ def write_mozinfo(file, config, env=os.environ):
     and what keys are produced.
     """
     build_conf = build_dict(config, env)
-    if isinstance(file, basestring):
+    if isinstance(file, six.string_types):
         file = open(file, 'wb')
 
     json.dump(build_conf, file, sort_keys=True, indent=4)

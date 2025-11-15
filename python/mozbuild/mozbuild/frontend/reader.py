@@ -293,7 +293,7 @@ class MozbuildSandbox(Sandbox):
             raise Exception('`template` is a function decorator. You must '
                             'use it as `@template` preceding a function declaration.')
 
-        name = func.func_name
+        name = func.__name__
 
         if name in self.templates:
             raise KeyError(
@@ -390,10 +390,10 @@ class MozbuildSandbox(Sandbox):
 
 class TemplateFunction(object):
     def __init__(self, func, sandbox):
-        self.path = func.func_code.co_filename
-        self.name = func.func_name
+        self.path = func.__code__.co_filename
+        self.name = func.__name__
 
-        code = func.func_code
+        code = func.__code__
         firstlineno = code.co_firstlineno
         lines = sandbox._current_source.splitlines(True)
         if lines:
@@ -418,7 +418,7 @@ class TemplateFunction(object):
         # actually never calls __getitem__ and __setitem__, so we need to
         # modify the AST so that accesses to globals are properly directed
         # to a dict.
-        self._global_name = b'_data'  # AST wants str for this, not unicode
+        self._global_name = '_data'  # AST wants str for this, not unicode
         # In case '_data' is a name used for a variable in the function code,
         # prepend more underscores until we find an unused name.
         while (self._global_name in code.co_names or
@@ -437,8 +437,8 @@ class TemplateFunction(object):
             compile(func_ast, self.path, 'exec'),
             glob,
             self.name,
-            func.func_defaults,
-            func.func_closure,
+            func.__defaults__,
+            func.__closure__,
         )
         func()
 
@@ -452,11 +452,11 @@ class TemplateFunction(object):
             '__builtins__': sandbox._builtins
         }
         func = types.FunctionType(
-            self._func.func_code,
+            self._func.__code__,
             glob,
             self.name,
-            self._func.func_defaults,
-            self._func.func_closure
+            self._func.__defaults__,
+            self._func.__closure__
         )
         sandbox.exec_function(func, args, kwargs, self.path,
                               becomes_current_path=False)
@@ -473,7 +473,7 @@ class TemplateFunction(object):
         def visit_Str(self, node):
             # String nodes we got from the AST parser are str, but we want
             # unicode literals everywhere, so transform them.
-            node.s = unicode(node.s)
+            node.s = text_type(node.s)
             return node
 
         def visit_Name(self, node):
@@ -608,7 +608,7 @@ class BuildReaderError(Exception):
 
             for l in traceback.format_exception(type(self.other), self.other,
                                                 self.trace):
-                s.write(unicode(l))
+                s.write(text_type(l))
 
         return s.getvalue()
 
@@ -1148,7 +1148,7 @@ class BuildReader(object):
                                                  context)
                 non_unified_sources.add(source)
             action_overrides = {}
-            for action, script in gyp_dir.action_overrides.iteritems():
+            for action, script in gyp_dir.action_overrides.items():
                 action_overrides[action] = SourcePath(context, script)
 
             gyp_processor = GypProcessor(context.config,

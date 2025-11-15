@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{time::Duration};
+use std::{time::Duration, time::Instant};
 
-use crate::driver::{AbortSignal, DefaultAbortSignal, DefaultDriver, Driver};
+use crate::driver::{
+    AbortSignal, DefaultAbortSignal, DefaultDriver, Driver, TelemetryEvent, TreeStats,
+};
 use crate::error::Error;
 use crate::guid::Guid;
 use crate::merge::{MergedRoot, Merger};
@@ -59,18 +61,31 @@ pub trait Store {
     ) -> Result<Self::Ok, Self::Error> {
         signal.err_if_aborted()?;
         debug!(driver, "Building local tree");
-        let local_tree = self.fetch_local_tree()?;
+        let (local_tree, time) = with_timing(|| self.fetch_local_tree())?;
+        driver.record_telemetry_event(TelemetryEvent::FetchLocalTree(TreeStats {
+            items: local_tree.size(),
+            deletions: local_tree.deletions().len(),
+            problems: local_tree.problems().counts(),
+            time,
+        }));
         trace!(driver, "Built local tree from mirror\n{}", local_tree);
 
         signal.err_if_aborted()?;
         debug!(driver, "Building remote tree");
-        let remote_tree = self.fetch_remote_tree()?;
+        let (remote_tree, time) = with_timing(|| self.fetch_remote_tree())?;
+        driver.record_telemetry_event(TelemetryEvent::FetchRemoteTree(TreeStats {
+            items: remote_tree.size(),
+            deletions: local_tree.deletions().len(),
+            problems: remote_tree.problems().counts(),
+            time,
+        }));
         trace!(driver, "Built remote tree from mirror\n{}", remote_tree);
 
         signal.err_if_aborted()?;
         debug!(driver, "Building merged tree");
         let merger = Merger::with_driver(driver, signal, &local_tree, &remote_tree);
-        let merged_root = merger.merge()?;
+        let (merged_root, time) = with_timing(|| merger.merge())?;
+        driver.record_telemetry_event(TelemetryEvent::Merge(time, *merged_root.counts()));
         trace!(
             driver,
             "Built new merged tree\n{}\nDelete Locally: [{}]\nDelete Remotely: [{}]",
@@ -89,8 +104,14 @@ pub trait Store {
 
         signal.err_if_aborted()?;
         debug!(driver, "Applying merged tree");
-        let result = self.apply(merged_root)?;
+        let (result, time) = with_timing(|| self.apply(merged_root))?;
+        driver.record_telemetry_event(TelemetryEvent::Apply(time));
 
         Ok(result)
     }
+}
+
+fn with_timing<T, E>(run: impl FnOnce() -> Result<T, E>) -> Result<(T, Duration), E> {
+    let now = Instant::now();
+    run().map(|value| (value, now.elapsed()))
 }

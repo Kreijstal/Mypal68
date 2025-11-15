@@ -138,7 +138,7 @@ if CONFIG["OS_ARCH"] == "WINNT":
         "WindowsVersion.h",
     ]
 
-if CONFIG["OS_ARCH"] == "WASI":
+if "%s" % CONFIG["OS_ARCH"] == "WASI":
     EXPORTS.mozilla += [
         "WasiAtomic.h",
     ]

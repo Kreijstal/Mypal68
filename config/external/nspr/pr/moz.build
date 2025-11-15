@@ -12,6 +12,9 @@ else:
 AllowCompilerWarnings()
 
 DEFINES['_NSPR_BUILD_'] = True
+
+os_target = '%s' % CONFIG['OS_TARGET']
+
 if CONFIG['OS_ARCH'] == 'Linux':
     OS_LIBS += CONFIG['REALTIME_LIBS']
     DEFINES.update(
@@ -28,15 +31,15 @@ if CONFIG['OS_ARCH'] == 'Linux':
         SOURCES += ['/nsprpub/pr/src/md/unix/os_Linux_x86.s']
     elif CONFIG['CPU_ARCH'] == 'ppc':
         SOURCES += ['/nsprpub/pr/src/md/unix/os_Linux_ppc.s']
-elif CONFIG['OS_TARGET'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+elif os_target in ('FreeBSD', 'OpenBSD', 'NetBSD'):
     DEFINES.update(
         HAVE_BSD_FLOCK=True,
         HAVE_SOCKLEN_T=True,
         HAVE_POINTER_LOCALTIME_R=True,
     )
-    DEFINES[CONFIG['OS_TARGET'].upper()] = True
-    SOURCES += ['/nsprpub/pr/src/md/unix/%s.c' % CONFIG['OS_TARGET'].lower()]
-elif CONFIG['OS_TARGET'] == 'Darwin':
+    DEFINES[os_target.upper()] = True
+    SOURCES += ['/nsprpub/pr/src/md/unix/%s.c' % os_target.lower()]
+elif os_target == 'Darwin':
     OS_LIBS += ['-framework CoreServices']
     # See also IncreaseDescriptorLimits in toolkit/xre/nsAppRunner.cpp
     DEFINES['FD_SETSIZE'] = 4096
@@ -60,7 +63,7 @@ elif CONFIG['OS_TARGET'] == 'Darwin':
         '/nsprpub/pr/src/md/unix/os_Darwin.s',
     ]
     DEFINES['HAVE_CRT_EXTERNS_H'] = True
-elif CONFIG['OS_TARGET'] == 'SunOS':
+elif os_target == 'SunOS':
     DEFINES.update(
         HAVE_FCNTL_FILE_LOCKING=True,
         HAVE_SOCKLEN_T=True,
@@ -76,7 +79,7 @@ elif CONFIG['OS_TARGET'] == 'SunOS':
     elif CONFIG['CPU_ARCH'] == 'sparc64':
         ASFLAGS += ['-x', 'assembler-with-cpp', '-D_ASM']
         SOURCES += ['/nsprpub/pr/src/md/unix/os_SunOS_sparcv9.s']
-elif CONFIG['OS_TARGET'] == 'WINNT':
+elif os_target == 'WINNT':
     OS_LIBS += [
         'advapi32',
         'ws2_32',
@@ -103,7 +106,7 @@ elif CONFIG['OS_TARGET'] == 'WINNT':
     else:
         error('Unsupported CPU_ARCH value: %s' % CONFIG['CPU_ARCH'])
 else:
-    error('Not a supported OS_TARGET for NSPR in moz.build: "%s". Use --with-system-nspr' % CONFIG['OS_TARGET'])
+    error('Not a supported OS_TARGET for NSPR in moz.build: "%s". Use --with-system-nspr' % os_target)
 
 
 LOCAL_INCLUDES += [
@@ -155,7 +158,7 @@ UNIFIED_SOURCES += [
     '/nsprpub/pr/src/threads/prtpd.c',
 ]
 
-if CONFIG['OS_TARGET'] != 'WINNT':
+if os_target != 'WINNT':
     DEFINES['_PR_PTHREADS'] = True
     UNIFIED_SOURCES += [
         '/nsprpub/pr/src/md/unix/unix.c',

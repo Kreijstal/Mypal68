@@ -21,7 +21,7 @@ def configure_error(message):
 # A wrapper to obtain a process' output and return code.
 # Returns a tuple (retcode, stdout, stderr).
 @imports('os')
-@imports(_from='__builtin__', _import='unicode')
+@imports('six')
 @imports('subprocess')
 @imports(_from='mozbuild.shellutil', _import='quote')
 def get_cmd_output(*args, **kwargs):
@@ -31,10 +31,10 @@ def get_cmd_output(*args, **kwargs):
     if 'env' in kwargs:
         normalized_env = {}
         for k, v in kwargs['env'].items():
-            if isinstance(k, unicode):
+            if isinstance(k, six.text_type):
                 k = k.encode('utf-8', 'strict')
 
-            if isinstance(v, unicode):
+            if isinstance(v, six.text_type):
                 v = v.encode('utf-8', 'strict')
 
             normalized_env[k] = v
@@ -82,14 +82,20 @@ def check_cmd_output(*args, **kwargs):
 
 
 @imports('os')
+@imports(_from='six', _import='binary_type')
 def is_absolute_or_relative(path):
+    if isinstance(path, binary_type):
+        path = path.decode('utf-8', 'ignore')
     if os.altsep and os.altsep in path:
         return True
     return os.sep in path
 
 
 @imports(_import='mozpack.path', _as='mozpath')
+@imports(_from='six', _import='binary_type')
 def normsep(path):
+    if isinstance(path, binary_type):
+        path = path.decode('utf-8', 'ignore')
     return mozpath.normsep(path)
 
 
@@ -180,7 +186,10 @@ normalize_path = normalize_path()
 @imports('sys')
 @imports(_from='os', _import='pathsep')
 @imports(_from='os', _import='environ')
+@imports(_from='six', _import='binary_type')
 def find_program(file, paths=None):
+    if isinstance(file, binary_type):
+        file = file.decode('utf-8', 'ignore')
     # The following snippet comes from `which` itself, with a slight
     # modification to use lowercase extensions, because it's confusing rustup
     # (on top of making results not really appealing to the eye).
@@ -299,7 +308,7 @@ def unique_list(l):
 #     ('19.0', 'arm', r'C:\...\amd64_arm\cl.exe')
 #     ('19.0', 'x64', r'C:\...\amd64\cl.exe')
 #     ('19.0', 'x86', r'C:\...\amd64_x86\cl.exe')
-@imports(_import='_winreg', _as='winreg')
+@imports('winreg')
 @imports(_from='__builtin__', _import='WindowsError')
 @imports(_from='fnmatch', _import='fnmatch')
 def get_registry_values(pattern, get_32_and_64_bit=False):
@@ -372,9 +381,12 @@ def get_registry_values(pattern, get_32_and_64_bit=False):
             yield match
 
 
+@imports(_from='six', _import='binary_type')
 @imports(_from='mozbuild.configure.util', _import='Version', _as='_Version')
 def Version(v):
     'A version number that can be compared usefully.'
+    if isinstance(v, binary_type):
+        v = v.decode('utf-8', 'ignore')
     return _Version(v)
 
 # Denotes a deprecated option. Combines option() and @depends:

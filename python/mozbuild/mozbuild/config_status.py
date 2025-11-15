@@ -115,7 +115,7 @@ def config_status(topobjdir='.', topsrcdir='.', defines=None, substs=None,
     with FileAvoidWrite(os.path.join(topobjdir, 'mozinfo.json')) as f:
         write_mozinfo(f, env, os.environ)
 
-    cpu_start = time.clock()
+    cpu_start = time.process_time()
     time_start = time.time()
 
     # Make appropriate backend instances, defaulting to RecursiveMakeBackend,
@@ -151,7 +151,7 @@ def config_status(topobjdir='.', topsrcdir='.', defines=None, substs=None,
             summary = obj.gyp_summary()
             print(summary, file=sys.stderr)
 
-    cpu_time = time.clock() - cpu_start
+    cpu_time = time.process_time() - cpu_start
     wall_time = time.time() - time_start
     efficiency = cpu_time / wall_time if wall_time else 100
     untracked = wall_time - execution_time

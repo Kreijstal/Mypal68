@@ -3,7 +3,6 @@ use std::fs::{self, File, OpenOptions};
 use std::os::windows::prelude::*;
 use std::path::{Path, PathBuf};
 use std::{io, ptr};
-use std::mem;
 
 use winapi::shared::minwindef::*;
 use winapi::shared::winerror::*;
@@ -12,7 +11,6 @@ use winapi::um::fileapi::*;
 use winapi::um::minwinbase::*;
 use winapi::um::winbase::*;
 use winapi::um::winnt::*;
-use winapi::um::ntifs::{IO_STATUS_BLOCK, NtSetInformationFile};
 
 pub const VOLUME_NAME_DOS: DWORD = 0x0;
 
@@ -192,13 +190,11 @@ fn rename(file: &File, new: &Path, replace: bool) -> io::Result<()> {
         (*info).ReplaceIfExists = if replace { -1 } else { FALSE };
         (*info).RootDirectory = ptr::null_mut();
         (*info).FileNameLength = (size - STRUCT_SIZE) as DWORD;
-        let mut io: IO_STATUS_BLOCK = mem::zeroed();
-        let result = NtSetInformationFile(
+        let result = SetFileInformationByHandle(
             file.as_raw_handle(),
-            &mut io as *mut _ as *mut _,
+            FileRenameInfo,
             data.as_mut_ptr() as *mut _ as *mut _,
             size as DWORD,
-            19
         );
 
         if result == 0 {
@@ -210,15 +206,10 @@ fn rename(file: &File, new: &Path, replace: bool) -> io::Result<()> {
 }
 
 fn get_path(f: &File) -> io::Result<PathBuf> {
-        if 0 == 0 {
-            Err(io::Error::last_os_error())
-        } else {
-            Ok(PathBuf::from("uka bleat suka bleuat suka bleat suka bleat"))
-        }
-    /*fill_utf16_buf(
+    fill_utf16_buf(
         |buf, sz| unsafe { GetFinalPathNameByHandleW(f.as_raw_handle(), buf, sz, VOLUME_NAME_DOS) },
         |buf| PathBuf::from(OsString::from_wide(buf)),
-    )*/
+    )
 }
 
 fn remove_dir_all_recursive(path: &Path, ctx: &mut RmdirContext) -> io::Result<()> {

@@ -1,9 +1,10 @@
 Rust Quasi-Quoting
 ==================
 
-[![Build Status](https://api.travis-ci.org/dtolnay/quote.svg?branch=master)](https://travis-ci.org/dtolnay/quote)
-[![Latest Version](https://img.shields.io/crates/v/quote.svg)](https://crates.io/crates/quote)
-[![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/quote/)
+[<img alt="github" src="https://img.shields.io/badge/github-dtolnay/quote-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/dtolnay/quote)
+[<img alt="crates.io" src="https://img.shields.io/crates/v/quote.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/quote)
+[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-quote-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/quote)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/dtolnay/quote/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/dtolnay/quote/actions?query=branch%3Amaster)
 
 This crate provides the [`quote!`] macro for turning Rust syntax tree data
 structures into tokens of source code.
@@ -28,15 +29,15 @@ This crate is motivated by the procedural macro use case, but is a
 general-purpose Rust quasi-quoting library and is not specific to procedural
 macros.
 
-*Version requirement: Quote supports any compiler version back to Rust's very
-first support for procedural macros in Rust 1.15.0.*
-
-[*Release notes*](https://github.com/dtolnay/quote/releases)
-
 ```toml
 [dependencies]
 quote = "1.0"
 ```
+
+*Version requirement: Quote supports rustc 1.68 and up.*<br>
+[*Release notes*](https://github.com/dtolnay/quote/releases)
+
+<br>
 
 ## Syntax
 
@@ -76,13 +77,14 @@ let tokens = quote! {
 };
 ```
 
+<br>
+
 ## Repetition
 
 Repetition is done using `#(...)*` or `#(...),*` similar to `macro_rules!`. This
 iterates through the elements of any variable interpolated within the repetition
 and inserts a copy of the repetition body for each one. The variables in an
-interpolation may be anything that implements `IntoIterator`, including `Vec` or
-a pre-existing iterator.
+interpolation may be a `Vec`, slice, `BTreeSet`, or any `Iterator`.
 
 - `#(#var)*` — no separators
 - `#(#var),*` — the character before the asterisk is used as a separator
@@ -92,6 +94,8 @@ a pre-existing iterator.
 Note that there is a difference between `#(#var ,)*` and `#(#var),*`—the latter
 does not produce a trailing comma. This matches the behavior of delimiters in
 `macro_rules!`.
+
+<br>
 
 ## Returning tokens to the compiler
 
@@ -111,6 +115,8 @@ There is a [`From`]-conversion in both directions so returning the output of
 `proc_macro::TokenStream::from(tokens)`.
 
 [`From`]: https://doc.rust-lang.org/std/convert/trait.From.html
+
+<br>
 
 ## Examples
 
@@ -206,6 +212,8 @@ quote! {
 }
 ```
 
+<br>
+
 ## Hygiene
 
 Any interpolated tokens preserve the `Span` information provided by their
@@ -218,6 +226,32 @@ A different span can be provided explicitly through the [`quote_spanned!`]
 macro.
 
 [`quote_spanned!`]: https://docs.rs/quote/1.0/quote/macro.quote_spanned.html
+
+<br>
+
+## Non-macro code generators
+
+When using `quote` in a build.rs or main.rs and writing the output out to a
+file, consider having the code generator pass the tokens through [prettyplease]
+before writing. This way if an error occurs in the generated code it is
+convenient for a human to read and debug.
+
+Be aware that no kind of hygiene or span information is retained when tokens are
+written to a file; the conversion from tokens to source code is lossy.
+
+Example usage in build.rs:
+
+```rust
+let output = quote! { ... };
+let syntax_tree = syn::parse2(output).unwrap();
+let formatted = prettyplease::unparse(&syntax_tree);
+
+let out_dir = env::var_os("OUT_DIR").unwrap();
+let dest_path = Path::new(&out_dir).join("out.rs");
+fs::write(dest_path, formatted).unwrap();
+```
+
+[prettyplease]: https://github.com/dtolnay/prettyplease
 
 <br>
 

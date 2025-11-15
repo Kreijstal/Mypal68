@@ -27,6 +27,10 @@ import itertools
 import operator
 import sys
 import types
+try:
+    import importlib.machinery as _six_import_machinery
+except ImportError:
+    _six_import_machinery = None
 
 __author__ = "Benjamin Peterson <benjamin@python.org>"
 __version__ = "1.10.0"
@@ -184,6 +188,13 @@ class _SixMetaPathImporter(object):
     def find_module(self, fullname, path=None):
         if fullname in self.known_modules:
             return self
+        return None
+
+    def find_spec(self, fullname, path=None, target=None):
+        if _six_import_machinery is None:
+            return None
+        if fullname in self.known_modules:
+            return _six_import_machinery.ModuleSpec(fullname, self)
         return None
 
     def __get_module(self, fullname):

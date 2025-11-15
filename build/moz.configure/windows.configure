@@ -7,6 +7,14 @@ option('--with-windows-version', nargs=1, default='603',
             'the minimum supported version.')
 
 
+@depends(c_compiler, host_c_compiler)
+def needs_windows_sdk(c_compiler, host_c_compiler):
+    if c_compiler and c_compiler.type == 'clang-cl':
+        return True
+    if host_c_compiler and host_c_compiler.type == 'clang-cl':
+        return True
+
+
 @depends('--with-windows-version')
 @imports(_from='__builtin__', _import='ValueError')
 def valid_windows_version(value):
@@ -27,8 +35,10 @@ option(env='WINDOWSSDKDIR', nargs=1,
        when=host_is_windows)
 
 
-@depends('WINDOWSSDKDIR', host, when=host_is_windows)
-def windows_sdk_dir(value, host):
+@depends('WINDOWSSDKDIR', host, c_compiler, when=host_is_windows)
+def windows_sdk_dir(value, host, compiler):
+    if not compiler or compiler.type != 'clang-cl':
+        return ()
     if value:
         return value
     if host.kernel != 'WINNT':
@@ -101,6 +111,8 @@ def valid_windows_sdk_dir_result(value):
 @imports(_from='textwrap', _import='dedent')
 def valid_windows_sdk_dir(compiler, windows_sdk_dir, target_version,
                           windows_sdk_dir_env):
+    if not compiler or compiler.type != 'clang-cl':
+        return
     if windows_sdk_dir_env:
         windows_sdk_dir_env = windows_sdk_dir_env[0]
     sdks = {}
@@ -169,6 +181,8 @@ def valid_ucrt_sdk_dir_result(value):
 @imports(_from='__builtin__', _import='sorted')
 @imports(_import='mozpack.path', _as='mozpath')
 def valid_ucrt_sdk_dir(windows_sdk_dir, windows_sdk_dir_env):
+    if not windows_sdk_dir:
+        return
     if windows_sdk_dir_env:
         windows_sdk_dir_env = windows_sdk_dir_env[0]
     sdks = {}
@@ -427,7 +441,7 @@ set_config('HOST_LINKER_LIBPATHS_BAT', host_linker_libpaths_bat)
 # @depends on the option will need to be adapted when actual support for
 # clang-cl cross-builds emerge.
 option(env='MT', nargs=1, help='Path to the Microsoft Manifest Tool',
-       when=host_is_windows)
+       when=needs_windows_sdk)
 
 
 @depends(valid_windows_sdk_dir, valid_ucrt_sdk_dir)
@@ -456,7 +470,7 @@ def sdk_bin_path(valid_windows_sdk_dir, valid_ucrt_sdk_dir):
 
 
 mt = check_prog('MT', ('mt.exe',), input='MT',
-                paths=sdk_bin_path, when=host_is_windows)
+                paths=sdk_bin_path, when=needs_windows_sdk)
 
 
 # Check that MT is not something unexpected like "magnetic tape manipulation
@@ -478,15 +492,15 @@ def valid_mt(path):
 
 set_config('MSMANIFEST_TOOL', depends(valid_mt)(lambda x: bool(x)))
 
-option(env='LINKER', nargs=1, when=target_is_windows, help='Path to the linker')
+option(env='LINKER', nargs=1, when=needs_windows_sdk, help='Path to the linker')
 
 link = check_prog('LINKER', ('lld-link',), input='LINKER',
-                  when=target_is_windows, paths=toolchain_search_path)
+                  when=needs_windows_sdk, paths=toolchain_search_path)
 
-option(env='HOST_LINKER', nargs=1, when=host_is_windows, help='Path to the host linker')
+option(env='HOST_LINKER', nargs=1, when=needs_windows_sdk, help='Path to the host linker')
 
 host_link = check_prog('HOST_LINKER', ('lld-link',), input='HOST_LINKER',
-                       when=host_is_windows, paths=host_toolchain_search_path)
+                       when=needs_windows_sdk, paths=host_toolchain_search_path)
 
 add_old_configure_assignment('LINKER', link)
 

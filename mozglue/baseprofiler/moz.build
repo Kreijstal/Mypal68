@@ -7,6 +7,8 @@
 # specific code).
 # All exported headers now prefixed with "Base" to avoid #include name clashes.
 
+os_target = '%s' % CONFIG['OS_TARGET']
+
 if CONFIG['MOZ_GECKO_PROFILER']:
     DEFINES['IMPL_MFBT'] = True
     EXPORTS += [
@@ -28,7 +30,7 @@ if CONFIG['MOZ_GECKO_PROFILER']:
         'core/RegisteredThread.cpp',
     ]
 
-    if CONFIG['OS_TARGET'] in ('Android', 'Linux', 'FreeBSD'):
+    if os_target in ('Android', 'Linux', 'FreeBSD'):
         if CONFIG['CPU_ARCH'] in ('arm', 'aarch64', 'x86', 'x86_64', 'mips64'):
             UNIFIED_SOURCES += [
                 'lul/AutoObjectMapper.cpp',
@@ -43,15 +45,15 @@ if CONFIG['MOZ_GECKO_PROFILER']:
         SOURCES += [
             'core/shared-libraries-linux.cc',
         ]
-        if CONFIG['CPU_ARCH'] == 'arm' and CONFIG['OS_TARGET'] != 'FreeBSD':
+        if CONFIG['CPU_ARCH'] == 'arm' and os_target != 'FreeBSD':
             SOURCES += [
                 'core/EHABIStackWalk.cpp',
             ]
-    elif CONFIG['OS_TARGET'] == 'Darwin':
+    elif os_target == 'Darwin':
         UNIFIED_SOURCES += [
             'core/shared-libraries-macos.cc',
         ]
-    elif CONFIG['OS_TARGET'] == 'WINNT':
+    elif os_target == 'WINNT':
         SOURCES += [
             'core/shared-libraries-win32.cc',
         ]
@@ -66,7 +68,7 @@ if CONFIG['MOZ_GECKO_PROFILER']:
         '/mozglue/linker',
     ]
 
-    if CONFIG['OS_TARGET'] == 'Android':
+    if os_target == 'Android':
         DEFINES['ANDROID_NDK_MAJOR_VERSION'] = CONFIG['ANDROID_NDK_MAJOR_VERSION']
         DEFINES['ANDROID_NDK_MINOR_VERSION'] = CONFIG['ANDROID_NDK_MINOR_VERSION']
 

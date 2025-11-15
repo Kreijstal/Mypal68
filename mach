@@ -22,11 +22,17 @@ def ancestors(path):
             break
 
 def load_mach(dir_path, mach_path):
-    import imp
-    with open(mach_path, 'r') as fh:
-        imp.load_module('mach_bootstrap', fh, mach_path,
-                        ('.py', 'r', imp.PY_SOURCE))
-    import mach_bootstrap
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('mach_bootstrap', mach_path)
+        mach_bootstrap = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mach_bootstrap)
+    except Exception:
+        import imp
+        with open(mach_path, 'r') as fh:
+            imp.load_module('mach_bootstrap', fh, mach_path,
+                            ('.py', 'r', imp.PY_SOURCE))
+        import mach_bootstrap
     return mach_bootstrap.bootstrap(dir_path)
 
 
@@ -59,7 +65,7 @@ def get_mach():
                 # its default locations.
                 #
                 # Note: subprocess requires native strings in os.environ on Windows
-                os.environ[b'MOZCONFIG'] = str(info['mozconfig'])
+                os.environ['MOZCONFIG'] = str(info['mozconfig'])
 
             if 'topsrcdir' in info:
                 # Continue searching for mach_bootstrap in the source directory.

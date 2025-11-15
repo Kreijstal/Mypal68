@@ -1,15 +1,17 @@
-use std::cmp;
-use std::error;
-use std::fmt;
-use std::result;
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
-use ast;
-use hir;
-
-/// A type alias for dealing with errors returned by this crate.
-pub type Result<T> = result::Result<T, Error>;
+use crate::{ast, hir};
 
 /// This error type encompasses any error that can be returned by this crate.
+///
+/// This error type is marked as `non_exhaustive`. This means that adding a
+/// new variant is not considered a breaking change.
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     /// An error that occurred while translating concrete syntax into abstract
@@ -18,13 +20,6 @@ pub enum Error {
     /// An error that occurred while translating abstract syntax into a high
     /// level intermediate representation (HIR).
     Translate(hir::Error),
-    /// Hints that destructuring should not be exhaustive.
-    ///
-    /// This enum may grow additional variants, so this makes sure clients
-    /// don't count on exhaustive matching. (Otherwise, adding a new variant
-    /// could break existing code.)
-    #[doc(hidden)]
-    __Nonexhaustive,
 }
 
 impl From<ast::Error> for Error {
@@ -39,22 +34,14 @@ impl From<hir::Error> for Error {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Parse(ref x) => x.description(),
-            Error::Translate(ref x) => x.description(),
-            _ => unreachable!(),
-        }
-    }
-}
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match *self {
             Error::Parse(ref x) => x.fmt(f),
             Error::Translate(ref x) => x.fmt(f),
-            _ => unreachable!(),
         }
     }
 }
@@ -65,7 +52,7 @@ impl fmt::Display for Error {
 /// readable format. Most of its complexity is from interspersing notational
 /// markers pointing out the position where an error occurred.
 #[derive(Debug)]
-pub struct Formatter<'e, E: 'e> {
+pub struct Formatter<'e, E> {
     /// The original regex pattern in which the error occurred.
     pattern: &'e str,
     /// The error kind. It must impl fmt::Display.
@@ -99,17 +86,17 @@ impl<'e> From<&'e hir::Error> for Formatter<'e, hir::ErrorKind> {
     }
 }
 
-impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl<'e, E: core::fmt::Display> core::fmt::Display for Formatter<'e, E> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let spans = Spans::from_formatter(self);
         if self.pattern.contains('\n') {
             let divider = repeat_char('~', 79);
 
             writeln!(f, "regex parse error:")?;
-            writeln!(f, "{}", divider)?;
+            writeln!(f, "{divider}")?;
             let notated = spans.notate();
-            write!(f, "{}", notated)?;
-            writeln!(f, "{}", divider)?;
+            write!(f, "{notated}")?;
+            writeln!(f, "{divider}")?;
             // If we have error spans that cover multiple lines, then we just
             // note the line numbers.
             if !spans.multi_line.is_empty() {
@@ -129,7 +116,7 @@ impl<'e, E: fmt::Display> fmt::Display for Formatter<'e, E> {
         } else {
             writeln!(f, "regex parse error:")?;
             let notated = Spans::from_formatter(self).notate();
-            write!(f, "{}", notated)?;
+            write!(f, "{notated}")?;
             write!(f, "error: {}", self.err)?;
         }
         Ok(())
@@ -166,7 +153,7 @@ struct Spans<'p> {
 
 impl<'p> Spans<'p> {
     /// Build a sequence of spans from a formatter.
-    fn from_formatter<'e, E: fmt::Display>(
+    fn from_formatter<'e, E: core::fmt::Display>(
         fmter: &'p Formatter<'e, E>,
     ) -> Spans<'p> {
         let mut line_count = fmter.pattern.lines().count();
@@ -180,7 +167,7 @@ impl<'p> Spans<'p> {
             if line_count <= 1 { 0 } else { line_count.to_string().len() };
         let mut spans = Spans {
             pattern: &fmter.pattern,
-            line_number_width: line_number_width,
+            line_number_width,
             by_line: vec![vec![]; line_count],
             multi_line: vec![],
         };
@@ -205,7 +192,7 @@ impl<'p> Spans<'p> {
         }
     }
 
-    /// Notate the pattern string with carents (`^`) pointing at each span
+    /// Notate the pattern string with carets (`^`) pointing at each span
     /// location. This only applies to spans that occur within a single line.
     fn notate(&self) -> String {
         let mut notated = String::new();
@@ -246,7 +233,7 @@ impl<'p> Spans<'p> {
                 pos += 1;
             }
             let note_len = span.end.column.saturating_sub(span.start.column);
-            for _ in 0..cmp::max(1, note_len) {
+            for _ in 0..core::cmp::max(1, note_len) {
                 notes.push('^');
                 pos += 1;
             }
@@ -279,14 +266,16 @@ impl<'p> Spans<'p> {
 }
 
 fn repeat_char(c: char, count: usize) -> String {
-    ::std::iter::repeat(c).take(count).collect()
+    core::iter::repeat(c).take(count).collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use ast::parse::Parser;
+    use alloc::string::ToString;
 
-    fn assert_panic_message(pattern: &str, expected_msg: &str) -> () {
+    use crate::ast::parse::Parser;
+
+    fn assert_panic_message(pattern: &str, expected_msg: &str) {
         let result = Parser::new().parse(pattern);
         match result {
             Ok(_) => {

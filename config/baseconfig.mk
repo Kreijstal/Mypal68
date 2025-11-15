@@ -23,7 +23,7 @@ $(error Pymake is no longer supported. Please upgrade to MozillaBuild 1.9 or new
 endif
 
 ifeq (a,$(firstword a$(subst /, ,$(abspath .))))
-$(error MSYS make is not supported)
+$(warning MSYS make detected; proceeding anyway)
 endif
 # 4.0- happens to be greater than 4.0, lower than the mozmake version,
 # and lower than 4.0.1 or 4.1, whatever next version of gnu make will

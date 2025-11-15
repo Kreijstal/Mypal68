@@ -66,7 +66,7 @@ def check_build_environment(help, dist):
             )
 
     # Check for CRLF line endings.
-    with open(os.path.join(topsrcdir, 'configure.py'), 'rb') as fh:
+    with open(os.path.join(topsrcdir, 'configure.py'), 'rt') as fh:
         data = fh.read()
         if '\r' in data:
             die('\n ***\n'
@@ -288,7 +288,7 @@ def early_options():
     def early_options():
         return set(
             option.env
-            for option in __sandbox__._options.itervalues()
+            for option in __sandbox__._options.values()
             if option.env
         )
     return early_options
@@ -369,7 +369,7 @@ def shell(value, mozillabuild):
 @depends('--help', 'CONFIG_SHELL')
 def help_shell(help, shell):
     if help and not shell:
-        return 'sh'
+        return find_program('sh')
 
 
 shell = help_shell | shell
@@ -387,6 +387,7 @@ option(env='PYTHON3', nargs=1, help='Python 3 interpreter (3.5 or later)')
 @imports(_from='__builtin__', _import='Exception')
 @imports(_from='mozbuild.pythonutil', _import='find_python3_executable')
 @imports(_from='mozbuild.pythonutil', _import='python_executable_version')
+@imports('six')
 def python3(env_python, mozillabuild):
     python = env_python[0] if env_python else None
 
@@ -411,7 +412,7 @@ def python3(env_python, mozillabuild):
         python, version = find_python3_executable(min_version='3.5.0')
 
         # The API returns a bytes whereas everything in configure is unicode.
-        if python:
+        if python and isinstance(python, six.binary_type):
             python = python.decode('utf-8')
 
     if not python:
@@ -524,8 +525,11 @@ def hg_config(build_env, hg, version):
 @depends_if(git)
 @checking('for Git version')
 @imports('re')
+@imports('six')
 def git_version(git):
     out = check_cmd_output(git, '--version').rstrip()
+    if isinstance(out, six.binary_type):
+        out = out.decode('utf-8', 'replace')
 
     match = re.search('git version (.*)$', out)
 
@@ -777,11 +781,26 @@ def help_host_target(help, host, target):
         )
 
 
+@imports('six')
 @imports('subprocess')
 def config_sub(shell, triplet):
     config_sub = os.path.join(os.path.dirname(__file__), '..',
                               'autoconf', 'config.sub')
-    return subprocess.check_output([shell, config_sub, triplet]).strip()
+    shell = shell or 'sh'
+    if isinstance(shell, six.binary_type):
+        shell = shell.decode('utf-8')
+    elif isinstance(shell, (list, tuple)):
+        shell = shell[0]
+    elif not isinstance(shell, six.string_types):
+        shell = six.text_type(shell)
+    if isinstance(triplet, six.binary_type):
+        triplet = triplet.decode('utf-8')
+    elif not isinstance(triplet, six.string_types):
+        triplet = six.text_type(triplet)
+    result = subprocess.check_output([shell, config_sub, triplet]).strip()
+    if isinstance(result, six.binary_type):
+        result = result.decode('utf-8')
+    return result
 
 
 @depends('--host', shell)

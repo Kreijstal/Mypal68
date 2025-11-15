@@ -205,7 +205,7 @@ impl<'a, W: Write> Write for ChunkWriter<'a, W> {
     fn write(&mut self, mut buf: &[u8]) -> io::Result<usize> {
         let written = buf.read(&mut self.buffer[self.index..])?;
         self.index += written;
-
+        
         if self.index + 1 >= self.buffer.len() {
             self.writer.write_chunk(chunk::IDAT, &self.buffer)?;
             self.index = 0;
@@ -233,7 +233,7 @@ impl<'a, W: Write> Drop for ChunkWriter<'a, W> {
 /// Streaming png writer
 ///
 /// This may may silently fail in the destructor so it is a good idea to call
-/// `finish` or `flush` before droping.
+/// `finish` or `flush` before droping. 
 pub struct StreamWriter<'a, W: Write> {
     writer: deflate::write::ZlibEncoder<ChunkWriter<'a, W>>,
     prev_buf: Vec<u8>,
@@ -276,7 +276,7 @@ impl<'a, W: Write> Write for StreamWriter<'a, W> {
     fn write(&mut self, mut buf: &[u8]) -> io::Result<usize> {
         let written = buf.read(&mut self.curr_buf[self.index..])?;
         self.index += written;
-
+        
         if self.index >= self.curr_buf.len() {
             self.writer.write_all(&[self.filter as u8])?;
             filter(self.filter, self.bpp, &self.prev_buf, &mut self.curr_buf);
@@ -389,7 +389,7 @@ mod tests {
                         rng: self::rand::thread_rng(),
                         w: &mut stream_writer
                     };
-
+                    
                     outer_wrapper.write_all(&buf).unwrap();
                 }
                 // Decode encoded decoded image

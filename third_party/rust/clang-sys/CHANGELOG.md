@@ -1,3 +1,189 @@
+## [1.8.1] - 2024-05-28
+
+### Added
+- Added support for `clang` 18.0.x
+
+### Fixed
+- Improve DLL search on Windows to take target architecture into account (e.g., ARM64 vs x86-64)
+- Improved detection of `libclang` installed with Visual Studio on Windows
+
+## [1.8.0] - 2024-05-26
+
+### Changed
+- Bumped minimum supported Rust version (MSRV) to 1.60.0
+- Added error logging when `CLANG_PATH` set but it isn't a full path to an executable
+- Removed reference to `libclang` 3.5 in error message for attempting to call an unsupported function
+
+### Added
+- Added `libcpp` Cargo feature which enables linking to `libc++` instead of `libstdc++` when linking to `libclang` statically on Linux or Haiku
+
+### Fixed
+- Fixed handling of paths that contain characters that have special meaning in
+glob patterns (e.g., `[` or `]`)
+- Fixed `Clang::find` to support both the `-target` and `--target` arguments
+when using target-prefixed `clang` binaries
+
+## [1.7.0] - 2023-12-31
+
+### Added
+- Added support for `clang` 17.0.x
+
+## [1.6.1] - 2023-03-29
+
+### Fixed
+- Improved error message when calling a `libclang` function that is not supported by the loaded `libclang` instance (https://github.com/rust-lang/rust-bindgen/issues/2446)
+
+## [1.6.0] - 2023-02-18
+
+### Changed
+- MinGW directories are not searched for `libclang` instances on Windows when
+compiling for an MSVC target
+- Bumped minimum supported Rust version (MSRV) to 1.51.0
+- Changed Windows search directory preferences (`libclang` instances from
+Visual Studio installs are now the lowest priority rather than the second
+highest)
+
+## ~~[1.5.1] - 2023-02-05~~ (YANKED)
+
+### Changed
+- MinGW directories are not searched for `libclang` instances on Windows when
+compiling for an MSVC target
+
+## ~~[1.5.0] - 2023-02-05~~ (YANKED)
+
+### Changed
+- Bumped minimum supported Rust version (MSRV) to 1.51.0
+- Changed Windows search directory preferences (`libclang` instances from
+Visual Studio installs are now the lowest priority rather than the second
+highest)
+
+### Added
+- Added additional support for `clang` 16.0.x
+
+## [1.4.0] - 2022-09-22
+
+### Changed
+- The value of an `EntityKind` enum variant
+(`EntityKind::CXCursor_TranslationUnit`) has been updated for Clang 15.0 and
+later to match the
+[breaking change made in `libclang`](https://github.com/llvm/llvm-project/commit/bb83f8e70bd1d56152f02307adacd718cd67e312#diff-674613a0e47f4e66cc19061e28e3296d39be2d124dceefb68237b30b8e241e7c)
+
+### Added
+- Added support for `clang` 16.0.x
+- Added support for `clang` 15.0.x
+- Added support for `clang` 14.0.x
+
+## [1.3.3] - 2022-05-28
+
+### Fixed
+- Fixed `Clang::find` to check that `CLANG_PATH` is an executable file before
+selecting it
+
+## [1.3.2] - 2022-05-18
+
+### Added
+- Added support for illumos and derivatives
+
+## [1.3.1] - 2022-02-03
+
+### Added
+- Added missing `clang_getToken` function
+
+## [1.3.0] - 2021-10-31
+
+### Added
+- Added support for `clang` 13.0.x
+- Added support for `clang` 12.0.x
+- Added support for the Haiku operating system
+
+## [1.2.2] - 2021-09-02
+
+### Fixed
+- Fixed handling of paths that contain characters that have special meaning in
+glob patterns (e.g., `[` or `]`)
+
+## [1.2.1] - 2021-08-24
+
+### Changed
+- Updated build script to check the install location used by the
+[Scoop](https://scoop.sh/) command-line installer on Windows
+
+### Fixed
+- Updated build script to support environments where the `PATH` environment
+variable is not set
+
+## [1.2.0] - 2021-04-08
+
+### Changed
+- Changed `Clang::find` to prefer target-prefixed binaries when a `-target`
+argument is provided (e.g., if the arguments `-target` and
+`x86_64-unknown-linux-gnu` are provided, a target-prefixed Clang executable
+such as `x86_64-unknown-linux-gnu-clang` will be preferred over a non-target
+prefixed Clang executable)
+
+### Fixed
+- Fixed build script to split paths in environment variables (e.g.,
+`LD_LIBRARY_PATH`) using the appropriate separator for the platform (previously
+`:` was used as the separator but some platforms such as Windows use `;`)
+
+## [1.1.1] - 2021-02-19
+
+### Changed
+- Bumped `libloading` version to `0.7`
+
+## [1.1.0] - 2021-02-09
+
+### Changed
+- Added Visual Studio LLVM component directory to search paths on Windows
+([#121](https://github.com/KyleMayes/clang-sys/issues/121))
+
+### Added
+- Added support for `clang` 11.0.x
+
+## [1.0.3] - 2020-11-19
+
+### Fixed
+- Fixed `Clang::find` panicking when `llvm-config` or `xcode-build` don't output anything to `stdout`
+
+## [1.0.2] - 2020-11-17
+
+### Fixed
+- Fixed `Clang::find` to properly search directories returned by the
+`llvm-config --bindir` and `xcodebuild -find clang` commands
+- Improved version selection algorithm in the case where there are multiple
+instances of `libclang` with the highest version found; previously the lowest
+priority instance would be selected instead of the highest priority instance
+(e.g., the versions found by searching the fallback directories were preferred
+over the versions found by searching the `llvm-config --prefix` directory)
+
+## [1.0.1] - 2020-10-01
+
+### Changed
+- Improved panic error message when calling an unloaded function
+
+## [1.0.0] - 2020-07-14
+
+### Changed
+- Bumped `libloading` version to `0.6.0`
+- Updated build script to not print warnings about failures to execute
+`llvm-config` and `xcode-select` unless an instance of `libclang` is not found
+
+### Added
+- Added support for `clang` 10.0.x
+
+### Removed
+- Removed `gte_clang_*` Cargo features (these were an implementation detail)
+
+## [0.29.3] - 2020-03-31
+
+### Added
+- Added ability to determine version of runtime-linked instance of `libclang`
+
+## [0.29.2] - 2020-03-09
+
+### Added
+- Revert unnecessary increase of minimum version of `libc` and `libloading`
+
 ## [0.29.2] - 2020-03-09
 
 ### Added

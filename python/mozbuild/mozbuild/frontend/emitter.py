@@ -10,6 +10,7 @@ import os
 import traceback
 import sys
 import time
+import six
 
 from collections import defaultdict, OrderedDict
 from mach.mixin.logging import LoggingMixin
@@ -21,6 +22,11 @@ from mozbuild.util import (
 import mozpack.path as mozpath
 import mozinfo
 import pytoml
+
+try:
+    unicode
+except NameError:
+    unicode = six.text_type
 
 from .data import (
     BaseRustProgram,
@@ -515,7 +521,7 @@ class TreeMetadataEmitter(LoggingMixin):
 
     def _verify_deps(self, context, crate_dir, crate_name, dependencies, description='Dependency'):
         """Verify that a crate's dependencies all specify local paths."""
-        for dep_crate_name, values in dependencies.iteritems():
+        for dep_crate_name, values in dependencies.items():
             # A simple version number.
             if isinstance(values, (str, unicode)):
                 raise SandboxValidationError(
@@ -576,7 +582,7 @@ class TreeMetadataEmitter(LoggingMixin):
 
         cargo_target_dir = context.config.topobjdir
 
-        dependencies = set(config.get('dependencies', {}).iterkeys())
+        dependencies = set(config.get('dependencies', {}).keys())
 
         features = context.get(cls.FEATURES_VAR, [])
         unique_features = set(features)
@@ -935,7 +941,7 @@ class TreeMetadataEmitter(LoggingMixin):
         assert not gen_sources['UNIFIED_SOURCES']
 
         no_pgo = context.get('NO_PGO')
-        no_pgo_sources = [f for f, flags in all_flags.iteritems()
+        no_pgo_sources = [f for f, flags in all_flags.items()
                           if flags.no_pgo]
         if no_pgo:
             if no_pgo_sources:
@@ -962,7 +968,7 @@ class TreeMetadataEmitter(LoggingMixin):
 
         # The inverse of the above, mapping suffixes to their canonical suffix.
         canonicalized_suffix_map = {}
-        for suffix, alternatives in suffix_map.iteritems():
+        for suffix, alternatives in suffix_map.items():
             alternatives.add(suffix)
             for a in alternatives:
                 canonicalized_suffix_map[a] = suffix
@@ -1041,7 +1047,7 @@ class TreeMetadataEmitter(LoggingMixin):
                 for suffix, srcs in ctxt_sources['WASM_SOURCES'].items():
                     wasm_linkable.sources[suffix] += srcs
 
-        for f, flags in sorted(all_flags.iteritems()):
+        for f, flags in sorted(all_flags.items()):
             if flags.flags:
                 ext = mozpath.splitext(f)[1]
                 yield PerSourceFlag(context, f, flags.flags)

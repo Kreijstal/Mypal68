@@ -3,19 +3,21 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 NoVisibilityFlags()
 
+os_target = '%s' % CONFIG["OS_TARGET"]
+
 EXPORTS.mozilla += [
     "VolatileBuffer.h",
 ]
 
-if CONFIG["OS_TARGET"] == "Android":
+if os_target == "Android":
     UNIFIED_SOURCES += [
         "VolatileBufferAshmem.cpp",
     ]
-elif CONFIG["OS_TARGET"] == "Darwin":
+elif os_target == "Darwin":
     UNIFIED_SOURCES += [
         "VolatileBufferOSX.cpp",
     ]
-elif CONFIG["OS_TARGET"] == "WINNT":
+elif os_target == "WINNT":
     UNIFIED_SOURCES += [
         "VolatileBufferWindows.cpp",
     ]

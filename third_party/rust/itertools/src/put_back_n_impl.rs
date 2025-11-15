@@ -1,10 +1,13 @@
-use size_hint;
+use alloc::vec::Vec;
+
+use crate::size_hint;
 
 /// An iterator adaptor that allows putting multiple
 /// items in front of the iterator.
 ///
 /// Iterator element type is `I::Item`.
 #[derive(Debug, Clone)]
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct PutBackN<I: Iterator> {
     top: Vec<I::Item>,
     iter: I,
@@ -15,7 +18,8 @@ pub struct PutBackN<I: Iterator> {
 ///
 /// Iterator element type is `I::Item`.
 pub fn put_back_n<I>(iterable: I) -> PutBackN<I::IntoIter>
-    where I: IntoIterator
+where
+    I: IntoIterator,
 {
     PutBackN {
         top: Vec::new(),
@@ -47,17 +51,20 @@ impl<I: Iterator> PutBackN<I> {
 impl<I: Iterator> Iterator for PutBackN<I> {
     type Item = I::Item;
     #[inline]
-    fn next(&mut self) -> Option<I::Item> {
-        if self.top.is_empty() {
-            self.iter.next()
-        } else {
-            self.top.pop()
-        }
+    fn next(&mut self) -> Option<Self::Item> {
+        self.top.pop().or_else(|| self.iter.next())
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         size_hint::add_scalar(self.iter.size_hint(), self.top.len())
     }
-}
 
+    fn fold<B, F>(self, mut init: B, mut f: F) -> B
+    where
+        F: FnMut(B, Self::Item) -> B,
+    {
+        init = self.top.into_iter().rfold(init, &mut f);
+        self.iter.fold(init, f)
+    }
+}

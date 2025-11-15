@@ -113,3 +113,4 @@ pub trait Com<Interface> where Self: Sized {
         Box::from_raw(thing as *mut ComRepr<Self, Self::Vtbl>);
     }
 }
+

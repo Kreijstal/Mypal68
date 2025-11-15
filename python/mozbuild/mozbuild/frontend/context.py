@@ -48,8 +48,17 @@ from ..testing import (
 
 import mozpack.path as mozpath
 from types import FunctionType
+import six
+
+try:
+    unicode
+except NameError:
+    unicode = six.text_type
 
 import itertools
+
+def cmp(a, b):
+    return (a > b) - (a < b)
 
 
 # The MOZ_HARDENING_CFLAGS and MOZ_HARDENING_LDFLAGS differ depending on whether
@@ -601,7 +610,7 @@ class WasmFlags(TargetCompileFlags):
         TargetCompileFlags.__init__(self, context)
 
 
-class FinalTargetValue(ContextDerivedValue, unicode):
+class FinalTargetValue(ContextDerivedValue, six.text_type):
     def __new__(cls, context, value=""):
         if not value:
             value = 'dist/'
@@ -611,7 +620,7 @@ class FinalTargetValue(ContextDerivedValue, unicode):
                 value += 'bin'
             if context['DIST_SUBDIR']:
                 value += '/' + context['DIST_SUBDIR']
-        return unicode.__new__(cls, value)
+        return six.text_type.__new__(cls, value)
 
 
 def Enum(*values):
@@ -650,6 +659,9 @@ class PathMeta(type):
             assert isinstance(context, Context)
             if isinstance(value, Path):
                 context = value.context
+                value = six.text_type(value)
+        if isinstance(value, six.binary_type):
+            value = value.decode('utf-8')
         if not issubclass(cls, (SourcePath, ObjDirPath, AbsolutePath)):
             if value.startswith('!'):
                 cls = ObjDirPath
@@ -660,6 +672,7 @@ class PathMeta(type):
         return super(PathMeta, cls).__call__(context, value)
 
 
+@six.add_metaclass(PathMeta)
 class Path(ContextDerivedValue, unicode):
     """Stores and resolves a source path relative to a given context
 
@@ -671,8 +684,6 @@ class Path(ContextDerivedValue, unicode):
       - '!objdir/relative/paths'
       - '%/filesystem/absolute/paths'
     """
-    __metaclass__ = PathMeta
-
     def __new__(cls, context, value=None):
         return super(Path, cls).__new__(cls, value)
 

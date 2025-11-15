@@ -64,6 +64,12 @@ impl Tree {
         }
     }
 
+    /// Returns the number of nodes in the tree.
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.entries.len()
+    }
+
     /// Returns the root node.
     #[inline]
     pub fn root(&self) -> Node<'_> {
@@ -1125,6 +1131,104 @@ pub enum Problem {
     DeletedChild { child_guid: Guid },
 }
 
+impl Problem {
+    /// Returns count deltas for this problem.
+    fn counts(&self) -> ProblemCounts {
+        let (parents, deltas) = match self {
+            Problem::Orphan => {
+                return ProblemCounts {
+                    orphans: 1,
+                    ..ProblemCounts::default()
+                }
+            }
+            Problem::DeletedChild { .. } => {
+                return ProblemCounts {
+                    deleted_children: 1,
+                    ..ProblemCounts::default()
+                }
+            }
+            Problem::MissingChild { .. } => {
+                return ProblemCounts {
+                    missing_children: 1,
+                    ..ProblemCounts::default()
+                }
+            }
+            // For misparented roots, or items with diverged parents, we need to
+            // do a bit more work to determine all the problems. For example, a
+            // toolbar root with a `parentid` pointing to a nonexistent folder,
+            // and mentioned in the `children` of unfiled and menu has three
+            // problems: it's a misparented root, with multiple parents, and a
+            // missing `parentid`.
+            Problem::MisparentedRoot(parents) => (
+                parents,
+                ProblemCounts {
+                    misparented_roots: 1,
+                    ..ProblemCounts::default()
+                },
+            ),
+            Problem::DivergedParents(parents) => (parents, ProblemCounts::default()),
+        };
+        let deltas = match parents.as_slice() {
+            // For items with different parents `by_parent_guid` and
+            // `by_children`, report a parent-child disagreement.
+            [DivergedParent::ByChildren(_)]
+            | [DivergedParent::ByParentGuid(_)]
+            | [DivergedParent::ByChildren(_), DivergedParent::ByParentGuid(_)]
+            | [DivergedParent::ByParentGuid(_), DivergedParent::ByChildren(_)] => ProblemCounts {
+                parent_child_disagreements: 1,
+                ..deltas
+            },
+            // For items with multiple parents `by_children`, and possibly by
+            // `by_parent_guid`, report a disagreement _and_ multiple parents.
+            _ => ProblemCounts {
+                multiple_parents_by_children: 1,
+                parent_child_disagreements: 1,
+                ..deltas
+            },
+        };
+        // Count invalid or missing parents, but only once, since we're counting
+        // the number of _items with the problem_, not the _occurrences of the
+        // problem_. This is specifically for roots; it doesn't make sense for
+        // other items to have multiple `parentid`s.
+        parents.iter().fold(deltas, |deltas, parent| match parent {
+            DivergedParent::ByChildren(_) => deltas,
+            DivergedParent::ByParentGuid(p) => match p {
+                DivergedParentGuid::Folder(_) => deltas,
+                DivergedParentGuid::NonFolder(_) => {
+                    if deltas.non_folder_parent_guids > 0 {
+                        deltas
+                    } else {
+                        ProblemCounts {
+                            non_folder_parent_guids: 1,
+                            ..deltas
+                        }
+                    }
+                }
+                DivergedParentGuid::Deleted(_) => {
+                    if deltas.deleted_parent_guids > 0 {
+                        deltas
+                    } else {
+                        ProblemCounts {
+                            deleted_parent_guids: 1,
+                            ..deltas
+                        }
+                    }
+                }
+                DivergedParentGuid::Missing(_) => {
+                    if deltas.missing_parent_guids > 0 {
+                        deltas
+                    } else {
+                        ProblemCounts {
+                            missing_parent_guids: 1,
+                            ..deltas
+                        }
+                    }
+                }
+            },
+        })
+    }
+}
+
 /// Describes where an invalid parent comes from.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum DivergedParent {
@@ -1201,6 +1305,17 @@ impl Problems {
                 .map(move |problem| ProblemSummary(guid, problem))
         })
     }
+
+    /// Returns total counts for each problem. If any counts are not 0, the
+    /// tree structure diverged.
+    pub fn counts(&self) -> ProblemCounts {
+        self.0
+            .values()
+            .flatten()
+            .fold(ProblemCounts::default(), |totals, problem| {
+                totals.add(problem.counts())
+            })
+    }
 }
 
 /// A printable summary of a problem for an item.
@@ -1261,6 +1376,52 @@ impl<'a> fmt::Display for ProblemSummary<'a> {
             }
         }
         Ok(())
+    }
+}
+
+/// Records total problem counts for telemetry. An item can have multiple
+/// problems, but each problem is only counted once per item.
+#[derive(Clone, Copy, Default, Debug, Eq, Hash, PartialEq)]
+pub struct ProblemCounts {
+    /// Number of items that aren't mentioned in any parent's `children` and
+    /// don't have a `parentid`. These are very rare; it's likely that a
+    /// problem child has at least a `parentid`.
+    pub orphans: usize,
+    /// Number of roots that aren't children of the Places root.
+    pub misparented_roots: usize,
+    /// Number of items with multiple, conflicting parents `by_children`.
+    pub multiple_parents_by_children: usize,
+    /// Number of items whose `parentid` is deleted.
+    pub deleted_parent_guids: usize,
+    /// Number of items whose `parentid` doesn't exist.
+    pub missing_parent_guids: usize,
+    /// Number of items whose `parentid` isn't a folder.
+    pub non_folder_parent_guids: usize,
+    /// Number of items whose `parentid`s disagree with their parents'
+    /// `children`.
+    pub parent_child_disagreements: usize,
+    /// Number of deleted items mentioned in all parents' `children`.
+    pub deleted_children: usize,
+    /// Number of nonexistent items mentioned in all parents' `children`.
+    pub missing_children: usize,
+}
+
+impl ProblemCounts {
+    /// Adds two sets of counts together.
+    pub fn add(&self, other: ProblemCounts) -> ProblemCounts {
+        ProblemCounts {
+            orphans: self.orphans + other.orphans,
+            misparented_roots: self.misparented_roots + other.misparented_roots,
+            multiple_parents_by_children: self.multiple_parents_by_children
+                + other.multiple_parents_by_children,
+            deleted_parent_guids: self.deleted_parent_guids + other.deleted_parent_guids,
+            missing_parent_guids: self.missing_parent_guids + other.missing_parent_guids,
+            non_folder_parent_guids: self.non_folder_parent_guids + other.non_folder_parent_guids,
+            parent_child_disagreements: self.parent_child_disagreements
+                + other.parent_child_disagreements,
+            deleted_children: self.deleted_children + other.deleted_children,
+            missing_children: self.missing_children + other.missing_children,
+        }
     }
 }
 

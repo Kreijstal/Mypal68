@@ -29,6 +29,7 @@ from mozbuild.util import (
 )
 from .context import Context
 from mozpack.files import FileFinder
+from functools import cmp_to_key
 
 
 default_finder = FileFinder('/')
@@ -39,7 +40,13 @@ def alphabetical_sorted(iterable, cmp=None, key=lambda x: x.lower(),
     """sorted() replacement for the sandbox, ordering alphabetically by
     default.
     """
-    return sorted(iterable, cmp, key, reverse)
+    if cmp is not None:
+        if key is not None:
+            def cmp_wrapper(a, b):
+                return cmp(key(a), key(b))
+            return sorted(iterable, key=cmp_to_key(cmp_wrapper), reverse=reverse)
+        return sorted(iterable, key=cmp_to_key(cmp), reverse=reverse)
+    return sorted(iterable, key=key, reverse=reverse)
 
 
 class SandboxError(Exception):
@@ -158,6 +165,8 @@ class Sandbox(dict):
         except Exception:
             raise SandboxLoadError(self._context.source_stack,
                                    sys.exc_info()[2], read_error=path)
+        if isinstance(source, bytes):
+            source = source.decode('utf-8')
 
         self.exec_source(source, path)
 

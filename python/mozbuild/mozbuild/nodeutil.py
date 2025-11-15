@@ -18,6 +18,12 @@ NODE_MIN_VERSION = StrictVersion("8.11.0")
 NPM_MIN_VERSION = StrictVersion("6.13.4")
 
 
+def _normalize_version_output(output):
+    if isinstance(output, bytes):
+        output = output.decode("utf-8", "ignore")
+    return output.lstrip("vV").strip()
+
+
 def find_node_paths():
     """ Determines the possible paths for node executables.
 
@@ -57,12 +63,14 @@ def check_executable_version(exe, wrap_call_with_node=False):
     if wrap_call_with_node and platform.system() != "Windows":
         binary, _ = find_node_executable()
         if binary:
-            out = subprocess.check_output([binary, exe, "--version"]).lstrip('v').rstrip()
+            out = _normalize_version_output(
+                subprocess.check_output([binary, exe, "--version"])
+            )
 
     # If we can't find node, or we don't need to wrap it, fallback to calling
     # direct.
-    if not out:
-        out = subprocess.check_output([exe, "--version"]).lstrip('v').rstrip()
+    if out is None:
+        out = _normalize_version_output(subprocess.check_output([exe, "--version"]))
     return StrictVersion(out)
 
 

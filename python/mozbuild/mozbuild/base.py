@@ -13,11 +13,7 @@ import six
 import subprocess
 import sys
 import errno
-try:
-    from shutil import which
-except ImportError:
-    # shutil.which is not available in Python 2.7
-    import which
+import which
 
 from mach.mixin.process import ProcessExecutionMixin
 from mozversioncontrol import (

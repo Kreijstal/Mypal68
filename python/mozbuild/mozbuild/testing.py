@@ -4,7 +4,10 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import os
 import sys
 

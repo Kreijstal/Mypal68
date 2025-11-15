@@ -1,16 +1,4 @@
-// Copyright 2016 Kyle Mayes
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 //================================================
 // Macros
@@ -18,7 +6,13 @@
 
 #[cfg(feature = "runtime")]
 macro_rules! link {
-    (@LOAD: #[cfg($cfg:meta)] fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*) => (
+    (
+        @LOAD:
+        $(#[doc=$doc:expr])*
+        #[cfg($cfg:meta)]
+        fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*
+    ) => (
+        $(#[doc=$doc])*
         #[cfg($cfg)]
         pub fn $name(library: &mut super::SharedLibrary) {
             let symbol = unsafe { library.library.get(stringify!($name).as_bytes()) }.ok();
@@ -32,19 +26,75 @@ macro_rules! link {
         pub fn $name(_: &mut super::SharedLibrary) {}
     );
 
-    (@LOAD: fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*) => (
-        link!(@LOAD: #[cfg(feature="runtime")] fn $name($($pname: $pty), *) $(-> $ret)*);
+    (
+        @LOAD:
+        fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*
+    ) => (
+        link!(@LOAD: #[cfg(feature = "runtime")] fn $name($($pname: $pty), *) $(-> $ret)*);
     );
 
-    ($($(#[cfg($cfg:meta)])* pub fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*;)+) => (
+    (
+        $(
+            $(#[doc=$doc:expr] #[cfg($cfg:meta)])*
+            pub fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*;
+        )+
+    ) => (
         use std::cell::{RefCell};
+        use std::fmt;
         use std::sync::{Arc};
         use std::path::{Path, PathBuf};
+
+        /// The (minimum) version of a `libclang` shared library.
+        #[allow(missing_docs)]
+        #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum Version {
+            V3_5 = 35,
+            V3_6 = 36,
+            V3_7 = 37,
+            V3_8 = 38,
+            V3_9 = 39,
+            V4_0 = 40,
+            V5_0 = 50,
+            V6_0 = 60,
+            V7_0 = 70,
+            V8_0 = 80,
+            V9_0 = 90,
+            V11_0 = 110,
+            V12_0 = 120,
+            V16_0 = 160,
+            V17_0 = 170,
+        }
+
+        impl fmt::Display for Version {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                use Version::*;
+                match self {
+                    V3_5 => write!(f, "3.5.x"),
+                    V3_6 => write!(f, "3.6.x"),
+                    V3_7 => write!(f, "3.7.x"),
+                    V3_8 => write!(f, "3.8.x"),
+                    V3_9 => write!(f, "3.9.x"),
+                    V4_0 => write!(f, "4.0.x"),
+                    V5_0 => write!(f, "5.0.x"),
+                    V6_0 => write!(f, "6.0.x"),
+                    V7_0 => write!(f, "7.0.x"),
+                    V8_0 => write!(f, "8.0.x"),
+                    V9_0 => write!(f, "9.0.x - 10.0.x"),
+                    V11_0 => write!(f, "11.0.x"),
+                    V12_0 => write!(f, "12.0.x - 15.0.x"),
+                    V16_0 => write!(f, "16.0.x"),
+                    V17_0 => write!(f, "17.0.x or later"),
+                }
+            }
+        }
 
         /// The set of functions loaded dynamically.
         #[derive(Debug, Default)]
         pub struct Functions {
-            $($(#[cfg($cfg)])* pub $name: Option<unsafe extern fn($($pname: $pty), *) $(-> $ret)*>,)+
+            $(
+                $(#[doc=$doc] #[cfg($cfg)])*
+                pub $name: Option<unsafe extern fn($($pname: $pty), *) $(-> $ret)*>,
+            )+
         }
 
         /// A dynamically loaded instance of the `libclang` library.
@@ -60,8 +110,46 @@ macro_rules! link {
                 Self { library, path, functions: Functions::default() }
             }
 
+            /// Returns the path to this `libclang` shared library.
             pub fn path(&self) -> &Path {
                 &self.path
+            }
+
+            /// Returns the (minimum) version of this `libclang` shared library.
+            ///
+            /// If this returns `None`, it indicates that the version is too old
+            /// to be supported by this crate (i.e., `3.4` or earlier). If the
+            /// version of this shared library is more recent than that fully
+            /// supported by this crate, the most recent fully supported version
+            /// will be returned.
+            pub fn version(&self) -> Option<Version> {
+                macro_rules! check {
+                    ($fn:expr, $version:ident) => {
+                        if self.library.get::<unsafe extern fn()>($fn).is_ok() {
+                            return Some(Version::$version);
+                        }
+                    };
+                }
+
+                unsafe {
+                    check!(b"clang_CXXMethod_isExplicit", V17_0);
+                    check!(b"clang_CXXMethod_isCopyAssignmentOperator", V16_0);
+                    check!(b"clang_Cursor_getVarDeclInitializer", V12_0);
+                    check!(b"clang_Type_getValueType", V11_0);
+                    check!(b"clang_Cursor_isAnonymousRecordDecl", V9_0);
+                    check!(b"clang_Cursor_getObjCPropertyGetterName", V8_0);
+                    check!(b"clang_File_tryGetRealPathName", V7_0);
+                    check!(b"clang_CXIndex_setInvocationEmissionPathOption", V6_0);
+                    check!(b"clang_Cursor_isExternalSymbol", V5_0);
+                    check!(b"clang_EvalResult_getAsLongLong", V4_0);
+                    check!(b"clang_CXXConstructor_isConvertingConstructor", V3_9);
+                    check!(b"clang_CXXField_isMutable", V3_8);
+                    check!(b"clang_Cursor_getOffsetOfField", V3_7);
+                    check!(b"clang_Cursor_getStorageClass", V3_6);
+                    check!(b"clang_Type_getNumTemplateArguments", V3_5);
+                }
+
+                None
             }
         }
 
@@ -82,19 +170,39 @@ macro_rules! link {
         }
 
         $(
-            #[cfg_attr(feature="cargo-clippy", allow(too_many_arguments))]
-            $(#[cfg($cfg)])*
+            #[cfg_attr(feature="cargo-clippy", allow(clippy::missing_safety_doc))]
+            #[cfg_attr(feature="cargo-clippy", allow(clippy::too_many_arguments))]
+            $(#[doc=$doc] #[cfg($cfg)])*
             pub unsafe fn $name($($pname: $pty), *) $(-> $ret)* {
-                let f = with_library(|l| {
-                    match l.functions.$name {
-                        Some(f) => f,
-                        _ => panic!(concat!("function not loaded: ", stringify!($name))),
+                let f = with_library(|library| {
+                    if let Some(function) = library.functions.$name {
+                        function
+                    } else {
+                        panic!(
+                            r#"
+A `libclang` function was called that is not supported by the loaded `libclang` instance.
+
+    called function = `{0}`
+    loaded `libclang` instance = {1}
+
+The minimum `libclang` requirement for this particular function can be found here:
+https://docs.rs/clang-sys/latest/clang_sys/{0}/index.html
+
+Instructions for installing `libclang` can be found here:
+https://rust-lang.github.io/rust-bindgen/requirements.html
+"#, 
+                            stringify!($name),
+                            library
+                                .version()
+                                .map(|v| format!("{}", v))
+                                .unwrap_or_else(|| "unsupported version".into()),
+                        );
                     }
                 }).expect("a `libclang` shared library is not loaded on this thread");
                 f($($pname), *)
             }
 
-            $(#[cfg($cfg)])*
+            $(#[doc=$doc] #[cfg($cfg)])*
             pub mod $name {
                 pub fn is_loaded() -> bool {
                     super::with_library(|l| l.functions.$name.is_some()).unwrap_or(false)
@@ -116,25 +224,29 @@ macro_rules! link {
         /// * a `libclang` shared library could not be found
         /// * the `libclang` shared library could not be opened
         pub fn load_manually() -> Result<SharedLibrary, String> {
+            #[allow(dead_code)]
             mod build {
+                include!(concat!(env!("OUT_DIR"), "/macros.rs"));
                 pub mod common { include!(concat!(env!("OUT_DIR"), "/common.rs")); }
                 pub mod dynamic { include!(concat!(env!("OUT_DIR"), "/dynamic.rs")); }
             }
 
-            let (directory, filename) = try!(build::dynamic::find(true));
+            let (directory, filename) = build::dynamic::find(true)?;
             let path = directory.join(filename);
 
-            let library = libloading::Library::new(&path).map_err(|e| {
-                format!(
-                    "the `libclang` shared library at {} could not be opened: {}",
-                    path.display(),
-                    e,
-                )
-            });
+            unsafe {
+                let library = libloading::Library::new(&path).map_err(|e| {
+                    format!(
+                        "the `libclang` shared library at {} could not be opened: {}",
+                        path.display(),
+                        e,
+                    )
+                });
 
-            let mut library = SharedLibrary::new(try!(library), path);
-            $(load::$name(&mut library);)+
-            Ok(library)
+                let mut library = SharedLibrary::new(library?, path);
+                $(load::$name(&mut library);)+
+                Ok(library)
+            }
         }
 
         /// Loads a `libclang` shared library for use in the current thread.
@@ -150,7 +262,7 @@ macro_rules! link {
         /// * the `libclang` shared library could not be opened
         #[allow(dead_code)]
         pub fn load() -> Result<(), String> {
-            let library = Arc::new(try!(load_manually()));
+            let library = Arc::new(load_manually()?);
             LIBRARY.with(|l| *l.borrow_mut() = Some(library));
             Ok(())
         }
@@ -187,12 +299,24 @@ macro_rules! link {
 
 #[cfg(not(feature = "runtime"))]
 macro_rules! link {
-    ($($(#[cfg($cfg:meta)])* pub fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*;)+) => (
-        extern { $($(#[cfg($cfg)])* pub fn $name($($pname: $pty), *) $(-> $ret)*;)+ }
+    (
+        $(
+            $(#[doc=$doc:expr] #[cfg($cfg:meta)])*
+            pub fn $name:ident($($pname:ident: $pty:ty), *) $(-> $ret:ty)*;
+        )+
+    ) => (
+        extern {
+            $(
+                $(#[doc=$doc] #[cfg($cfg)])*
+                pub fn $name($($pname: $pty), *) $(-> $ret)*;
+            )+
+        }
 
-        $($(#[cfg($cfg)])*
-        pub mod $name {
-            pub fn is_loaded() -> bool { true }
-        })+
+        $(
+            $(#[doc=$doc] #[cfg($cfg)])*
+            pub mod $name {
+                pub fn is_loaded() -> bool { true }
+            }
+        )+
     )
 }

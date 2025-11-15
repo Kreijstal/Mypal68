@@ -9,7 +9,11 @@ import six
 import sys
 import json
 
-from collections import Iterable, OrderedDict
+from collections import OrderedDict
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 from types import ModuleType
 
 import mozpack.path as mozpath
@@ -246,10 +250,9 @@ class PartialConfigDict(object):
         return existing_files
 
     def _write_file(self, key, value):
-        encoding = 'mbcs' if sys.platform == 'win32' else 'utf-8'
         filename = mozpath.join(self._datadir, key)
         with FileAvoidWrite(filename) as fh:
-            json.dump(value, fh, indent=4, encoding=encoding)
+            json.dump(value, fh, indent=4)
         return filename
 
     def _fill_group(self, values):
@@ -263,7 +266,7 @@ class PartialConfigDict(object):
         existing_files = self._load_config_track()
 
         new_files = set()
-        for k, v in values.iteritems():
+        for k, v in values.items():
             new_files.add(self._write_file(k, v))
 
         for filename in existing_files - new_files:

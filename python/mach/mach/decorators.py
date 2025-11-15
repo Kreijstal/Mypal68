@@ -5,9 +5,12 @@
 from __future__ import absolute_import, unicode_literals
 
 import argparse
-import collections
 import inspect
 import types
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 from .base import MachError
 from .registrar import Registrar
@@ -114,17 +117,27 @@ def CommandProvider(cls):
     # Tell mach driver whether to pass context argument to __init__.
     pass_context = False
 
-    if inspect.ismethod(cls.__init__):
-        spec = inspect.getargspec(cls.__init__)
-
-        if len(spec.args) > 2:
-            msg = 'Mach @CommandProvider class %s implemented incorrectly. ' + \
-                  '__init__() must take 1 or 2 arguments. From %s'
-            msg = msg % (cls.__name__, inspect.getsourcefile(cls))
-            raise MachError(msg)
-
-        if len(spec.args) == 2:
-            pass_context = True
+    init = cls.__init__
+    if init is not object.__init__:
+        get_spec = getattr(inspect, 'getfullargspec', getattr(inspect, 'getargspec', None))
+        spec = None
+        if get_spec:
+            try:
+                spec = get_spec(init)
+            except TypeError:
+                spec = None
+        if spec:
+            arg_count = len(spec.args)
+            # Discount the implicit self argument.
+            if arg_count:
+                arg_count -= 1
+            if arg_count > 1:
+                msg = 'Mach @CommandProvider class %s implemented incorrectly. ' + \
+                      '__init__() must take 1 or 2 arguments. From %s'
+                msg = msg % (cls.__name__, inspect.getsourcefile(cls))
+                raise MachError(msg)
+            if arg_count == 1:
+                pass_context = True
 
     seen_commands = set()
 
@@ -155,7 +168,7 @@ def CommandProvider(cls):
               'Conditions argument must take a list ' + \
               'of functions. Found %s instead.'
 
-        if not isinstance(command.conditions, collections.Iterable):
+        if not isinstance(command.conditions, Iterable):
             msg = msg % (command.name, type(command.conditions))
             raise MachError(msg)
 

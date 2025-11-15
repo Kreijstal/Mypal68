@@ -10,7 +10,7 @@
 def all_configure_options():
     result = []
     previous = None
-    for option in __sandbox__._options.itervalues():
+    for option in __sandbox__._options.values():
         # __sandbox__._options contains items for both option.name and
         # option.env. But it's also an OrderedDict, meaning both are
         # consecutive.
@@ -733,10 +733,9 @@ option('--disable-skia', help='Disable use of Skia')
 
 @depends('--disable-skia')
 def skia(value):
-    if not value:
+    if value:
         die('--disable-skia is not supported anymore')
-    else:
-        return True
+    return True
 
 set_config('MOZ_ENABLE_SKIA', skia)
 set_define('MOZ_ENABLE_SKIA', skia)
@@ -914,10 +913,10 @@ def geckodriver_default(enable_tests, target, cross_compile, hazard, asan):
     return True
 
 option('--enable-geckodriver', default=geckodriver_default,
-       when='--enable-compile-environment',
+       when=compile_environment,
        help='{Build|Do not build} geckodriver')
 
-@depends('--enable-geckodriver', when='--enable-compile-environment')
+@depends('--enable-geckodriver', when=compile_environment)
 def geckodriver(enabled):
     if enabled:
         return True
@@ -1012,7 +1011,7 @@ add_old_configure_assignment('MOZ_ASAN_REPORTER', enable_asan_reporter)
 
 # Elfhack
 # ==============================================================
-with only_when('--enable-compile-environment'):
+with only_when(compile_environment):
     @depends(host, target)
     def has_elfhack(host, target):
         return target.kernel == 'Linux' and host.kernel == 'Linux' and \
@@ -1073,7 +1072,7 @@ def midl_names(c_compiler, toolchain_prefix):
 
     return ('midl',)
 
-@depends(target, '--enable-compile-environment')
+@depends(target, compile_environment)
 def check_for_midl(target, compile_environment):
     if target.os != 'WINNT':
         return
@@ -1090,12 +1089,13 @@ midl = check_prog('MIDL', midl_names, when=check_for_midl, allow_missing=True,
          when=depends(midl, target)(lambda m, t: m and t.kernel == 'WINNT'))
 @imports(_from='mozbuild.shellutil', _import='quote')
 def midl_flags(c_compiler, target, toolchain_search_path):
+    cpu = '%s' % target.cpu
     if c_compiler and c_compiler.type == 'clang-cl':
         env = {
             'x86': 'win32',
             'x86_64': 'x64',
             'aarch64': 'arm64',
-        }[target.cpu]
+        }[cpu]
         flags = ['-env', env]
 
         if c_compiler.version >= '8':
@@ -1114,7 +1114,7 @@ def midl_flags(c_compiler, target, toolchain_search_path):
     return {
         'x86': ['--win32', '-m32'],
         'x86_64': ['--win64', '-m64'],
-    }[target.cpu]
+    }[cpu]
 
 
 set_config('MIDL_FLAGS', midl_flags)
@@ -1606,13 +1606,14 @@ with only_when(compile_environment & target_is_windows):
     @checking('for D3D compiler DLL', d3d_compiler_dll_result)
     @imports('os.path')
     def d3d_compiler_dll(target, windows_sdk_dir, fxc):
+        cpu = '%s' % target.cpu
         suffix = {
             'x86_64': 'x64',
-        }.get(target.cpu, target.cpu)
+        }.get(cpu, cpu)
 
         name = 'd3dcompiler_47.dll'
 
-        if target.cpu == 'aarch64':
+        if cpu == 'aarch64':
             # AArch64 Windows comes with d3dcompiler_47.dll installed
             return namespace(name=name, path=None)
 

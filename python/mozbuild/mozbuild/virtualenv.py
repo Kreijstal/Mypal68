@@ -116,7 +116,7 @@ class VirtualenvManager(object):
         on OS X our python path may end up being a different or modified
         executable.
         """
-        ver = subprocess.check_output([python, '-c', 'import sys; print(sys.hexversion)']).rstrip()
+        ver = subprocess.check_output([python, '-c', 'import sys; print(sys.hexversion)']).decode('ascii').strip()
         with open(self.exe_info_path, 'w') as fh:
             fh.write("%s\n" % ver)
             fh.write("%s\n" % os.path.getsize(python))
@@ -198,13 +198,12 @@ class VirtualenvManager(object):
         env = dict(os.environ)
         env.pop('PYTHONDONTWRITEBYTECODE', None)
 
-        args = [python, self.virtualenv_script_path,
-                # Without this, virtualenv.py may attempt to contact the outside
-                # world and search for or download a newer version of pip,
-                # setuptools, or wheel. This is bad for security, reproducibility,
-                # and speed.
-                '--no-download',
-                self.virtualenv_root]
+        if sys.version_info >= (3, 3):
+            args = [python, '-m', 'venv', self.virtualenv_root]
+        else:
+            args = [python, self.virtualenv_script_path,
+                    '--no-download',
+                    self.virtualenv_root]
 
         result = self._log_process_output(args, env=env)
 
@@ -217,7 +216,7 @@ class VirtualenvManager(object):
         return self.virtualenv_root
 
     def packages(self):
-        with open(self.manifest_path, 'rU') as fh:
+        with open(self.manifest_path, 'r') as fh:
             packages = [line.rstrip().split(':')
                         for line in fh]
         return packages

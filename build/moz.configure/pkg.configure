@@ -14,8 +14,12 @@ pkg_config = check_prog('PKG_CONFIG', pkg_config, allow_missing=True)
 
 @depends_if(pkg_config)
 @checking('for pkg-config version')
+@imports('six')
 def pkg_config_version(pkg_config):
-    return Version(check_cmd_output(pkg_config, '--version').rstrip())
+    out = check_cmd_output(pkg_config, '--version').rstrip()
+    if isinstance(out, six.binary_type):
+        out = out.decode('utf-8', 'replace')
+    return Version(out)
 
 # Locates the given module using pkg-config.
 # - `var` determines the name of variables to set when the package is found.
@@ -39,7 +43,7 @@ def pkg_check_modules(var, package_desc, when=always,
     package_desc = dependable(package_desc)
     allow_missing = dependable(allow_missing)
 
-    @depends(when, '--enable-compile-environment')
+    @depends(when, compile_environment)
     def when_and_compile_environment(when, compile_environment):
         return when and compile_environment
 

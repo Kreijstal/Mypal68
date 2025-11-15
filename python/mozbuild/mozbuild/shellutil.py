@@ -5,6 +5,7 @@
 from __future__ import absolute_import, print_function
 
 import re
+import six
 
 
 def _tokens2re(**tokens):
@@ -184,6 +185,9 @@ def _quote(s):
     As a special case, if given an int, returns a string containing the int,
     not enclosed in quotes.
     '''
+    if isinstance(s, six.binary_type):
+        s = s.decode('utf-8', 'ignore')
+
     if type(s) == int:
         return '%d' % s
 

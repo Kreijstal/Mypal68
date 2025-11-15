@@ -57,29 +57,34 @@ yasm = check_prog('YASM', ['yasm'], allow_missing=True)
 
 @depends_if(yasm)
 @checking('yasm version')
+@imports('six')
 def yasm_version(yasm):
-    version = check_cmd_output(
+    out = check_cmd_output(
         yasm, '--version',
         onerror=lambda: die('Failed to get yasm version.')
-    ).splitlines()[0].split()[1]
+    )
+    if isinstance(out, six.binary_type):
+        out = out.decode('utf-8', 'replace')
+    version = out.splitlines()[0].split()[1]
     return Version(version)
 
 
 @depends(yasm, target)
 def yasm_asflags(yasm, target):
     if yasm:
+        key = (str(target.os), str(target.cpu))
         asflags = {
             ('OSX', 'x86'): ['-f', 'macho32'],
             ('OSX', 'x86_64'): ['-f', 'macho64'],
             ('WINNT', 'x86'): ['-f', 'win32'],
             ('WINNT', 'x86_64'): ['-f', 'x64'],
-        }.get((target.os, target.cpu), None)
+        }.get(key, None)
         if asflags is None:
             # We're assuming every x86 platform we support that's
             # not Windows or Mac is ELF.
-            if target.cpu == 'x86':
+            if str(target.cpu) == 'x86':
                 asflags = ['-f', 'elf32']
-            elif target.cpu == 'x86_64':
+            elif str(target.cpu) == 'x86_64':
                 asflags = ['-f', 'elf64']
         if asflags:
             asflags += ['-rnasm', '-pnasm']
@@ -377,6 +382,7 @@ def try_preprocess(compiler, language, source):
          _import='OS_preprocessor_checks')
 @imports(_from='textwrap', _import='dedent')
 @imports(_from='__builtin__', _import='Exception')
+@imports('six')
 def get_compiler_info(compiler, language):
     '''Returns information about the given `compiler` (command line in the
     form of a list or tuple), in the given `language`.
@@ -424,7 +430,7 @@ def get_compiler_info(compiler, language):
         ('KERNEL', kernel_preprocessor_checks),
         ('OS', OS_preprocessor_checks),
     ):
-        for n, (value, condition) in enumerate(preprocessor_checks.iteritems()):
+        for n, (value, condition) in enumerate(preprocessor_checks.items()):
             check += dedent('''\
                 #%(if)s %(condition)s
                 %%%(name)s "%(value)s"
@@ -448,6 +454,16 @@ def get_compiler_info(compiler, language):
     ''')
 
     result = try_preprocess(compiler, language, check)
+    if result and hasattr(result, 'tobytes'):
+        try:
+            result = result.tobytes()
+        except Exception:
+            pass
+    if result and hasattr(result, 'decode'):
+        try:
+            result = result.decode('utf-8', 'replace')
+        except Exception:
+            pass
 
     if not result:
         raise FatalCheckError(
@@ -457,11 +473,20 @@ def get_compiler_info(compiler, language):
     # have non-ASCII characters. Treat the output as bytearray.
     data = {}
     for line in result.splitlines():
-        if line.startswith(b'%'):
+        if isinstance(line, six.binary_type):
+            if not line.startswith(b'%'):
+                continue
+            k, _, v = line.partition(b' ')
+            k = k.lstrip(b'%').decode('utf-8', 'replace')
+            v = v.replace(b' ', b'').lstrip(b'"').rstrip(b'"').decode('utf-8', 'replace')
+        else:
+            if not line.startswith('%'):
+                continue
             k, _, v = line.partition(' ')
             k = k.lstrip('%')
-            data[k] = v.replace(' ', '').lstrip('"').rstrip('"')
-            log.debug('%s = %s', k, data[k])
+            v = v.replace(' ', '').lstrip('"').rstrip('"')
+        data[k] = v
+        log.debug('%s = %s', k, data[k])
 
     try:
         type = CompilerType(data['COMPILER'])
@@ -542,8 +567,8 @@ def check_compiler(compiler, language, target):
         # Add target flag when there is an OS mismatch (e.g. building for Android on
         # Linux). However, only do this if the target OS is in our whitelist, to
         # keep things the same on other platforms.
-        elif target.os in OS_preprocessor_checks and (
-                not info.os or info.os != target.os):
+        elif str(target.os) in OS_preprocessor_checks and (
+                not info.os or info.os != str(target.os)):
             flags.append('--target=%s' % target.toolchain)
             has_target = True
 
@@ -645,7 +670,7 @@ def vc_compiler_paths_for_version(host, vs_major_version, env, vc_path, vs_relea
     host_dir = {
         'x86_64': 'HostX64',
         'x86': 'HostX86',
-    }.get(host.cpu)
+    }.get(str(host.cpu))
     if host_dir:
         path = os.path.join(path, 'bin', host_dir)
         return {
@@ -666,7 +691,7 @@ def vc_compiler_path_for(host_or_target):
             'x86_64': 'x64',
             'arm': 'arm',
             'aarch64': 'arm64'
-        }.get(target.cpu)
+        }.get(str(target.cpu))
         if not paths:
             return
         return paths.get(vc_target)
@@ -1629,12 +1654,15 @@ nasm = check_prog('NASM', ['nasm'], allow_missing=True, paths=toolchain_search_p
 
 @depends_if(nasm)
 @checking('nasm version')
+@imports('six')
 def nasm_version(nasm):
     (retcode, stdout, _) = get_cmd_output(nasm, '-v')
     if retcode:
         # mac stub binary
         return None
 
+    if isinstance(stdout, six.binary_type):
+        stdout = stdout.decode('utf-8', 'replace')
     version = stdout.splitlines()[0].split()[2]
     return Version(version)
 
@@ -1656,18 +1684,19 @@ set_config('NASM_MINOR_VERSION', nasm_minor_version)
 @depends(nasm, target)
 def nasm_asflags(nasm, target):
     if nasm:
+        key = (str(target.os), str(target.cpu))
         asflags = {
             ('OSX', 'x86'): ['-f', 'macho32'],
             ('OSX', 'x86_64'): ['-f', 'macho64'],
             ('WINNT', 'x86'): ['-f', 'win32'],
             ('WINNT', 'x86_64'): ['-f', 'win64'],
-        }.get((target.os, target.cpu), None)
+        }.get(key, None)
         if asflags is None:
             # We're assuming every x86 platform we support that's
             # not Windows or Mac is ELF.
-            if target.cpu == 'x86':
+            if str(target.cpu) == 'x86':
                 asflags = ['-f', 'elf32']
-            elif target.cpu == 'x86_64':
+            elif str(target.cpu) == 'x86_64':
                 asflags = ['-f', 'elf64']
         return asflags
 

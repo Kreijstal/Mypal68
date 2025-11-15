@@ -6,7 +6,7 @@ The `Localization` struct encapsulates a persistant localization context providi
 language fallbacking. The instance remains available throughout the whole life cycle of
 the corresponding UI, reacting to events such as locale changes, resource updates etc.
 
-The API can be used directly, or can serve as an example of state manager for `fluent-bundle` and `fluent-resmgr`.
+The API can be used directly, or can serve as an example of state manager for `fluent-bundle` and `fluent-resmgr`. 
 
 [![crates.io](https://meritbadge.herokuapp.com/fluent-fallback)](https://crates.io/crates/fluent-fallback)
 [![Build and test](https://github.com/projectfluent/fluent-rs/workflows/Build%20and%20test/badge.svg)](https://github.com/projectfluent/fluent-rs/actions?query=branch%3Amaster+workflow%3A%22Build+and+test%22)

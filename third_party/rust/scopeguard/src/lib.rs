@@ -73,7 +73,7 @@
 //!
 //! ```
 //! extern crate scopeguard;
-//!
+//! 
 //! use std::fs::*;
 //! use std::io::{self, Write};
 //! # // Mock file so that we don't actually write a file
@@ -84,7 +84,7 @@
 //! #     fn sync_all(&self) -> io::Result<()> { Ok(()) }
 //! # }
 //! # use self::MockFile as File;
-//!
+//! 
 //! fn try_main() -> io::Result<()> {
 //!     let f = File::create("newfile.txt")?;
 //!     let mut file = scopeguard::guard(f, |f| {
@@ -114,7 +114,7 @@
 //! //
 //! // For optimization purposes we temporarily violate an invariant of the
 //! // Vec, that it owns all of its elements.
-//! //
+//! // 
 //! // The safe approach is to use swap, which means two writes to memory,
 //! // the optimization is to use a “hole” which uses only one write of memory
 //! // for each position it moves.
@@ -335,7 +335,7 @@ impl<T, F, S> ScopeGuard<T, F, S>
     /// fn main() {
     ///     let mut guard = guard(Vec::new(), |mut v| v.clear());
     ///     guard.push(1);
-    ///
+    ///     
     ///     if conditional() {
     ///         // a condition maybe makes us decide to
     ///         // “defuse” the guard and get back its inner parts
@@ -396,14 +396,14 @@ pub fn guard_on_success<T, F>(v: T, dropfn: F) -> ScopeGuard<T, F, OnSuccess>
 ///
 /// ```
 /// extern crate scopeguard;
-///
+/// 
 /// use scopeguard::ScopeGuard;
 /// # fn main() {
 /// {
 ///     let guard = scopeguard::guard((), |_| { });
 ///
 ///     // rest of the code here
-///
+///     
 ///     // we reached the end of scope without unwinding - defuse it
 ///     ScopeGuard::into_inner(guard);
 /// }

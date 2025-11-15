@@ -1,5 +1,6 @@
+use alloc::borrow::Cow;
+use core::fmt;
 use proc_macro2::{Ident, Span};
-use std::fmt;
 
 /// Specialized formatting trait used by `format_ident!`.
 ///
@@ -7,6 +8,8 @@ use std::fmt;
 /// stripped, if present.
 ///
 /// See [`format_ident!`] for more information.
+///
+/// [`format_ident!`]: crate::format_ident
 pub trait IdentFragment {
     /// Format this value as an identifier fragment.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result;
@@ -19,7 +22,7 @@ pub trait IdentFragment {
     }
 }
 
-impl<'a, T: IdentFragment + ?Sized> IdentFragment for &'a T {
+impl<T: IdentFragment + ?Sized> IdentFragment for &T {
     fn span(&self) -> Option<Span> {
         <T as IdentFragment>::span(*self)
     }
@@ -29,7 +32,7 @@ impl<'a, T: IdentFragment + ?Sized> IdentFragment for &'a T {
     }
 }
 
-impl<'a, T: IdentFragment + ?Sized> IdentFragment for &'a mut T {
+impl<T: IdentFragment + ?Sized> IdentFragment for &mut T {
     fn span(&self) -> Option<Span> {
         <T as IdentFragment>::span(*self)
     }
@@ -46,11 +49,24 @@ impl IdentFragment for Ident {
 
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let id = self.to_string();
-        if id.starts_with("r#") {
-            fmt::Display::fmt(&id[2..], f)
+        if let Some(id) = id.strip_prefix("r#") {
+            fmt::Display::fmt(id, f)
         } else {
             fmt::Display::fmt(&id[..], f)
         }
+    }
+}
+
+impl<T> IdentFragment for Cow<'_, T>
+where
+    T: IdentFragment + ToOwned + ?Sized,
+{
+    fn span(&self) -> Option<Span> {
+        T::span(self)
+    }
+
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        T::fmt(self, f)
     }
 }
 
@@ -65,8 +81,8 @@ macro_rules! ident_fragment_display {
                 }
             }
         )*
-    }
+    };
 }
 
-ident_fragment_display!(bool, str, String);
+ident_fragment_display!(bool, str, String, char);
 ident_fragment_display!(u8, u16, u32, u64, u128, usize);

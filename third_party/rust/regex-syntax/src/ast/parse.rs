@@ -2,17 +2,26 @@
 This module provides a regular expression parser.
 */
 
-use std::borrow::Borrow;
-use std::cell::{Cell, RefCell};
-use std::mem;
-use std::result;
+use core::{
+    borrow::Borrow,
+    cell::{Cell, RefCell},
+    mem,
+};
 
-use ast::{self, Ast, Position, Span};
-use either::Either;
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
-use is_meta_character;
+use crate::{
+    ast::{self, Ast, Position, Span},
+    either::Either,
+    is_escapeable_character, is_meta_character,
+};
 
-type Result<T> = result::Result<T, ast::Error>;
+type Result<T> = core::result::Result<T, ast::Error>;
 
 /// A primitive is an expression with no sub-expressions. This includes
 /// literals, assertions and non-set character classes. This representation
@@ -44,11 +53,11 @@ impl Primitive {
     /// Convert this primitive into a proper AST.
     fn into_ast(self) -> Ast {
         match self {
-            Primitive::Literal(lit) => Ast::Literal(lit),
-            Primitive::Assertion(assert) => Ast::Assertion(assert),
-            Primitive::Dot(span) => Ast::Dot(span),
-            Primitive::Perl(cls) => Ast::Class(ast::Class::Perl(cls)),
-            Primitive::Unicode(cls) => Ast::Class(ast::Class::Unicode(cls)),
+            Primitive::Literal(lit) => Ast::literal(lit),
+            Primitive::Assertion(assert) => Ast::assertion(assert),
+            Primitive::Dot(span) => Ast::dot(span),
+            Primitive::Perl(cls) => Ast::class_perl(cls),
+            Primitive::Unicode(cls) => Ast::class_unicode(cls),
         }
     }
 
@@ -58,10 +67,10 @@ impl Primitive {
     /// then return an error.
     fn into_class_set_item<P: Borrow<Parser>>(
         self,
-        p: &ParserI<P>,
+        p: &ParserI<'_, P>,
     ) -> Result<ast::ClassSetItem> {
         use self::Primitive::*;
-        use ast::ClassSetItem;
+        use crate::ast::ClassSetItem;
 
         match self {
             Literal(lit) => Ok(ClassSetItem::Literal(lit)),
@@ -79,7 +88,7 @@ impl Primitive {
     /// dot), then return an error.
     fn into_class_literal<P: Borrow<Parser>>(
         self,
-        p: &ParserI<P>,
+        p: &ParserI<'_, P>,
     ) -> Result<ast::Literal> {
         use self::Primitive::*;
 
@@ -98,12 +107,13 @@ fn is_hex(c: char) -> bool {
 /// Returns true if the given character is a valid in a capture group name.
 ///
 /// If `first` is true, then `c` is treated as the first character in the
-/// group name (which is not allowed to be a digit).
+/// group name (which must be alphabetic or underscore).
 fn is_capture_char(c: char, first: bool) -> bool {
-    c == '_'
-        || (!first && c >= '0' && c <= '9')
-        || (c >= 'a' && c <= 'z')
-        || (c >= 'A' && c <= 'Z')
+    if first {
+        c == '_' || c.is_alphabetic()
+    } else {
+        c == '_' || c == '.' || c == '[' || c == ']' || c.is_alphanumeric()
+    }
 }
 
 /// A builder for a regular expression parser.
@@ -114,6 +124,7 @@ pub struct ParserBuilder {
     ignore_whitespace: bool,
     nest_limit: u32,
     octal: bool,
+    empty_min_range: bool,
 }
 
 impl Default for ParserBuilder {
@@ -129,6 +140,7 @@ impl ParserBuilder {
             ignore_whitespace: false,
             nest_limit: 250,
             octal: false,
+            empty_min_range: false,
         }
     }
 
@@ -139,6 +151,7 @@ impl ParserBuilder {
             capture_index: Cell::new(0),
             nest_limit: self.nest_limit,
             octal: self.octal,
+            empty_min_range: self.empty_min_range,
             initial_ignore_whitespace: self.ignore_whitespace,
             ignore_whitespace: Cell::new(self.ignore_whitespace),
             comments: RefCell::new(vec![]),
@@ -161,12 +174,12 @@ impl ParserBuilder {
     /// constant stack space and moving the call stack to the heap), other
     /// crates may.
     ///
-    /// This limit is not checked until the entire Ast is parsed. Therefore,
+    /// This limit is not checked until the entire AST is parsed. Therefore,
     /// if callers want to put a limit on the amount of heap space used, then
     /// they should impose a limit on the length, in bytes, of the concrete
     /// pattern string. In particular, this is viable since this parser
     /// implementation will limit itself to heap space proportional to the
-    /// lenth of the pattern string.
+    /// length of the pattern string.
     ///
     /// Note that a nest limit of `0` will return a nest limit error for most
     /// patterns but not all. For example, a nest limit of `0` permits `a` but
@@ -201,7 +214,7 @@ impl ParserBuilder {
 
     /// Enable verbose mode in the regular expression.
     ///
-    /// When enabled, verbose mode permits insigificant whitespace in many
+    /// When enabled, verbose mode permits insignificant whitespace in many
     /// places in the regular expression, as well as comments. Comments are
     /// started using `#` and continue until the end of the line.
     ///
@@ -209,6 +222,18 @@ impl ParserBuilder {
     /// regular expression by using the `x` flag regardless of this setting.
     pub fn ignore_whitespace(&mut self, yes: bool) -> &mut ParserBuilder {
         self.ignore_whitespace = yes;
+        self
+    }
+
+    /// Allow using `{,n}` as an equivalent to `{0,n}`.
+    ///
+    /// When enabled, the parser accepts `{,n}` as valid syntax for `{0,n}`.
+    /// Most regular expression engines don't support the `{,n}` syntax, but
+    /// some others do it, namely Python's `re` library.
+    ///
+    /// This is disabled by default.
+    pub fn empty_min_range(&mut self, yes: bool) -> &mut ParserBuilder {
+        self.empty_min_range = yes;
         self
     }
 }
@@ -219,8 +244,7 @@ impl ParserBuilder {
 /// abstract syntax tree. The size of the tree is proportional to the length
 /// of the regular expression pattern.
 ///
-/// A `Parser` can be configured in more detail via a
-/// [`ParserBuilder`](struct.ParserBuilder.html).
+/// A `Parser` can be configured in more detail via a [`ParserBuilder`].
 #[derive(Clone, Debug)]
 pub struct Parser {
     /// The current position of the parser.
@@ -235,8 +259,11 @@ pub struct Parser {
     /// supported.
     octal: bool,
     /// The initial setting for `ignore_whitespace` as provided by
-    /// Th`ParserBuilder`. is is used when reseting the parser's state.
+    /// `ParserBuilder`. It is used when resetting the parser's state.
     initial_ignore_whitespace: bool,
+    /// Whether the parser supports `{,n}` repetitions as an equivalent to
+    /// `{0,n}.`
+    empty_min_range: bool,
     /// Whether whitespace should be ignored. When enabled, comments are
     /// also permitted.
     ignore_whitespace: Cell<bool>,
@@ -326,8 +353,7 @@ impl Parser {
     /// The parser can be run with either the `parse` or `parse_with_comments`
     /// methods. The parse methods return an abstract syntax tree.
     ///
-    /// To set configuration options on the parser, use
-    /// [`ParserBuilder`](struct.ParserBuilder.html).
+    /// To set configuration options on the parser, use [`ParserBuilder`].
     pub fn new() -> Parser {
         ParserBuilder::new().build()
     }
@@ -365,7 +391,7 @@ impl Parser {
 impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// Build an internal parser from a parser configuration and a pattern.
     fn new(parser: P, pattern: &'s str) -> ParserI<'s, P> {
-        ParserI { parser: parser, pattern: pattern }
+        ParserI { parser, pattern }
     }
 
     /// Return a reference to the parser state.
@@ -375,16 +401,12 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
 
     /// Return a reference to the pattern being parsed.
     fn pattern(&self) -> &str {
-        self.pattern.borrow()
+        self.pattern
     }
 
     /// Create a new error with the given span and error type.
     fn error(&self, span: Span, kind: ast::ErrorKind) -> ast::Error {
-        ast::Error {
-            kind: kind,
-            pattern: self.pattern().to_string(),
-            span: span,
-        }
+        ast::Error { kind, pattern: self.pattern().to_string(), span }
     }
 
     /// Return the current offset of the parser.
@@ -462,7 +484,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         self.pattern()[i..]
             .chars()
             .next()
-            .unwrap_or_else(|| panic!("expected char at offset {}", i))
+            .unwrap_or_else(|| panic!("expected char at offset {i}"))
     }
 
     /// Bump the parser to the next Unicode scalar value.
@@ -480,11 +502,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             column = column.checked_add(1).unwrap();
         }
         offset += self.char().len_utf8();
-        self.parser().pos.set(Position {
-            offset: offset,
-            line: line,
-            column: column,
-        });
+        self.parser().pos.set(Position { offset, line, column });
         self.pattern()[self.offset()..].chars().next().is_some()
     }
 
@@ -691,7 +709,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                     self.parser().ignore_whitespace.set(v);
                 }
 
-                concat.asts.push(Ast::Flags(set));
+                concat.asts.push(Ast::flags(set));
                 Ok(concat)
             }
             Either::Right(group) => {
@@ -702,8 +720,8 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                     .unwrap_or(old_ignore_whitespace);
                 self.parser().stack_group.borrow_mut().push(
                     GroupState::Group {
-                        concat: concat,
-                        group: group,
+                        concat,
+                        group,
                         ignore_whitespace: old_ignore_whitespace,
                     },
                 );
@@ -764,7 +782,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 group.ast = Box::new(group_concat.into_ast());
             }
         }
-        prior_concat.asts.push(Ast::Group(group));
+        prior_concat.asts.push(Ast::group(group));
         Ok(prior_concat)
     }
 
@@ -783,7 +801,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             Some(GroupState::Alternation(mut alt)) => {
                 alt.span.end = self.pos();
                 alt.asts.push(concat.into_ast());
-                Ok(Ast::Alternation(alt))
+                Ok(Ast::alternation(alt))
             }
             Some(GroupState::Group { group, .. }) => {
                 return Err(
@@ -850,7 +868,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     fn pop_class(
         &self,
         nested_union: ast::ClassSetUnion,
-    ) -> Result<Either<ast::ClassSetUnion, ast::Class>> {
+    ) -> Result<Either<ast::ClassSetUnion, ast::ClassBracketed>> {
         assert_eq!(self.char(), ']');
 
         let item = ast::ClassSet::Item(nested_union.into_item());
@@ -882,7 +900,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 set.span.end = self.pos();
                 set.kind = prevset;
                 if stack.is_empty() {
-                    Ok(Either::Right(ast::Class::Bracketed(set)))
+                    Ok(Either::Right(set))
                 } else {
                     union.push(ast::ClassSetItem::Bracketed(Box::new(set)));
                     Ok(Either::Left(union))
@@ -898,12 +916,8 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     #[inline(never)]
     fn unclosed_class_error(&self) -> ast::Error {
         for state in self.parser().stack_class.borrow().iter().rev() {
-            match *state {
-                ClassState::Open { ref set, .. } => {
-                    return self
-                        .error(set.span, ast::ErrorKind::ClassUnclosed);
-                }
-                _ => {}
+            if let ClassState::Open { ref set, .. } = *state {
+                return self.error(set.span, ast::ErrorKind::ClassUnclosed);
             }
         }
         // We are guaranteed to have a non-empty stack with at least
@@ -949,8 +963,8 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         };
         let span = Span::new(lhs.span().start, rhs.span().end);
         ast::ClassSet::BinaryOp(ast::ClassSetBinaryOp {
-            span: span,
-            kind: kind,
+            span,
+            kind,
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
         })
@@ -980,7 +994,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 '|' => concat = self.push_alternate(concat)?,
                 '[' => {
                     let class = self.parse_set_class()?;
-                    concat.asts.push(Ast::Class(class));
+                    concat.asts.push(Ast::class_bracketed(class));
                 }
                 '?' => {
                     concat = self.parse_uncounted_repetition(
@@ -1009,7 +1023,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         let ast = self.pop_group_end(concat)?;
         NestLimiter::new(self).check(&ast)?;
         Ok(ast::WithComments {
-            ast: ast,
+            ast,
             comments: mem::replace(
                 &mut *self.parser().comments.borrow_mut(),
                 vec![],
@@ -1022,7 +1036,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// The given `kind` should correspond to the operator observed by the
     /// caller.
     ///
-    /// This assumes that the paser is currently positioned at the repetition
+    /// This assumes that the parser is currently positioned at the repetition
     /// operator and advances the parser to the first character after the
     /// operator. (Note that the operator may include a single additional `?`,
     /// which makes the operator ungreedy.)
@@ -1061,13 +1075,13 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             greedy = false;
             self.bump();
         }
-        concat.asts.push(Ast::Repetition(ast::Repetition {
+        concat.asts.push(Ast::repetition(ast::Repetition {
             span: ast.span().with_end(self.pos()),
             op: ast::RepetitionOp {
                 span: Span::new(op_start, self.pos()),
-                kind: kind,
+                kind,
             },
-            greedy: greedy,
+            greedy,
             ast: Box::new(ast),
         }));
         Ok(concat)
@@ -1077,7 +1091,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// corresponds to the {m,n} syntax, and does not include the ?, * or +
     /// operators.
     ///
-    /// This assumes that the paser is currently positioned at the opening `{`
+    /// This assumes that the parser is currently positioned at the opening `{`
     /// and advances the parser to the first character after the operator.
     /// (Note that the operator may include a single additional `?`, which
     /// makes the operator ungreedy.)
@@ -1118,15 +1132,14 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             self.parse_decimal(),
             ast::ErrorKind::DecimalEmpty,
             ast::ErrorKind::RepetitionCountDecimalEmpty,
-        )?;
-        let mut range = ast::RepetitionRange::Exactly(count_start);
+        );
         if self.is_eof() {
             return Err(self.error(
                 Span::new(start, self.pos()),
                 ast::ErrorKind::RepetitionCountUnclosed,
             ));
         }
-        if self.char() == ',' {
+        let range = if self.char() == ',' {
             if !self.bump_and_bump_space() {
                 return Err(self.error(
                     Span::new(start, self.pos()),
@@ -1134,16 +1147,33 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 ));
             }
             if self.char() != '}' {
+                let count_start = match count_start {
+                    Ok(c) => c,
+                    Err(err)
+                        if err.kind
+                            == ast::ErrorKind::RepetitionCountDecimalEmpty =>
+                    {
+                        if self.parser().empty_min_range {
+                            0
+                        } else {
+                            return Err(err);
+                        }
+                    }
+                    err => err?,
+                };
                 let count_end = specialize_err(
                     self.parse_decimal(),
                     ast::ErrorKind::DecimalEmpty,
                     ast::ErrorKind::RepetitionCountDecimalEmpty,
                 )?;
-                range = ast::RepetitionRange::Bounded(count_start, count_end);
+                ast::RepetitionRange::Bounded(count_start, count_end)
             } else {
-                range = ast::RepetitionRange::AtLeast(count_start);
+                ast::RepetitionRange::AtLeast(count_start?)
             }
-        }
+        } else {
+            ast::RepetitionRange::Exactly(count_start?)
+        };
+
         if self.is_eof() || self.char() != '}' {
             return Err(self.error(
                 Span::new(start, self.pos()),
@@ -1163,13 +1193,13 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 self.error(op_span, ast::ErrorKind::RepetitionCountInvalid)
             );
         }
-        concat.asts.push(Ast::Repetition(ast::Repetition {
+        concat.asts.push(Ast::repetition(ast::Repetition {
             span: ast.span().with_end(self.pos()),
             op: ast::RepetitionOp {
                 span: op_span,
                 kind: ast::RepetitionKind::Range(range),
             },
-            greedy: greedy,
+            greedy,
             ast: Box::new(ast),
         }));
         Ok(concat)
@@ -1206,13 +1236,17 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             ));
         }
         let inner_span = self.span();
-        if self.bump_if("?P<") {
+        let mut starts_with_p = true;
+        if self.bump_if("?P<") || {
+            starts_with_p = false;
+            self.bump_if("?<")
+        } {
             let capture_index = self.next_capture_index(open_span)?;
-            let cap = self.parse_capture_name(capture_index)?;
+            let name = self.parse_capture_name(capture_index)?;
             Ok(Either::Right(ast::Group {
                 span: open_span,
-                kind: ast::GroupKind::CaptureName(cap),
-                ast: Box::new(Ast::Empty(self.span())),
+                kind: ast::GroupKind::CaptureName { starts_with_p, name },
+                ast: Box::new(Ast::empty(self.span())),
             }))
         } else if self.bump_if("?") {
             if self.is_eof() {
@@ -1234,14 +1268,14 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 }
                 Ok(Either::Left(ast::SetFlags {
                     span: Span { end: self.pos(), ..open_span },
-                    flags: flags,
+                    flags,
                 }))
             } else {
                 assert_eq!(char_end, ':');
                 Ok(Either::Right(ast::Group {
                     span: open_span,
                     kind: ast::GroupKind::NonCapturing(flags),
-                    ast: Box::new(Ast::Empty(self.span())),
+                    ast: Box::new(Ast::empty(self.span())),
                 }))
             }
         } else {
@@ -1249,7 +1283,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             Ok(Either::Right(ast::Group {
                 span: open_span,
                 kind: ast::GroupKind::CaptureIndex(capture_index),
-                ast: Box::new(Ast::Empty(self.span())),
+                ast: Box::new(Ast::empty(self.span())),
             }))
         }
     }
@@ -1381,6 +1415,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             's' => Ok(ast::Flag::DotMatchesNewLine),
             'U' => Ok(ast::Flag::SwapGreed),
             'u' => Ok(ast::Flag::Unicode),
+            'R' => Ok(ast::Flag::CRLF),
             'x' => Ok(ast::Flag::IgnoreWhitespace),
             _ => {
                 Err(self
@@ -1427,7 +1462,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
                 let ast = Primitive::Literal(ast::Literal {
                     span: self.span_char(),
                     kind: ast::LiteralKind::Verbatim,
-                    c: c,
+                    c,
                 });
                 self.bump();
                 Ok(ast)
@@ -1493,16 +1528,23 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         let span = Span::new(start, self.pos());
         if is_meta_character(c) {
             return Ok(Primitive::Literal(ast::Literal {
-                span: span,
-                kind: ast::LiteralKind::Punctuation,
-                c: c,
+                span,
+                kind: ast::LiteralKind::Meta,
+                c,
+            }));
+        }
+        if is_escapeable_character(c) {
+            return Ok(Primitive::Literal(ast::Literal {
+                span,
+                kind: ast::LiteralKind::Superfluous,
+                c,
             }));
         }
         let special = |kind, c| {
             Ok(Primitive::Literal(ast::Literal {
-                span: span,
+                span,
                 kind: ast::LiteralKind::Special(kind),
-                c: c,
+                c,
             }))
         };
         match c {
@@ -1512,27 +1554,121 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             'n' => special(ast::SpecialLiteralKind::LineFeed, '\n'),
             'r' => special(ast::SpecialLiteralKind::CarriageReturn, '\r'),
             'v' => special(ast::SpecialLiteralKind::VerticalTab, '\x0B'),
-            ' ' if self.ignore_whitespace() => {
-                special(ast::SpecialLiteralKind::Space, ' ')
-            }
             'A' => Ok(Primitive::Assertion(ast::Assertion {
-                span: span,
+                span,
                 kind: ast::AssertionKind::StartText,
             })),
             'z' => Ok(Primitive::Assertion(ast::Assertion {
-                span: span,
+                span,
                 kind: ast::AssertionKind::EndText,
             })),
-            'b' => Ok(Primitive::Assertion(ast::Assertion {
-                span: span,
-                kind: ast::AssertionKind::WordBoundary,
-            })),
+            'b' => {
+                let mut wb = ast::Assertion {
+                    span,
+                    kind: ast::AssertionKind::WordBoundary,
+                };
+                // After a \b, we "try" to parse things like \b{start} for
+                // special word boundary assertions.
+                if !self.is_eof() && self.char() == '{' {
+                    if let Some(kind) =
+                        self.maybe_parse_special_word_boundary(start)?
+                    {
+                        wb.kind = kind;
+                        wb.span.end = self.pos();
+                    }
+                }
+                Ok(Primitive::Assertion(wb))
+            }
             'B' => Ok(Primitive::Assertion(ast::Assertion {
-                span: span,
+                span,
                 kind: ast::AssertionKind::NotWordBoundary,
+            })),
+            '<' => Ok(Primitive::Assertion(ast::Assertion {
+                span,
+                kind: ast::AssertionKind::WordBoundaryStartAngle,
+            })),
+            '>' => Ok(Primitive::Assertion(ast::Assertion {
+                span,
+                kind: ast::AssertionKind::WordBoundaryEndAngle,
             })),
             _ => Err(self.error(span, ast::ErrorKind::EscapeUnrecognized)),
         }
+    }
+
+    /// Attempt to parse a specialty word boundary. That is, `\b{start}`,
+    /// `\b{end}`, `\b{start-half}` or `\b{end-half}`.
+    ///
+    /// This is similar to `maybe_parse_ascii_class` in that, in most cases,
+    /// if it fails it will just return `None` with no error. This is done
+    /// because `\b{5}` is a valid expression and we want to let that be parsed
+    /// by the existing counted repetition parsing code. (I thought about just
+    /// invoking the counted repetition code from here, but it seemed a little
+    /// ham-fisted.)
+    ///
+    /// Unlike `maybe_parse_ascii_class` though, this can return an error.
+    /// Namely, if we definitely know it isn't a counted repetition, then we
+    /// return an error specific to the specialty word boundaries.
+    ///
+    /// This assumes the parser is positioned at a `{` immediately following
+    /// a `\b`. When `None` is returned, the parser is returned to the position
+    /// at which it started: pointing at a `{`.
+    ///
+    /// The position given should correspond to the start of the `\b`.
+    fn maybe_parse_special_word_boundary(
+        &self,
+        wb_start: Position,
+    ) -> Result<Option<ast::AssertionKind>> {
+        assert_eq!(self.char(), '{');
+
+        let is_valid_char = |c| match c {
+            'A'..='Z' | 'a'..='z' | '-' => true,
+            _ => false,
+        };
+        let start = self.pos();
+        if !self.bump_and_bump_space() {
+            return Err(self.error(
+                Span::new(wb_start, self.pos()),
+                ast::ErrorKind::SpecialWordOrRepetitionUnexpectedEof,
+            ));
+        }
+        let start_contents = self.pos();
+        // This is one of the critical bits: if the first non-whitespace
+        // character isn't in [-A-Za-z] (i.e., this can't be a special word
+        // boundary), then we bail and let the counted repetition parser deal
+        // with this.
+        if !is_valid_char(self.char()) {
+            self.parser().pos.set(start);
+            return Ok(None);
+        }
+
+        // Now collect up our chars until we see a '}'.
+        let mut scratch = self.parser().scratch.borrow_mut();
+        scratch.clear();
+        while !self.is_eof() && is_valid_char(self.char()) {
+            scratch.push(self.char());
+            self.bump_and_bump_space();
+        }
+        if self.is_eof() || self.char() != '}' {
+            return Err(self.error(
+                Span::new(start, self.pos()),
+                ast::ErrorKind::SpecialWordBoundaryUnclosed,
+            ));
+        }
+        let end = self.pos();
+        self.bump();
+        let kind = match scratch.as_str() {
+            "start" => ast::AssertionKind::WordBoundaryStart,
+            "end" => ast::AssertionKind::WordBoundaryEnd,
+            "start-half" => ast::AssertionKind::WordBoundaryStartHalf,
+            "end-half" => ast::AssertionKind::WordBoundaryEndHalf,
+            _ => {
+                return Err(self.error(
+                    Span::new(start_contents, end),
+                    ast::ErrorKind::SpecialWordBoundaryUnrecognized,
+                ))
+            }
+        };
+        Ok(Some(kind))
     }
 
     /// Parse an octal representation of a Unicode codepoint up to 3 digits
@@ -1544,9 +1680,6 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// Assuming the preconditions are met, this routine can never fail.
     #[inline(never)]
     fn parse_octal(&self) -> ast::Literal {
-        use std::char;
-        use std::u32;
-
         assert!(self.parser().octal);
         assert!('0' <= self.char() && self.char() <= '7');
         let start = self.pos();
@@ -1568,7 +1701,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         ast::Literal {
             span: Span::new(start, end),
             kind: ast::LiteralKind::Octal,
-            c: c,
+            c,
         }
     }
 
@@ -1611,9 +1744,6 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         &self,
         kind: ast::HexLiteralKind,
     ) -> Result<ast::Literal> {
-        use std::char;
-        use std::u32;
-
         let mut scratch = self.parser().scratch.borrow_mut();
         scratch.clear();
 
@@ -1644,7 +1774,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             Some(c) => Ok(ast::Literal {
                 span: Span::new(start, end),
                 kind: ast::LiteralKind::HexFixed(kind),
-                c: c,
+                c,
             }),
         }
     }
@@ -1657,9 +1787,6 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         &self,
         kind: ast::HexLiteralKind,
     ) -> Result<ast::Literal> {
-        use std::char;
-        use std::u32;
-
         let mut scratch = self.parser().scratch.borrow_mut();
         scratch.clear();
 
@@ -1699,7 +1826,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             Some(c) => Ok(ast::Literal {
                 span: Span::new(start, self.pos()),
                 kind: ast::LiteralKind::HexBrace(kind),
-                c: c,
+                c,
             }),
         }
     }
@@ -1747,7 +1874,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
     /// is successful, then the parser is advanced to the position immediately
     /// following the closing `]`.
     #[inline(never)]
-    fn parse_set_class(&self) -> Result<ast::Class> {
+    fn parse_set_class(&self) -> Result<ast::ClassBracketed> {
         assert_eq!(self.char(), '[');
 
         let mut union =
@@ -1926,7 +2053,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             }));
             if !self.bump_and_bump_space() {
                 return Err(self.error(
-                    Span::new(start, self.pos()),
+                    Span::new(start, start),
                     ast::ErrorKind::ClassUnclosed,
                 ));
             }
@@ -1948,7 +2075,7 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         }
         let set = ast::ClassBracketed {
             span: Span::new(start, self.pos()),
-            negated: negated,
+            negated,
             kind: ast::ClassSet::union(ast::ClassSetUnion {
                 span: Span::new(union.span.start, union.span.start),
                 items: vec![],
@@ -1971,9 +2098,9 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         // because parsing cannot fail with any interesting error. For example,
         // in order to use an ASCII character class, it must be enclosed in
         // double brackets, e.g., `[[:alnum:]]`. Alternatively, you might think
-        // of it as "ASCII character characters have the syntax `[:NAME:]`
-        // which can only appear within character brackets." This means that
-        // things like `[[:lower:]A]` are legal constructs.
+        // of it as "ASCII character classes have the syntax `[:NAME:]` which
+        // can only appear within character brackets." This means that things
+        // like `[[:lower:]A]` are legal constructs.
         //
         // However, if one types an incorrect ASCII character class, e.g.,
         // `[[:loower:]]`, then we treat that as a normal nested character
@@ -2025,8 +2152,8 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         };
         Some(ast::ClassAscii {
             span: Span::new(start, self.pos()),
-            kind: kind,
-            negated: negated,
+            kind,
+            negated,
         })
     }
 
@@ -2095,14 +2222,20 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
         } else {
             let start = self.pos();
             let c = self.char();
+            if c == '\\' {
+                return Err(self.error(
+                    self.span_char(),
+                    ast::ErrorKind::UnicodeClassInvalid,
+                ));
+            }
             self.bump_and_bump_space();
             let kind = ast::ClassUnicodeKind::OneLetter(c);
             (start, kind)
         };
         Ok(ast::ClassUnicode {
             span: Span::new(start, self.pos()),
-            negated: negated,
-            kind: kind,
+            negated,
+            kind,
         })
     }
 
@@ -2121,16 +2254,16 @@ impl<'s, P: Borrow<Parser>> ParserI<'s, P> {
             'S' => (true, ast::ClassPerlKind::Space),
             'w' => (false, ast::ClassPerlKind::Word),
             'W' => (true, ast::ClassPerlKind::Word),
-            c => panic!("expected valid Perl class but got '{}'", c),
+            c => panic!("expected valid Perl class but got '{c}'"),
         };
-        ast::ClassPerl { span: span, kind: kind, negated: negated }
+        ast::ClassPerl { span, kind, negated }
     }
 }
 
 /// A type that traverses a fully parsed Ast and checks whether its depth
 /// exceeds the specified nesting limit. If it does, then an error is returned.
 #[derive(Debug)]
-struct NestLimiter<'p, 's: 'p, P: 'p + 's> {
+struct NestLimiter<'p, 's, P> {
     /// The parser that is checking the nest limit.
     p: &'p ParserI<'s, P>,
     /// The current depth while walking an Ast.
@@ -2139,7 +2272,7 @@ struct NestLimiter<'p, 's: 'p, P: 'p + 's> {
 
 impl<'p, 's, P: Borrow<Parser>> NestLimiter<'p, 's, P> {
     fn new(p: &'p ParserI<'s, P>) -> NestLimiter<'p, 's, P> {
-        NestLimiter { p: p, depth: 0 }
+        NestLimiter { p, depth: 0 }
     }
 
     #[inline(never)]
@@ -2151,7 +2284,7 @@ impl<'p, 's, P: Borrow<Parser>> NestLimiter<'p, 's, P> {
         let new = self.depth.checked_add(1).ok_or_else(|| {
             self.p.error(
                 span.clone(),
-                ast::ErrorKind::NestLimitExceeded(::std::u32::MAX),
+                ast::ErrorKind::NestLimitExceeded(u32::MAX),
             )
         })?;
         let limit = self.p.parser().nest_limit;
@@ -2187,12 +2320,12 @@ impl<'p, 's, P: Borrow<Parser>> ast::Visitor for NestLimiter<'p, 's, P> {
             | Ast::Literal(_)
             | Ast::Dot(_)
             | Ast::Assertion(_)
-            | Ast::Class(ast::Class::Unicode(_))
-            | Ast::Class(ast::Class::Perl(_)) => {
+            | Ast::ClassUnicode(_)
+            | Ast::ClassPerl(_) => {
                 // These are all base cases, so we don't increment depth.
                 return Ok(());
             }
-            Ast::Class(ast::Class::Bracketed(ref x)) => &x.span,
+            Ast::ClassBracketed(ref x) => &x.span,
             Ast::Repetition(ref x) => &x.span,
             Ast::Group(ref x) => &x.span,
             Ast::Alternation(ref x) => &x.span,
@@ -2208,12 +2341,12 @@ impl<'p, 's, P: Borrow<Parser>> ast::Visitor for NestLimiter<'p, 's, P> {
             | Ast::Literal(_)
             | Ast::Dot(_)
             | Ast::Assertion(_)
-            | Ast::Class(ast::Class::Unicode(_))
-            | Ast::Class(ast::Class::Perl(_)) => {
+            | Ast::ClassUnicode(_)
+            | Ast::ClassPerl(_) => {
                 // These are all base cases, so we don't decrement depth.
                 Ok(())
             }
-            Ast::Class(ast::Class::Bracketed(_))
+            Ast::ClassBracketed(_)
             | Ast::Repetition(_)
             | Ast::Group(_)
             | Ast::Alternation(_)
@@ -2302,10 +2435,11 @@ fn specialize_err<T>(
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Range;
+    use core::ops::Range;
 
-    use super::{Parser, ParserBuilder, ParserI, Primitive};
-    use ast::{self, Ast, Position, Span};
+    use alloc::format;
+
+    use super::*;
 
     // Our own assert_eq, which has slightly better formatting (but honestly
     // still kind of crappy).
@@ -2350,21 +2484,29 @@ mod tests {
         str.to_string()
     }
 
-    fn parser(pattern: &str) -> ParserI<Parser> {
+    fn parser(pattern: &str) -> ParserI<'_, Parser> {
         ParserI::new(Parser::new(), pattern)
     }
 
-    fn parser_octal(pattern: &str) -> ParserI<Parser> {
+    fn parser_octal(pattern: &str) -> ParserI<'_, Parser> {
         let parser = ParserBuilder::new().octal(true).build();
         ParserI::new(parser, pattern)
     }
 
-    fn parser_nest_limit(pattern: &str, nest_limit: u32) -> ParserI<Parser> {
+    fn parser_empty_min_range(pattern: &str) -> ParserI<'_, Parser> {
+        let parser = ParserBuilder::new().empty_min_range(true).build();
+        ParserI::new(parser, pattern)
+    }
+
+    fn parser_nest_limit(
+        pattern: &str,
+        nest_limit: u32,
+    ) -> ParserI<'_, Parser> {
         let p = ParserBuilder::new().nest_limit(nest_limit).build();
         ParserI::new(p, pattern)
     }
 
-    fn parser_ignore_whitespace(pattern: &str) -> ParserI<Parser> {
+    fn parser_ignore_whitespace(pattern: &str) -> ParserI<'_, Parser> {
         let p = ParserBuilder::new().ignore_whitespace(true).build();
         ParserI::new(p, pattern)
     }
@@ -2416,21 +2558,17 @@ mod tests {
         lit_with(c, span(start..start + c.len_utf8()))
     }
 
-    /// Create a punctuation literal starting at the given position.
-    fn punct_lit(c: char, span: Span) -> Ast {
-        Ast::Literal(ast::Literal {
-            span: span,
-            kind: ast::LiteralKind::Punctuation,
-            c: c,
-        })
+    /// Create a meta literal starting at the given position.
+    fn meta_lit(c: char, span: Span) -> Ast {
+        Ast::literal(ast::Literal { span, kind: ast::LiteralKind::Meta, c })
     }
 
     /// Create a verbatim literal with the given span.
     fn lit_with(c: char, span: Span) -> Ast {
-        Ast::Literal(ast::Literal {
-            span: span,
+        Ast::literal(ast::Literal {
+            span,
             kind: ast::LiteralKind::Verbatim,
-            c: c,
+            c,
         })
     }
 
@@ -2441,17 +2579,17 @@ mod tests {
 
     /// Create a concatenation with the given span.
     fn concat_with(span: Span, asts: Vec<Ast>) -> Ast {
-        Ast::Concat(ast::Concat { span: span, asts: asts })
+        Ast::concat(ast::Concat { span, asts })
     }
 
     /// Create an alternation with the given span.
     fn alt(range: Range<usize>, asts: Vec<Ast>) -> Ast {
-        Ast::Alternation(ast::Alternation { span: span(range), asts: asts })
+        Ast::alternation(ast::Alternation { span: span(range), asts })
     }
 
     /// Create a capturing group with the given span.
     fn group(range: Range<usize>, index: u32, ast: Ast) -> Ast {
-        Ast::Group(ast::Group {
+        Ast::group(ast::Group {
             span: span(range),
             kind: ast::GroupKind::CaptureIndex(index),
             ast: Box::new(ast),
@@ -2484,11 +2622,11 @@ mod tests {
                 },
             );
         }
-        Ast::Flags(ast::SetFlags {
+        Ast::flags(ast::SetFlags {
             span: span_range(pat, range.clone()),
             flags: ast::Flags {
                 span: span_range(pat, (range.start + 2)..(range.end - 1)),
-                items: items,
+                items,
             },
         })
     }
@@ -2498,7 +2636,7 @@ mod tests {
         // A nest limit of 0 still allows some types of regexes.
         assert_eq!(
             parser_nest_limit("", 0).parse(),
-            Ok(Ast::Empty(span(0..0)))
+            Ok(Ast::empty(span(0..0)))
         );
         assert_eq!(parser_nest_limit("a", 0).parse(), Ok(lit('a', 0)));
 
@@ -2512,7 +2650,7 @@ mod tests {
         );
         assert_eq!(
             parser_nest_limit("a+", 1).parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..2),
                 op: ast::RepetitionOp {
                     span: span(1..2),
@@ -2538,14 +2676,14 @@ mod tests {
         );
         assert_eq!(
             parser_nest_limit("a+*", 2).parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..3),
                 op: ast::RepetitionOp {
                     span: span(2..3),
                     kind: ast::RepetitionKind::ZeroOrMore,
                 },
                 greedy: true,
-                ast: Box::new(Ast::Repetition(ast::Repetition {
+                ast: Box::new(Ast::repetition(ast::Repetition {
                     span: span(0..2),
                     op: ast::RepetitionOp {
                         span: span(1..2),
@@ -2602,7 +2740,7 @@ mod tests {
         );
         assert_eq!(
             parser_nest_limit("[a]", 1).parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..3),
                 negated: false,
                 kind: ast::ClassSet::Item(ast::ClassSetItem::Literal(
@@ -2612,7 +2750,7 @@ mod tests {
                         c: 'a',
                     }
                 )),
-            })))
+            }))
         );
         assert_eq!(
             parser_nest_limit("[ab]", 1).parse().unwrap_err(),
@@ -2706,24 +2844,24 @@ bar
             Ok(concat(
                 0..36,
                 vec![
-                    punct_lit('\\', span(0..2)),
-                    punct_lit('.', span(2..4)),
-                    punct_lit('+', span(4..6)),
-                    punct_lit('*', span(6..8)),
-                    punct_lit('?', span(8..10)),
-                    punct_lit('(', span(10..12)),
-                    punct_lit(')', span(12..14)),
-                    punct_lit('|', span(14..16)),
-                    punct_lit('[', span(16..18)),
-                    punct_lit(']', span(18..20)),
-                    punct_lit('{', span(20..22)),
-                    punct_lit('}', span(22..24)),
-                    punct_lit('^', span(24..26)),
-                    punct_lit('$', span(26..28)),
-                    punct_lit('#', span(28..30)),
-                    punct_lit('&', span(30..32)),
-                    punct_lit('-', span(32..34)),
-                    punct_lit('~', span(34..36)),
+                    meta_lit('\\', span(0..2)),
+                    meta_lit('.', span(2..4)),
+                    meta_lit('+', span(4..6)),
+                    meta_lit('*', span(6..8)),
+                    meta_lit('?', span(8..10)),
+                    meta_lit('(', span(10..12)),
+                    meta_lit(')', span(12..14)),
+                    meta_lit('|', span(14..16)),
+                    meta_lit('[', span(16..18)),
+                    meta_lit(']', span(18..20)),
+                    meta_lit('{', span(20..22)),
+                    meta_lit('}', span(22..24)),
+                    meta_lit('^', span(24..26)),
+                    meta_lit('$', span(26..28)),
+                    meta_lit('#', span(28..30)),
+                    meta_lit('&', span(30..32)),
+                    meta_lit('-', span(32..34)),
+                    meta_lit('~', span(34..36)),
                 ]
             ))
         );
@@ -2772,7 +2910,7 @@ bar
                 vec![
                     lit_with('a', span_range(pat, 0..1)),
                     lit_with(' ', span_range(pat, 1..2)),
-                    Ast::Group(ast::Group {
+                    Ast::group(ast::Group {
                         span: span_range(pat, 2..9),
                         kind: ast::GroupKind::NonCapturing(ast::Flags {
                             span: span_range(pat, 4..5),
@@ -2799,13 +2937,16 @@ bar
                 span_range(pat, 0..pat.len()),
                 vec![
                     flag_set(pat, 0..4, ast::Flag::IgnoreWhitespace, false),
-                    Ast::Group(ast::Group {
+                    Ast::group(ast::Group {
                         span: span_range(pat, 4..pat.len()),
-                        kind: ast::GroupKind::CaptureName(ast::CaptureName {
-                            span: span_range(pat, 9..12),
-                            name: s("foo"),
-                            index: 1,
-                        }),
+                        kind: ast::GroupKind::CaptureName {
+                            starts_with_p: true,
+                            name: ast::CaptureName {
+                                span: span_range(pat, 9..12),
+                                name: s("foo"),
+                                index: 1,
+                            }
+                        },
                         ast: Box::new(lit_with('a', span_range(pat, 14..15))),
                     }),
                 ]
@@ -2818,7 +2959,7 @@ bar
                 span_range(pat, 0..pat.len()),
                 vec![
                     flag_set(pat, 0..4, ast::Flag::IgnoreWhitespace, false),
-                    Ast::Group(ast::Group {
+                    Ast::group(ast::Group {
                         span: span_range(pat, 4..pat.len()),
                         kind: ast::GroupKind::CaptureIndex(1),
                         ast: Box::new(lit_with('a', span_range(pat, 7..8))),
@@ -2833,7 +2974,7 @@ bar
                 span_range(pat, 0..pat.len()),
                 vec![
                     flag_set(pat, 0..4, ast::Flag::IgnoreWhitespace, false),
-                    Ast::Group(ast::Group {
+                    Ast::group(ast::Group {
                         span: span_range(pat, 4..pat.len()),
                         kind: ast::GroupKind::NonCapturing(ast::Flags {
                             span: span_range(pat, 8..8),
@@ -2851,7 +2992,7 @@ bar
                 span_range(pat, 0..pat.len()),
                 vec![
                     flag_set(pat, 0..4, ast::Flag::IgnoreWhitespace, false),
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span(4..13),
                         kind: ast::LiteralKind::HexBrace(
                             ast::HexLiteralKind::X
@@ -2870,24 +3011,13 @@ bar
                 span_range(pat, 0..pat.len()),
                 vec![
                     flag_set(pat, 0..4, ast::Flag::IgnoreWhitespace, false),
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span_range(pat, 4..6),
-                        kind: ast::LiteralKind::Special(
-                            ast::SpecialLiteralKind::Space
-                        ),
+                        kind: ast::LiteralKind::Superfluous,
                         c: ' ',
                     }),
                 ]
             ))
-        );
-        // ... but only when `x` mode is enabled.
-        let pat = r"\ ";
-        assert_eq!(
-            parser(pat).parse().unwrap_err(),
-            TestError {
-                span: span_range(pat, 0..2),
-                kind: ast::ErrorKind::EscapeUnrecognized,
-            }
         );
     }
 
@@ -2899,9 +3029,9 @@ bar
             Ok(concat_with(
                 span_range(pat, 0..3),
                 vec![
-                    Ast::Dot(span_range(pat, 0..1)),
+                    Ast::dot(span_range(pat, 0..1)),
                     lit_with('\n', span_range(pat, 1..2)),
-                    Ast::Dot(span_range(pat, 2..3)),
+                    Ast::dot(span_range(pat, 2..3)),
                 ]
             ))
         );
@@ -2937,7 +3067,7 @@ bar
     fn parse_uncounted_repetition() {
         assert_eq!(
             parser(r"a*").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..2),
                 op: ast::RepetitionOp {
                     span: span(1..2),
@@ -2949,7 +3079,7 @@ bar
         );
         assert_eq!(
             parser(r"a+").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..2),
                 op: ast::RepetitionOp {
                     span: span(1..2),
@@ -2962,7 +3092,7 @@ bar
 
         assert_eq!(
             parser(r"a?").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..2),
                 op: ast::RepetitionOp {
                     span: span(1..2),
@@ -2974,7 +3104,7 @@ bar
         );
         assert_eq!(
             parser(r"a??").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..3),
                 op: ast::RepetitionOp {
                     span: span(1..3),
@@ -2986,7 +3116,7 @@ bar
         );
         assert_eq!(
             parser(r"a?").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..2),
                 op: ast::RepetitionOp {
                     span: span(1..2),
@@ -3001,7 +3131,7 @@ bar
             Ok(concat(
                 0..3,
                 vec![
-                    Ast::Repetition(ast::Repetition {
+                    Ast::repetition(ast::Repetition {
                         span: span(0..2),
                         op: ast::RepetitionOp {
                             span: span(1..2),
@@ -3019,7 +3149,7 @@ bar
             Ok(concat(
                 0..4,
                 vec![
-                    Ast::Repetition(ast::Repetition {
+                    Ast::repetition(ast::Repetition {
                         span: span(0..3),
                         op: ast::RepetitionOp {
                             span: span(1..3),
@@ -3038,7 +3168,7 @@ bar
                 0..3,
                 vec![
                     lit('a', 0),
-                    Ast::Repetition(ast::Repetition {
+                    Ast::repetition(ast::Repetition {
                         span: span(1..3),
                         op: ast::RepetitionOp {
                             span: span(2..3),
@@ -3052,7 +3182,7 @@ bar
         );
         assert_eq!(
             parser(r"(ab)?").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..5),
                 op: ast::RepetitionOp {
                     span: span(4..5),
@@ -3071,8 +3201,8 @@ bar
             Ok(alt(
                 0..3,
                 vec![
-                    Ast::Empty(span(0..0)),
-                    Ast::Repetition(ast::Repetition {
+                    Ast::empty(span(0..0)),
+                    Ast::repetition(ast::Repetition {
                         span: span(1..3),
                         op: ast::RepetitionOp {
                             span: span(2..3),
@@ -3161,7 +3291,7 @@ bar
     fn parse_counted_repetition() {
         assert_eq!(
             parser(r"a{5}").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..4),
                 op: ast::RepetitionOp {
                     span: span(1..4),
@@ -3175,7 +3305,7 @@ bar
         );
         assert_eq!(
             parser(r"a{5,}").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..5),
                 op: ast::RepetitionOp {
                     span: span(1..5),
@@ -3189,7 +3319,7 @@ bar
         );
         assert_eq!(
             parser(r"a{5,9}").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..6),
                 op: ast::RepetitionOp {
                     span: span(1..6),
@@ -3203,7 +3333,7 @@ bar
         );
         assert_eq!(
             parser(r"a{5}?").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..5),
                 op: ast::RepetitionOp {
                     span: span(1..5),
@@ -3221,7 +3351,7 @@ bar
                 0..5,
                 vec![
                     lit('a', 0),
-                    Ast::Repetition(ast::Repetition {
+                    Ast::repetition(ast::Repetition {
                         span: span(1..5),
                         op: ast::RepetitionOp {
                             span: span(2..5),
@@ -3241,7 +3371,7 @@ bar
                 0..6,
                 vec![
                     lit('a', 0),
-                    Ast::Repetition(ast::Repetition {
+                    Ast::repetition(ast::Repetition {
                         span: span(1..5),
                         op: ast::RepetitionOp {
                             span: span(2..5),
@@ -3259,7 +3389,7 @@ bar
 
         assert_eq!(
             parser(r"a{ 5 }").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..6),
                 op: ast::RepetitionOp {
                     span: span(1..6),
@@ -3273,7 +3403,7 @@ bar
         );
         assert_eq!(
             parser(r"a{ 5 , 9 }").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..10),
                 op: ast::RepetitionOp {
                     span: span(1..10),
@@ -3286,8 +3416,22 @@ bar
             }))
         );
         assert_eq!(
+            parser_empty_min_range(r"a{,9}").parse(),
+            Ok(Ast::repetition(ast::Repetition {
+                span: span(0..5),
+                op: ast::RepetitionOp {
+                    span: span(1..5),
+                    kind: ast::RepetitionKind::Range(
+                        ast::RepetitionRange::Bounded(0, 9)
+                    ),
+                },
+                greedy: true,
+                ast: Box::new(lit('a', 0)),
+            }))
+        );
+        assert_eq!(
             parser_ignore_whitespace(r"a{5,9} ?").parse(),
-            Ok(Ast::Repetition(ast::Repetition {
+            Ok(Ast::repetition(ast::Repetition {
                 span: span(0..8),
                 op: ast::RepetitionOp {
                     span: span(1..8),
@@ -3297,6 +3441,23 @@ bar
                 },
                 greedy: false,
                 ast: Box::new(lit('a', 0)),
+            }))
+        );
+        assert_eq!(
+            parser(r"\b{5,9}").parse(),
+            Ok(Ast::repetition(ast::Repetition {
+                span: span(0..7),
+                op: ast::RepetitionOp {
+                    span: span(2..7),
+                    kind: ast::RepetitionKind::Range(
+                        ast::RepetitionRange::Bounded(5, 9)
+                    ),
+                },
+                greedy: true,
+                ast: Box::new(Ast::assertion(ast::Assertion {
+                    span: span(0..2),
+                    kind: ast::AssertionKind::WordBoundary,
+                })),
             }))
         );
 
@@ -3418,7 +3579,7 @@ bar
     fn parse_alternate() {
         assert_eq!(
             parser(r"a|b").parse(),
-            Ok(Ast::Alternation(ast::Alternation {
+            Ok(Ast::alternation(ast::Alternation {
                 span: span(0..3),
                 asts: vec![lit('a', 0), lit('b', 2)],
             }))
@@ -3428,7 +3589,7 @@ bar
             Ok(group(
                 0..5,
                 1,
-                Ast::Alternation(ast::Alternation {
+                Ast::alternation(ast::Alternation {
                     span: span(1..4),
                     asts: vec![lit('a', 1), lit('b', 3)],
                 })
@@ -3437,14 +3598,14 @@ bar
 
         assert_eq!(
             parser(r"a|b|c").parse(),
-            Ok(Ast::Alternation(ast::Alternation {
+            Ok(Ast::alternation(ast::Alternation {
                 span: span(0..5),
                 asts: vec![lit('a', 0), lit('b', 2), lit('c', 4)],
             }))
         );
         assert_eq!(
             parser(r"ax|by|cz").parse(),
-            Ok(Ast::Alternation(ast::Alternation {
+            Ok(Ast::alternation(ast::Alternation {
                 span: span(0..8),
                 asts: vec![
                     concat(0..2, vec![lit('a', 0), lit('x', 1)]),
@@ -3458,7 +3619,7 @@ bar
             Ok(group(
                 0..10,
                 1,
-                Ast::Alternation(ast::Alternation {
+                Ast::alternation(ast::Alternation {
                     span: span(1..9),
                     asts: vec![
                         concat(1..3, vec![lit('a', 1), lit('x', 2)]),
@@ -3507,7 +3668,7 @@ bar
             parser(r"|").parse(),
             Ok(alt(
                 0..1,
-                vec![Ast::Empty(span(0..0)), Ast::Empty(span(1..1)),]
+                vec![Ast::empty(span(0..0)), Ast::empty(span(1..1)),]
             ))
         );
         assert_eq!(
@@ -3515,19 +3676,19 @@ bar
             Ok(alt(
                 0..2,
                 vec![
-                    Ast::Empty(span(0..0)),
-                    Ast::Empty(span(1..1)),
-                    Ast::Empty(span(2..2)),
+                    Ast::empty(span(0..0)),
+                    Ast::empty(span(1..1)),
+                    Ast::empty(span(2..2)),
                 ]
             ))
         );
         assert_eq!(
             parser(r"a|").parse(),
-            Ok(alt(0..2, vec![lit('a', 0), Ast::Empty(span(2..2)),]))
+            Ok(alt(0..2, vec![lit('a', 0), Ast::empty(span(2..2)),]))
         );
         assert_eq!(
             parser(r"|a").parse(),
-            Ok(alt(0..2, vec![Ast::Empty(span(0..0)), lit('a', 1),]))
+            Ok(alt(0..2, vec![Ast::empty(span(0..0)), lit('a', 1),]))
         );
 
         assert_eq!(
@@ -3537,7 +3698,7 @@ bar
                 1,
                 alt(
                     1..2,
-                    vec![Ast::Empty(span(1..1)), Ast::Empty(span(2..2)),]
+                    vec![Ast::empty(span(1..1)), Ast::empty(span(2..2)),]
                 )
             ))
         );
@@ -3546,7 +3707,7 @@ bar
             Ok(group(
                 0..4,
                 1,
-                alt(1..3, vec![lit('a', 1), Ast::Empty(span(3..3)),])
+                alt(1..3, vec![lit('a', 1), Ast::empty(span(3..3)),])
             ))
         );
         assert_eq!(
@@ -3554,7 +3715,7 @@ bar
             Ok(group(
                 0..4,
                 1,
-                alt(1..3, vec![Ast::Empty(span(1..1)), lit('a', 2),])
+                alt(1..3, vec![Ast::empty(span(1..1)), lit('a', 2),])
             ))
         );
 
@@ -3610,7 +3771,7 @@ bar
     fn parse_group() {
         assert_eq!(
             parser("(?i)").parse(),
-            Ok(Ast::Flags(ast::SetFlags {
+            Ok(Ast::flags(ast::SetFlags {
                 span: span(0..4),
                 flags: ast::Flags {
                     span: span(2..3),
@@ -3625,7 +3786,7 @@ bar
         );
         assert_eq!(
             parser("(?iU)").parse(),
-            Ok(Ast::Flags(ast::SetFlags {
+            Ok(Ast::flags(ast::SetFlags {
                 span: span(0..5),
                 flags: ast::Flags {
                     span: span(2..4),
@@ -3648,7 +3809,7 @@ bar
         );
         assert_eq!(
             parser("(?i-U)").parse(),
-            Ok(Ast::Flags(ast::SetFlags {
+            Ok(Ast::flags(ast::SetFlags {
                 span: span(0..6),
                 flags: ast::Flags {
                     span: span(2..5),
@@ -3676,15 +3837,15 @@ bar
 
         assert_eq!(
             parser("()").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..2),
                 kind: ast::GroupKind::CaptureIndex(1),
-                ast: Box::new(Ast::Empty(span(1..1))),
+                ast: Box::new(Ast::empty(span(1..1))),
             }))
         );
         assert_eq!(
             parser("(a)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..3),
                 kind: ast::GroupKind::CaptureIndex(1),
                 ast: Box::new(lit('a', 1)),
@@ -3692,20 +3853,20 @@ bar
         );
         assert_eq!(
             parser("(())").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..4),
                 kind: ast::GroupKind::CaptureIndex(1),
-                ast: Box::new(Ast::Group(ast::Group {
+                ast: Box::new(Ast::group(ast::Group {
                     span: span(1..3),
                     kind: ast::GroupKind::CaptureIndex(2),
-                    ast: Box::new(Ast::Empty(span(2..2))),
+                    ast: Box::new(Ast::empty(span(2..2))),
                 })),
             }))
         );
 
         assert_eq!(
             parser("(?:a)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..5),
                 kind: ast::GroupKind::NonCapturing(ast::Flags {
                     span: span(2..2),
@@ -3717,7 +3878,7 @@ bar
 
         assert_eq!(
             parser("(?i:a)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..6),
                 kind: ast::GroupKind::NonCapturing(ast::Flags {
                     span: span(2..3),
@@ -3733,7 +3894,7 @@ bar
         );
         assert_eq!(
             parser("(?i-U:a)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..8),
                 kind: ast::GroupKind::NonCapturing(ast::Flags {
                     span: span(2..5),
@@ -3821,27 +3982,145 @@ bar
     #[test]
     fn parse_capture_name() {
         assert_eq!(
+            parser("(?<a>z)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: span(0..7),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: false,
+                    name: ast::CaptureName {
+                        span: span(3..4),
+                        name: s("a"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(lit('z', 5)),
+            }))
+        );
+        assert_eq!(
             parser("(?P<a>z)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..8),
-                kind: ast::GroupKind::CaptureName(ast::CaptureName {
-                    span: span(4..5),
-                    name: s("a"),
-                    index: 1,
-                }),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: span(4..5),
+                        name: s("a"),
+                        index: 1,
+                    }
+                },
                 ast: Box::new(lit('z', 6)),
             }))
         );
         assert_eq!(
             parser("(?P<abc>z)").parse(),
-            Ok(Ast::Group(ast::Group {
+            Ok(Ast::group(ast::Group {
                 span: span(0..10),
-                kind: ast::GroupKind::CaptureName(ast::CaptureName {
-                    span: span(4..7),
-                    name: s("abc"),
-                    index: 1,
-                }),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: span(4..7),
+                        name: s("abc"),
+                        index: 1,
+                    }
+                },
                 ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a_1>z)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: span(0..10),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: span(4..7),
+                        name: s("a_1"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a.1>z)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: span(0..10),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: span(4..7),
+                        name: s("a.1"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(lit('z', 8)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a[1]>z)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: span(0..11),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: span(4..8),
+                        name: s("a[1]"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(lit('z', 9)),
+            }))
+        );
+
+        assert_eq!(
+            parser("(?P<a¾>)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: Span::new(
+                    Position::new(0, 1, 1),
+                    Position::new(9, 1, 9),
+                ),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: Span::new(
+                            Position::new(4, 1, 5),
+                            Position::new(7, 1, 7),
+                        ),
+                        name: s("a¾"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(Ast::empty(Span::new(
+                    Position::new(8, 1, 8),
+                    Position::new(8, 1, 8),
+                ))),
+            }))
+        );
+        assert_eq!(
+            parser("(?P<名字>)").parse(),
+            Ok(Ast::group(ast::Group {
+                span: Span::new(
+                    Position::new(0, 1, 1),
+                    Position::new(12, 1, 9),
+                ),
+                kind: ast::GroupKind::CaptureName {
+                    starts_with_p: true,
+                    name: ast::CaptureName {
+                        span: Span::new(
+                            Position::new(4, 1, 5),
+                            Position::new(10, 1, 7),
+                        ),
+                        name: s("名字"),
+                        index: 1,
+                    }
+                },
+                ast: Box::new(Ast::empty(Span::new(
+                    Position::new(11, 1, 8),
+                    Position::new(11, 1, 8),
+                ))),
             }))
         );
 
@@ -3901,6 +4180,60 @@ bar
                 kind: ast::ErrorKind::GroupNameDuplicate {
                     original: span(4..5),
                 },
+            }
+        );
+        assert_eq!(
+            parser("(?P<5>)").parse().unwrap_err(),
+            TestError {
+                span: span(4..5),
+                kind: ast::ErrorKind::GroupNameInvalid,
+            }
+        );
+        assert_eq!(
+            parser("(?P<5a>)").parse().unwrap_err(),
+            TestError {
+                span: span(4..5),
+                kind: ast::ErrorKind::GroupNameInvalid,
+            }
+        );
+        assert_eq!(
+            parser("(?P<¾>)").parse().unwrap_err(),
+            TestError {
+                span: Span::new(
+                    Position::new(4, 1, 5),
+                    Position::new(6, 1, 6),
+                ),
+                kind: ast::ErrorKind::GroupNameInvalid,
+            }
+        );
+        assert_eq!(
+            parser("(?P<¾a>)").parse().unwrap_err(),
+            TestError {
+                span: Span::new(
+                    Position::new(4, 1, 5),
+                    Position::new(6, 1, 6),
+                ),
+                kind: ast::ErrorKind::GroupNameInvalid,
+            }
+        );
+        assert_eq!(
+            parser("(?P<☃>)").parse().unwrap_err(),
+            TestError {
+                span: Span::new(
+                    Position::new(4, 1, 5),
+                    Position::new(7, 1, 6),
+                ),
+                kind: ast::ErrorKind::GroupNameInvalid,
+            }
+        );
+        assert_eq!(
+            parser("(?P<a☃>)").parse().unwrap_err(),
+            TestError {
+                span: Span::new(
+                    Position::new(5, 1, 6),
+                    Position::new(8, 1, 7),
+                ),
+                kind: ast::ErrorKind::GroupNameInvalid,
             }
         );
     }
@@ -4009,6 +4342,34 @@ bar
                 ],
             })
         );
+        assert_eq!(
+            parser("i-sR:").parse_flags(),
+            Ok(ast::Flags {
+                span: span(0..4),
+                items: vec![
+                    ast::FlagsItem {
+                        span: span(0..1),
+                        kind: ast::FlagsItemKind::Flag(
+                            ast::Flag::CaseInsensitive
+                        ),
+                    },
+                    ast::FlagsItem {
+                        span: span(1..2),
+                        kind: ast::FlagsItemKind::Negation,
+                    },
+                    ast::FlagsItem {
+                        span: span(2..3),
+                        kind: ast::FlagsItemKind::Flag(
+                            ast::Flag::DotMatchesNewLine
+                        ),
+                    },
+                    ast::FlagsItem {
+                        span: span(3..4),
+                        kind: ast::FlagsItemKind::Flag(ast::Flag::CRLF),
+                    },
+                ],
+            })
+        );
 
         assert_eq!(
             parser("isU").parse_flags().unwrap_err(),
@@ -4070,6 +4431,7 @@ bar
         assert_eq!(parser("s").parse_flag(), Ok(ast::Flag::DotMatchesNewLine));
         assert_eq!(parser("U").parse_flag(), Ok(ast::Flag::SwapGreed));
         assert_eq!(parser("u").parse_flag(), Ok(ast::Flag::Unicode));
+        assert_eq!(parser("R").parse_flag(), Ok(ast::Flag::CRLF));
         assert_eq!(parser("x").parse_flag(), Ok(ast::Flag::IgnoreWhitespace));
 
         assert_eq!(
@@ -4141,7 +4503,7 @@ bar
             parser(r"\|").parse_primitive(),
             Ok(Primitive::Literal(ast::Literal {
                 span: span(0..2),
-                kind: ast::LiteralKind::Punctuation,
+                kind: ast::LiteralKind::Meta,
                 c: '|',
             }))
         );
@@ -4159,7 +4521,7 @@ bar
                 Ok(Primitive::Literal(ast::Literal {
                     span: span(0..2),
                     kind: ast::LiteralKind::Special(kind.clone()),
-                    c: c,
+                    c,
                 }))
             );
         }
@@ -4185,6 +4547,48 @@ bar
             }))
         );
         assert_eq!(
+            parser(r"\b{start}").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..9),
+                kind: ast::AssertionKind::WordBoundaryStart,
+            }))
+        );
+        assert_eq!(
+            parser(r"\b{end}").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..7),
+                kind: ast::AssertionKind::WordBoundaryEnd,
+            }))
+        );
+        assert_eq!(
+            parser(r"\b{start-half}").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..14),
+                kind: ast::AssertionKind::WordBoundaryStartHalf,
+            }))
+        );
+        assert_eq!(
+            parser(r"\b{end-half}").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..12),
+                kind: ast::AssertionKind::WordBoundaryEndHalf,
+            }))
+        );
+        assert_eq!(
+            parser(r"\<").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..2),
+                kind: ast::AssertionKind::WordBoundaryStartAngle,
+            }))
+        );
+        assert_eq!(
+            parser(r"\>").parse_primitive(),
+            Ok(Primitive::Assertion(ast::Assertion {
+                span: span(0..2),
+                kind: ast::AssertionKind::WordBoundaryEndAngle,
+            }))
+        );
+        assert_eq!(
             parser(r"\B").parse_primitive(),
             Ok(Primitive::Assertion(ast::Assertion {
                 span: span(0..2),
@@ -4192,11 +4596,26 @@ bar
             }))
         );
 
+        // We also support superfluous escapes in most cases now too.
+        for c in ['!', '@', '%', '"', '\'', '/', ' '] {
+            let pat = format!(r"\{c}");
+            assert_eq!(
+                parser(&pat).parse_primitive(),
+                Ok(Primitive::Literal(ast::Literal {
+                    span: span(0..2),
+                    kind: ast::LiteralKind::Superfluous,
+                    c,
+                }))
+            );
+        }
+
+        // Some superfluous escapes, namely [0-9A-Za-z], are still banned. This
+        // gives flexibility for future evolution.
         assert_eq!(
-            parser(r"\").parse_escape().unwrap_err(),
+            parser(r"\e").parse_escape().unwrap_err(),
             TestError {
-                span: span(0..1),
-                kind: ast::ErrorKind::EscapeUnexpectedEof,
+                span: span(0..2),
+                kind: ast::ErrorKind::EscapeUnrecognized,
             }
         );
         assert_eq!(
@@ -4204,6 +4623,71 @@ bar
             TestError {
                 span: span(0..2),
                 kind: ast::ErrorKind::EscapeUnrecognized,
+            }
+        );
+
+        // Starting a special word boundary without any non-whitespace chars
+        // after the brace makes it ambiguous whether the user meant to write
+        // a counted repetition (probably not?) or an actual special word
+        // boundary assertion.
+        assert_eq!(
+            parser(r"\b{").parse_escape().unwrap_err(),
+            TestError {
+                span: span(0..3),
+                kind: ast::ErrorKind::SpecialWordOrRepetitionUnexpectedEof,
+            }
+        );
+        assert_eq!(
+            parser_ignore_whitespace(r"\b{ ").parse_escape().unwrap_err(),
+            TestError {
+                span: span(0..4),
+                kind: ast::ErrorKind::SpecialWordOrRepetitionUnexpectedEof,
+            }
+        );
+        // When 'x' is not enabled, the space is seen as a non-[-A-Za-z] char,
+        // and thus causes the parser to treat it as a counted repetition.
+        assert_eq!(
+            parser(r"\b{ ").parse().unwrap_err(),
+            TestError {
+                span: span(2..4),
+                kind: ast::ErrorKind::RepetitionCountUnclosed,
+            }
+        );
+        // In this case, we got some valid chars that makes it look like the
+        // user is writing one of the special word boundary assertions, but
+        // we forget to close the brace.
+        assert_eq!(
+            parser(r"\b{foo").parse_escape().unwrap_err(),
+            TestError {
+                span: span(2..6),
+                kind: ast::ErrorKind::SpecialWordBoundaryUnclosed,
+            }
+        );
+        // We get the same error as above, except it is provoked by seeing a
+        // char that we know is invalid before seeing a closing brace.
+        assert_eq!(
+            parser(r"\b{foo!}").parse_escape().unwrap_err(),
+            TestError {
+                span: span(2..6),
+                kind: ast::ErrorKind::SpecialWordBoundaryUnclosed,
+            }
+        );
+        // And this one occurs when, syntactically, everything looks okay, but
+        // we don't use a valid spelling of a word boundary assertion.
+        assert_eq!(
+            parser(r"\b{foo}").parse_escape().unwrap_err(),
+            TestError {
+                span: span(3..6),
+                kind: ast::ErrorKind::SpecialWordBoundaryUnrecognized,
+            }
+        );
+
+        // An unfinished escape is illegal.
+        assert_eq!(
+            parser(r"\").parse_escape().unwrap_err(),
+            TestError {
+                span: span(0..1),
+                kind: ast::ErrorKind::EscapeUnexpectedEof,
             }
         );
     }
@@ -4229,13 +4713,13 @@ bar
     #[test]
     fn parse_octal() {
         for i in 0..511 {
-            let pat = format!(r"\{:o}", i);
+            let pat = format!(r"\{i:o}");
             assert_eq!(
                 parser_octal(&pat).parse_escape(),
                 Ok(Primitive::Literal(ast::Literal {
                     span: span(0..pat.len()),
                     kind: ast::LiteralKind::Octal,
-                    c: ::std::char::from_u32(i).unwrap(),
+                    c: char::from_u32(i).unwrap(),
                 }))
             );
         }
@@ -4257,15 +4741,15 @@ bar
         );
         assert_eq!(
             parser_octal(r"\778").parse(),
-            Ok(Ast::Concat(ast::Concat {
+            Ok(Ast::concat(ast::Concat {
                 span: span(0..4),
                 asts: vec![
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span(0..3),
                         kind: ast::LiteralKind::Octal,
                         c: '?',
                     }),
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span(3..4),
                         kind: ast::LiteralKind::Verbatim,
                         c: '8',
@@ -4275,15 +4759,15 @@ bar
         );
         assert_eq!(
             parser_octal(r"\7777").parse(),
-            Ok(Ast::Concat(ast::Concat {
+            Ok(Ast::concat(ast::Concat {
                 span: span(0..5),
                 asts: vec![
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span(0..4),
                         kind: ast::LiteralKind::Octal,
                         c: '\u{01FF}',
                     }),
-                    Ast::Literal(ast::Literal {
+                    Ast::literal(ast::Literal {
                         span: span(4..5),
                         kind: ast::LiteralKind::Verbatim,
                         c: '7',
@@ -4304,13 +4788,13 @@ bar
     #[test]
     fn parse_hex_two() {
         for i in 0..256 {
-            let pat = format!(r"\x{:02x}", i);
+            let pat = format!(r"\x{i:02x}");
             assert_eq!(
                 parser(&pat).parse_escape(),
                 Ok(Primitive::Literal(ast::Literal {
                     span: span(0..pat.len()),
                     kind: ast::LiteralKind::HexFixed(ast::HexLiteralKind::X),
-                    c: ::std::char::from_u32(i).unwrap(),
+                    c: char::from_u32(i).unwrap(),
                 }))
             );
         }
@@ -4341,11 +4825,11 @@ bar
     #[test]
     fn parse_hex_four() {
         for i in 0..65536 {
-            let c = match ::std::char::from_u32(i) {
+            let c = match char::from_u32(i) {
                 None => continue,
                 Some(c) => c,
             };
-            let pat = format!(r"\u{:04x}", i);
+            let pat = format!(r"\u{i:04x}");
             assert_eq!(
                 parser(&pat).parse_escape(),
                 Ok(Primitive::Literal(ast::Literal {
@@ -4353,7 +4837,7 @@ bar
                     kind: ast::LiteralKind::HexFixed(
                         ast::HexLiteralKind::UnicodeShort
                     ),
-                    c: c,
+                    c,
                 }))
             );
         }
@@ -4405,11 +4889,11 @@ bar
     #[test]
     fn parse_hex_eight() {
         for i in 0..65536 {
-            let c = match ::std::char::from_u32(i) {
+            let c = match char::from_u32(i) {
                 None => continue,
                 Some(c) => c,
             };
-            let pat = format!(r"\U{:08x}", i);
+            let pat = format!(r"\U{i:08x}");
             assert_eq!(
                 parser(&pat).parse_escape(),
                 Ok(Primitive::Literal(ast::Literal {
@@ -4417,7 +4901,7 @@ bar
                     kind: ast::LiteralKind::HexFixed(
                         ast::HexLiteralKind::UnicodeLong
                     ),
-                    c: c,
+                    c,
                 }))
             );
         }
@@ -4618,10 +5102,7 @@ bar
     #[test]
     fn parse_set_class() {
         fn union(span: Span, items: Vec<ast::ClassSetItem>) -> ast::ClassSet {
-            ast::ClassSet::union(ast::ClassSetUnion {
-                span: span,
-                items: items,
-            })
+            ast::ClassSet::union(ast::ClassSetUnion { span, items })
         }
 
         fn intersection(
@@ -4630,7 +5111,7 @@ bar
             rhs: ast::ClassSet,
         ) -> ast::ClassSet {
             ast::ClassSet::BinaryOp(ast::ClassSetBinaryOp {
-                span: span,
+                span,
                 kind: ast::ClassSetBinaryOpKind::Intersection,
                 lhs: Box::new(lhs),
                 rhs: Box::new(rhs),
@@ -4643,7 +5124,7 @@ bar
             rhs: ast::ClassSet,
         ) -> ast::ClassSet {
             ast::ClassSet::BinaryOp(ast::ClassSetBinaryOp {
-                span: span,
+                span,
                 kind: ast::ClassSetBinaryOpKind::Difference,
                 lhs: Box::new(lhs),
                 rhs: Box::new(rhs),
@@ -4656,7 +5137,7 @@ bar
             rhs: ast::ClassSet,
         ) -> ast::ClassSet {
             ast::ClassSet::BinaryOp(ast::ClassSetBinaryOp {
-                span: span,
+                span,
                 kind: ast::ClassSetBinaryOpKind::SymmetricDifference,
                 lhs: Box::new(lhs),
                 rhs: Box::new(rhs),
@@ -4685,9 +5166,9 @@ bar
 
         fn lit(span: Span, c: char) -> ast::ClassSetItem {
             ast::ClassSetItem::Literal(ast::Literal {
-                span: span,
+                span,
                 kind: ast::LiteralKind::Verbatim,
-                c: c,
+                c,
             })
         }
 
@@ -4707,7 +5188,7 @@ bar
                 ..span.end
             };
             ast::ClassSetItem::Range(ast::ClassSetRange {
-                span: span,
+                span,
                 start: ast::Literal {
                     span: Span { end: pos1, ..span },
                     kind: ast::LiteralKind::Verbatim,
@@ -4722,32 +5203,24 @@ bar
         }
 
         fn alnum(span: Span, negated: bool) -> ast::ClassAscii {
-            ast::ClassAscii {
-                span: span,
-                kind: ast::ClassAsciiKind::Alnum,
-                negated: negated,
-            }
+            ast::ClassAscii { span, kind: ast::ClassAsciiKind::Alnum, negated }
         }
 
         fn lower(span: Span, negated: bool) -> ast::ClassAscii {
-            ast::ClassAscii {
-                span: span,
-                kind: ast::ClassAsciiKind::Lower,
-                negated: negated,
-            }
+            ast::ClassAscii { span, kind: ast::ClassAsciiKind::Lower, negated }
         }
 
         assert_eq!(
             parser("[[:alnum:]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..11),
                 negated: false,
                 kind: itemset(item_ascii(alnum(span(1..10), false))),
-            })))
+            }))
         );
         assert_eq!(
             parser("[[[:alnum:]]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..13),
                 negated: false,
                 kind: itemset(item_bracket(ast::ClassBracketed {
@@ -4755,11 +5228,11 @@ bar
                     negated: false,
                     kind: itemset(item_ascii(alnum(span(2..11), false))),
                 })),
-            })))
+            }))
         );
         assert_eq!(
             parser("[[:alnum:]&&[:lower:]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..22),
                 negated: false,
                 kind: intersection(
@@ -4767,11 +5240,11 @@ bar
                     itemset(item_ascii(alnum(span(1..10), false))),
                     itemset(item_ascii(lower(span(12..21), false))),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser("[[:alnum:]--[:lower:]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..22),
                 negated: false,
                 kind: difference(
@@ -4779,11 +5252,11 @@ bar
                     itemset(item_ascii(alnum(span(1..10), false))),
                     itemset(item_ascii(lower(span(12..21), false))),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser("[[:alnum:]~~[:lower:]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..22),
                 negated: false,
                 kind: symdifference(
@@ -4791,20 +5264,20 @@ bar
                     itemset(item_ascii(alnum(span(1..10), false))),
                     itemset(item_ascii(lower(span(12..21), false))),
                 ),
-            })))
+            }))
         );
 
         assert_eq!(
             parser("[a]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..3),
                 negated: false,
                 kind: itemset(lit(span(1..2), 'a')),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a\]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..5),
                 negated: false,
                 kind: union(
@@ -4813,16 +5286,16 @@ bar
                         lit(span(1..2), 'a'),
                         ast::ClassSetItem::Literal(ast::Literal {
                             span: span(2..4),
-                            kind: ast::LiteralKind::Punctuation,
+                            kind: ast::LiteralKind::Meta,
                             c: ']',
                         }),
                     ]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a\-z]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..6),
                 negated: false,
                 kind: union(
@@ -4831,50 +5304,50 @@ bar
                         lit(span(1..2), 'a'),
                         ast::ClassSetItem::Literal(ast::Literal {
                             span: span(2..4),
-                            kind: ast::LiteralKind::Punctuation,
+                            kind: ast::LiteralKind::Meta,
                             c: '-',
                         }),
                         lit(span(4..5), 'z'),
                     ]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser("[ab]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..4),
                 negated: false,
                 kind: union(
                     span(1..3),
                     vec![lit(span(1..2), 'a'), lit(span(2..3), 'b'),]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser("[a-]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..4),
                 negated: false,
                 kind: union(
                     span(1..3),
                     vec![lit(span(1..2), 'a'), lit(span(2..3), '-'),]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser("[-a]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..4),
                 negated: false,
                 kind: union(
                     span(1..3),
                     vec![lit(span(1..2), '-'), lit(span(2..3), 'a'),]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\pL]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..5),
                 negated: false,
                 kind: itemset(item_unicode(ast::ClassUnicode {
@@ -4882,11 +5355,11 @@ bar
                     negated: false,
                     kind: ast::ClassUnicodeKind::OneLetter('L'),
                 })),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\w]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..4),
                 negated: false,
                 kind: itemset(item_perl(ast::ClassPerl {
@@ -4894,11 +5367,11 @@ bar
                     kind: ast::ClassPerlKind::Word,
                     negated: false,
                 })),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a\wz]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..6),
                 negated: false,
                 kind: union(
@@ -4913,20 +5386,20 @@ bar
                         lit(span(4..5), 'z'),
                     ]
                 ),
-            })))
+            }))
         );
 
         assert_eq!(
             parser("[a-z]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..5),
                 negated: false,
                 kind: itemset(range(span(1..4), 'a', 'z')),
-            })))
+            }))
         );
         assert_eq!(
             parser("[a-cx-z]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..8),
                 negated: false,
                 kind: union(
@@ -4936,11 +5409,11 @@ bar
                         range(span(4..7), 'x', 'z'),
                     ]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\w&&a-cx-z]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..12),
                 negated: false,
                 kind: intersection(
@@ -4958,11 +5431,11 @@ bar
                         ]
                     ),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a-cx-z&&\w]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..12),
                 negated: false,
                 kind: intersection(
@@ -4980,11 +5453,11 @@ bar
                         negated: false,
                     })),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a--b--c]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..9),
                 negated: false,
                 kind: difference(
@@ -4996,11 +5469,11 @@ bar
                     ),
                     itemset(lit(span(7..8), 'c')),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[a~~b~~c]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..9),
                 negated: false,
                 kind: symdifference(
@@ -5012,43 +5485,43 @@ bar
                     ),
                     itemset(lit(span(7..8), 'c')),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\^&&^]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..7),
                 negated: false,
                 kind: intersection(
                     span(1..6),
                     itemset(ast::ClassSetItem::Literal(ast::Literal {
                         span: span(1..3),
-                        kind: ast::LiteralKind::Punctuation,
+                        kind: ast::LiteralKind::Meta,
                         c: '^',
                     })),
                     itemset(lit(span(5..6), '^')),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\&&&&]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..7),
                 negated: false,
                 kind: intersection(
                     span(1..6),
                     itemset(ast::ClassSetItem::Literal(ast::Literal {
                         span: span(1..3),
-                        kind: ast::LiteralKind::Punctuation,
+                        kind: ast::LiteralKind::Meta,
                         c: '&',
                     })),
                     itemset(lit(span(5..6), '&')),
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[&&&&]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..6),
                 negated: false,
                 kind: intersection(
@@ -5060,13 +5533,13 @@ bar
                     ),
                     itemset(empty(span(5..5))),
                 ),
-            })))
+            }))
         );
 
         let pat = "[☃-⛄]";
         assert_eq!(
             parser(pat).parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span_range(pat, 0..9),
                 negated: false,
                 kind: itemset(ast::ClassSetItem::Range(ast::ClassSetRange {
@@ -5082,20 +5555,20 @@ bar
                         c: '⛄',
                     },
                 })),
-            })))
+            }))
         );
 
         assert_eq!(
             parser(r"[]]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..3),
                 negated: false,
                 kind: itemset(lit(span(1..2), ']')),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[]\[]").parse(),
-            Ok(Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+            Ok(Ast::class_bracketed(ast::ClassBracketed {
                 span: span(0..5),
                 negated: false,
                 kind: union(
@@ -5104,30 +5577,30 @@ bar
                         lit(span(1..2), ']'),
                         ast::ClassSetItem::Literal(ast::Literal {
                             span: span(2..4),
-                            kind: ast::LiteralKind::Punctuation,
+                            kind: ast::LiteralKind::Meta,
                             c: '[',
                         }),
                     ]
                 ),
-            })))
+            }))
         );
         assert_eq!(
             parser(r"[\[]]").parse(),
             Ok(concat(
                 0..5,
                 vec![
-                    Ast::Class(ast::Class::Bracketed(ast::ClassBracketed {
+                    Ast::class_bracketed(ast::ClassBracketed {
                         span: span(0..4),
                         negated: false,
                         kind: itemset(ast::ClassSetItem::Literal(
                             ast::Literal {
                                 span: span(1..3),
-                                kind: ast::LiteralKind::Punctuation,
+                                kind: ast::LiteralKind::Meta,
                                 c: '[',
                             }
                         )),
-                    })),
-                    Ast::Literal(ast::Literal {
+                    }),
+                    Ast::literal(ast::Literal {
                         span: span(4..5),
                         kind: ast::LiteralKind::Verbatim,
                         c: ']',
@@ -5466,14 +5939,23 @@ bar
         assert_eq!(
             parser("[-").parse_set_class_open().unwrap_err(),
             TestError {
-                span: span(0..2),
+                span: span(0..0),
                 kind: ast::ErrorKind::ClassUnclosed,
             }
         );
         assert_eq!(
             parser("[--").parse_set_class_open().unwrap_err(),
             TestError {
-                span: span(0..3),
+                span: span(0..0),
+                kind: ast::ErrorKind::ClassUnclosed,
+            }
+        );
+
+        // See: https://github.com/rust-lang/regex/issues/792
+        assert_eq!(
+            parser("(?x)[-#]").parse_with_comments().unwrap_err(),
+            TestError {
+                span: span(4..4),
                 kind: ast::ErrorKind::ClassUnclosed,
             }
         );
@@ -5679,15 +6161,15 @@ bar
 
         assert_eq!(
             parser(r"\pNz").parse(),
-            Ok(Ast::Concat(ast::Concat {
+            Ok(Ast::concat(ast::Concat {
                 span: span(0..4),
                 asts: vec![
-                    Ast::Class(ast::Class::Unicode(ast::ClassUnicode {
+                    Ast::class_unicode(ast::ClassUnicode {
                         span: span(0..3),
                         negated: false,
                         kind: ast::ClassUnicodeKind::OneLetter('N'),
-                    })),
-                    Ast::Literal(ast::Literal {
+                    }),
+                    Ast::literal(ast::Literal {
                         span: span(3..4),
                         kind: ast::LiteralKind::Verbatim,
                         c: 'z',
@@ -5697,21 +6179,35 @@ bar
         );
         assert_eq!(
             parser(r"\p{Greek}z").parse(),
-            Ok(Ast::Concat(ast::Concat {
+            Ok(Ast::concat(ast::Concat {
                 span: span(0..10),
                 asts: vec![
-                    Ast::Class(ast::Class::Unicode(ast::ClassUnicode {
+                    Ast::class_unicode(ast::ClassUnicode {
                         span: span(0..9),
                         negated: false,
                         kind: ast::ClassUnicodeKind::Named(s("Greek")),
-                    })),
-                    Ast::Literal(ast::Literal {
+                    }),
+                    Ast::literal(ast::Literal {
                         span: span(9..10),
                         kind: ast::LiteralKind::Verbatim,
                         c: 'z',
                     }),
                 ],
             }))
+        );
+        assert_eq!(
+            parser(r"\p\{").parse().unwrap_err(),
+            TestError {
+                span: span(2..3),
+                kind: ast::ErrorKind::UnicodeClassInvalid,
+            }
+        );
+        assert_eq!(
+            parser(r"\P\{").parse().unwrap_err(),
+            TestError {
+                span: span(2..3),
+                kind: ast::ErrorKind::UnicodeClassInvalid,
+            }
         );
     }
 
@@ -5768,23 +6264,23 @@ bar
 
         assert_eq!(
             parser(r"\d").parse(),
-            Ok(Ast::Class(ast::Class::Perl(ast::ClassPerl {
+            Ok(Ast::class_perl(ast::ClassPerl {
                 span: span(0..2),
                 kind: ast::ClassPerlKind::Digit,
                 negated: false,
-            })))
+            }))
         );
         assert_eq!(
             parser(r"\dz").parse(),
-            Ok(Ast::Concat(ast::Concat {
+            Ok(Ast::concat(ast::Concat {
                 span: span(0..3),
                 asts: vec![
-                    Ast::Class(ast::Class::Perl(ast::ClassPerl {
+                    Ast::class_perl(ast::ClassPerl {
                         span: span(0..2),
                         kind: ast::ClassPerlKind::Digit,
                         negated: false,
-                    })),
-                    Ast::Literal(ast::Literal {
+                    }),
+                    Ast::literal(ast::Literal {
                         span: span(2..3),
                         kind: ast::LiteralKind::Verbatim,
                         c: 'z',
