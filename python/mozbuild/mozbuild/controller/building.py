@@ -910,9 +910,9 @@ class CCacheStats(object):
                 ))
 
     def hit_rates(self):
-        direct = self._values['cache_hit_direct']
-        preprocessed = self._values['cache_hit_preprocessed']
-        miss = self._values['cache_miss']
+        direct = self._values.get('cache_hit_direct', 0)
+        preprocessed = self._values.get('cache_hit_preprocessed', 0)
+        miss = self._values.get('cache_miss', 0)
         total = float(direct + preprocessed + miss)
 
         if total > 0:

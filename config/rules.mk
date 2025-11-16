@@ -343,13 +343,14 @@ endif # WINNT && !GNU_CC
 ifeq (,$(CROSS_COMPILE))
 HOST_OUTOPTION = $(OUTOPTION)
 else
-# Windows-to-Windows cross compiles should always use MSVC-style options for
-# host compiles.
+# Windows-to-Windows cross compiles default to MSVC-style options for host
+# compilers, but allow POSIX-style toolchains when clang is used.
 ifeq (WINNT_WINNT,$(HOST_OS_ARCH)_$(OS_ARCH))
-ifneq (,$(filter-out clang-cl,$(HOST_CC_TYPE)))
-$(error MSVC-style compilers should be used for host compilations!)
-endif
+ifneq (,$(filter clang-cl,$(HOST_CC_TYPE)))
 HOST_OUTOPTION = -Fo# eol
+else
+HOST_OUTOPTION = -o # eol
+endif
 else
 HOST_OUTOPTION = -o # eol
 endif

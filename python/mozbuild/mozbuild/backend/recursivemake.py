@@ -4,6 +4,11 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 import logging
 import os
 import re
@@ -13,6 +18,7 @@ from collections import (
     namedtuple,
 )
 from io import StringIO
+from functools import reduce
 from itertools import chain
 
 from mozpack.manifests import (
@@ -155,6 +161,15 @@ DEPRECATED_VARIABLES = [
     b'TESTING_JS_MODULE_DIR',
 ]
 
+MOZBUILD_VARIABLES = [
+    v.decode('ascii') if isinstance(v, bytes) else v
+    for v in MOZBUILD_VARIABLES
+]
+DEPRECATED_VARIABLES = [
+    v.decode('ascii') if isinstance(v, bytes) else v
+    for v in DEPRECATED_VARIABLES
+]
+
 MOZBUILD_VARIABLES_MESSAGE = 'It should only be defined in moz.build files.'
 
 DEPRECATED_VARIABLES_MESSAGE = (
@@ -164,7 +179,7 @@ DEPRECATED_VARIABLES_MESSAGE = (
 
 
 def make_quote(s):
-    return s.replace('#', '\#').replace('$', '$$')
+    return s.replace('#', r'\#').replace('$', '$$')
 
 
 class BackendMakeFile(object):
@@ -776,7 +791,7 @@ class RecursiveMakeBackend(MakeBackend):
         #   as direct dependencies of the top recursion target, to somehow
         #   prioritize them.
         #   1. See bug 1262241 comment 5.
-        compile_roots = [t for t, deps in self._compile_graph.iteritems()
+        compile_roots = [t for t, deps in self._compile_graph.items()
                          if not deps or t not in all_compile_deps]
 
         def add_category_rules(category, roots, graph):
@@ -831,7 +846,7 @@ class RecursiveMakeBackend(MakeBackend):
                 self._no_skip['syms'].remove(dirname)
 
         add_category_rules('compile', compile_roots, self._compile_graph)
-        for category, graph in non_default_graphs.iteritems():
+        for category, graph in non_default_graphs.items():
             add_category_rules(category, non_default_roots[category], graph)
 
         root_mk = Makefile()
@@ -853,7 +868,7 @@ class RecursiveMakeBackend(MakeBackend):
         root_mk.add_statement('non_default_tiers := %s' % ' '.join(sorted(
             non_default_roots.keys())))
 
-        for category, graphs in non_default_graphs.iteritems():
+        for category, graphs in non_default_graphs.items():
             category_dirs = [mozpath.dirname(target)
                              for target in graphs.keys()]
             root_mk.add_statement('%s_dirs := %s' % (category,
@@ -898,14 +913,14 @@ class RecursiveMakeBackend(MakeBackend):
             rule.add_dependencies(['$(CURDIR)/%: %'])
 
     def _check_blacklisted_variables(self, makefile_in, makefile_content):
-        if b'EXTERNALLY_MANAGED_MAKE_FILE' in makefile_content:
+        if 'EXTERNALLY_MANAGED_MAKE_FILE' in makefile_content:
             # Bypass the variable restrictions for externally managed makefiles.
             return
 
         for l in makefile_content.splitlines():
             l = l.strip()
             # Don't check comments
-            if l.startswith(b'#'):
+            if l.startswith('#'):
                 continue
             for x in chain(MOZBUILD_VARIABLES, DEPRECATED_VARIABLES):
                 if x not in l:
@@ -962,11 +977,11 @@ class RecursiveMakeBackend(MakeBackend):
                     # Directories with a Makefile containing a tools target, or
                     # XPI_PKGNAME or INSTALL_EXTENSION_ID can't be skipped and
                     # must run during the 'tools' tier.
-                    for t in (b'XPI_PKGNAME', b'INSTALL_EXTENSION_ID',
-                              b'tools'):
+                    for t in ('XPI_PKGNAME', 'INSTALL_EXTENSION_ID',
+                              'tools'):
                         if t not in content:
                             continue
-                        if t == b'tools' and not re.search('(?:^|\s)tools.*::', content, re.M):
+                        if t == 'tools' and not re.search(r'(?:^|\s)tools.*::', content, re.M):
                             continue
                         if objdir == self.environment.topobjdir:
                             continue
@@ -975,7 +990,7 @@ class RecursiveMakeBackend(MakeBackend):
 
                     # Directories with a Makefile containing a check target
                     # can't be skipped and must run during the 'check' tier.
-                    if re.search('(?:^|\s)check.*::', content, re.M):
+                    if re.search(r'(?:^|\s)check.*::', content, re.M):
                         self._no_skip['check'].add(mozpath.relpath(objdir,
                                                                    self.environment.topobjdir))
 
@@ -1639,20 +1654,20 @@ class RecursiveMakeBackend(MakeBackend):
                 pp.context.update(extra)
             if not pp.context.get('autoconfmk', ''):
                 pp.context['autoconfmk'] = 'autoconf.mk'
-            pp.handleLine(b'# THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT MODIFY BY HAND.\n')
-            pp.handleLine(b'DEPTH := @DEPTH@\n')
-            pp.handleLine(b'topobjdir := @topobjdir@\n')
-            pp.handleLine(b'topsrcdir := @top_srcdir@\n')
-            pp.handleLine(b'srcdir := @srcdir@\n')
-            pp.handleLine(b'srcdir_rel := @srcdir_rel@\n')
-            pp.handleLine(b'relativesrcdir := @relativesrcdir@\n')
-            pp.handleLine(b'include $(DEPTH)/config/@autoconfmk@\n')
+            pp.handleLine('# THIS FILE WAS AUTOMATICALLY GENERATED. DO NOT MODIFY BY HAND.\n')
+            pp.handleLine('DEPTH := @DEPTH@\n')
+            pp.handleLine('topobjdir := @topobjdir@\n')
+            pp.handleLine('topsrcdir := @top_srcdir@\n')
+            pp.handleLine('srcdir := @srcdir@\n')
+            pp.handleLine('srcdir_rel := @srcdir_rel@\n')
+            pp.handleLine('relativesrcdir := @relativesrcdir@\n')
+            pp.handleLine('include $(DEPTH)/config/@autoconfmk@\n')
             if not stub:
                 pp.do_include(obj.input_path)
             # Empty line to avoid failures when last line in Makefile.in ends
             # with a backslash.
-            pp.handleLine(b'\n')
-            pp.handleLine(b'include $(topsrcdir)/config/recurse.mk\n')
+            pp.handleLine('\n')
+            pp.handleLine('include $(topsrcdir)/config/recurse.mk\n')
         if not stub:
             # Adding the Makefile.in here has the desired side-effect
             # that if the Makefile.in disappears, this will force

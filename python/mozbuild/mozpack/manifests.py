@@ -116,15 +116,17 @@ class InstallManifest(object):
         self._source_files = set()
 
         if path or fileobj:
-            with _auto_fileobj(path, fileobj, 'rb') as fh:
+            with _auto_fileobj(path, fileobj, 'r') as fh:
                 self._source_files.add(fh.name)
                 self._load_from_fileobj(fh)
 
     def _load_from_fileobj(self, fileobj):
         version = fileobj.readline().rstrip()
+        if not version:
+            return
         if version not in ('1', '2', '3', '4', '5'):
-            raise UnreadableInstallManifest('Unknown manifest version: %s' %
-                                            version)
+            raise UnreadableInstallManifest(
+                'Unknown manifest version: %s (%s)' % (version, fileobj.name))
 
         for line in fileobj:
             line = line.rstrip()
@@ -228,7 +230,7 @@ class InstallManifest(object):
 
         It is an error if both are specified.
         """
-        with _auto_fileobj(path, fileobj, 'wb') as fh:
+        with _auto_fileobj(path, fileobj, 'w') as fh:
             fh.write('%d\n' % self.CURRENT_VERSION)
 
             for dest in sorted(self._dests):
@@ -242,13 +244,13 @@ class InstallManifest(object):
                     for path in paths:
                         source = mozpath.join(base, path)
                         parts = ['%d' % type, mozpath.join(dest, path), source]
-                        fh.write('%s\n' % self.FIELD_SEPARATOR.join(
-                            p.encode('utf-8') for p in parts))
+                        line = self.FIELD_SEPARATOR.join(parts)
+                        fh.write(line + '\n')
                 else:
                     parts = ['%d' % entry[0], dest]
                     parts.extend(entry[1:])
-                    fh.write('%s\n' % self.FIELD_SEPARATOR.join(
-                        p.encode('utf-8') for p in parts))
+                    line = self.FIELD_SEPARATOR.join(parts)
+                    fh.write(line + '\n')
 
     def add_link(self, source, dest):
         """Add a link to this manifest.

@@ -324,14 +324,14 @@ class Preprocessor:
         for cmd, level in (
             ('define', 0),
             ('undef', 0),
-            ('if', sys.maxint),
-            ('ifdef', sys.maxint),
-            ('ifndef', sys.maxint),
+            ('if', sys.maxsize),
+            ('ifdef', sys.maxsize),
+            ('ifndef', sys.maxsize),
             ('else', 1),
             ('elif', 1),
             ('elifdef', 1),
             ('elifndef', 1),
-            ('endif', sys.maxint),
+            ('endif', sys.maxsize),
             ('expand', 0),
             ('literal', 0),
             ('filter', 0),
@@ -483,7 +483,7 @@ class Preprocessor:
                 except OSError as error:
                     if error.errno != errno.EEXIST:
                         raise
-            return open(path, 'wb')
+            return open(path, 'w', encoding='utf-8')
 
         p = self.getCommandLineParser()
         options, args = p.parse_args(args=args)
@@ -505,7 +505,7 @@ class Preprocessor:
 
         if args:
             for f in args:
-                with open(f, 'rU') as input:
+                with open(f, 'r', encoding='utf-8', errors='replace') as input:
                     self.processFile(input=input, output=out)
             if depfile:
                 mk = Makefile()
@@ -730,9 +730,8 @@ class Preprocessor:
         current = dict(self.filters)
         for f in filters:
             current[f] = getattr(self, 'filter_' + f)
-        filterNames = current.keys()
-        filterNames.sort()
-        self.filters = [(fn, current[fn]) for fn in filterNames]
+        filter_names = sorted(current.keys())
+        self.filters = [(fn, current[fn]) for fn in filter_names]
         return
 
     def do_unfilter(self, args):
@@ -741,9 +740,8 @@ class Preprocessor:
         for f in filters:
             if f in current:
                 del current[f]
-        filterNames = current.keys()
-        filterNames.sort()
-        self.filters = [(fn, current[fn]) for fn in filterNames]
+        filter_names = sorted(current.keys())
+        self.filters = [(fn, current[fn]) for fn in filter_names]
         return
     # Filters
     #
@@ -802,7 +800,7 @@ class Preprocessor:
                     args = self.applyFilters(args)
                 if not os.path.isabs(args):
                     args = os.path.join(self.curdir, args)
-                args = open(args, 'rU')
+                args = open(args, 'r', encoding='utf-8', errors='replace')
             except Preprocessor.Error:
                 raise
             except Exception:
@@ -857,7 +855,7 @@ def preprocess(includes=[sys.stdin], defines={},
     pp = Preprocessor(defines=defines,
                       marker=marker)
     for f in includes:
-        with open(f, 'rU') as input:
+        with open(f, 'r', encoding='utf-8', errors='replace') as input:
             pp.processFile(input=input, output=output)
     return pp.includes
 

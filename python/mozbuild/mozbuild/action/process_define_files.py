@@ -36,7 +36,7 @@ def process_define_file(output, input):
             not config.substs.get('JS_STANDALONE'):
         config = PartialConfigEnvironment(mozpath.join(topobjdir, 'js', 'src'))
 
-    with open(path, 'rU') as input:
+    with open(path, 'r', encoding='utf-8', errors='replace') as input:
         r = re.compile('^\s*#\s*(?P<cmd>[a-z]+)(?:\s+(?P<name>\S+)(?:\s+(?P<value>\S+))?)?', re.U)
         for l in input:
             m = r.match(l)
@@ -63,7 +63,7 @@ def process_define_file(output, input):
                             return define
                         defines = '\n'.join(sorted(
                             define_for_name(name, val)
-                            for name, val in config.defines['ALLDEFINES'].iteritems()))
+                            for name, val in config.defines['ALLDEFINES'].items()))
                         l = l[:m.start('cmd') - 1] \
                             + defines + l[m.end('name'):]
                     elif cmd == 'define':

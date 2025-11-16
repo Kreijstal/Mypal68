@@ -292,8 +292,11 @@ class FileAvoidWrite(BytesIO):
             writemode = 'w'
             if self._binary_mode:
                 writemode += 'b'
+            data = buf
+            if 'b' not in writemode:
+                data = buf.decode('utf-8')
             with open(self.name, writemode) as file:
-                file.write(buf)
+                file.write(data)
 
         self._generate_diff(buf, old_content)
 
@@ -1188,7 +1191,7 @@ def pair(iterable):
         [(1,2), (3,4), (5,6)]
     '''
     i = iter(iterable)
-    return itertools.izip_longest(i, i)
+    return itertools.zip_longest(i, i)
 
 
 def pairwise(iterable):

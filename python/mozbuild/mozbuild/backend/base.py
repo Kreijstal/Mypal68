@@ -263,7 +263,7 @@ class BuildBackend(LoggingMixin):
         return status
 
     @contextmanager
-    def _write_file(self, path=None, fh=None, readmode='rU'):
+    def _write_file(self, path=None, fh=None, readmode='r'):
         """Context manager to write a file.
 
         This is a glorified wrapper around FileAvoidWrite with integration to
@@ -311,7 +311,7 @@ class BuildBackend(LoggingMixin):
         srcdir = mozpath.dirname(obj.input_path)
         pp.context.update({
             k: ' '.join(v) if isinstance(v, list) else v
-            for k, v in obj.config.substs.iteritems()
+            for k, v in obj.config.substs.items()
         })
         pp.context.update(
             top_srcdir=obj.topsrcdir,

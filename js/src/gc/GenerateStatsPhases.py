@@ -330,7 +330,7 @@ def generateHeader(out):
     #
     # Generate PhaseKind enum.
     #
-    phaseKindNames = map(lambda phaseKind: phaseKind.name, AllPhaseKinds)
+    phaseKindNames = list(map(lambda phaseKind: phaseKind.name, AllPhaseKinds))
     extraPhaseKinds = [
         "NONE = LIMIT",
         "EXPLICIT_SUSPENSION = LIMIT",
@@ -342,7 +342,7 @@ def generateHeader(out):
     #
     # Generate Phase enum.
     #
-    phaseNames = map(lambda phase: phase.name, AllPhases)
+    phaseNames = list(map(lambda phase: phase.name, AllPhases))
     extraPhases = ["NONE = LIMIT", "EXPLICIT_SUSPENSION = LIMIT", "IMPLICIT_SUSPENSION"]
     writeEnumClass(out, "Phase", "uint8_t", phaseNames, extraPhases)
     out.write("\n")

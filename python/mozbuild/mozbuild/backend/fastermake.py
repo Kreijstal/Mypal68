@@ -182,7 +182,7 @@ class FasterMakeBackend(MakeBackend, PartialBackend):
         # Add information for chrome manifest generation
         manifest_targets = []
 
-        for target, entries in self._manifest_entries.iteritems():
+        for target, entries in self._manifest_entries.items():
             manifest_targets.append(target)
             install_target = mozpath.basedir(target, install_manifests_bases)
             self._install_manifests[install_target].add_content(
@@ -194,7 +194,7 @@ class FasterMakeBackend(MakeBackend, PartialBackend):
                          % ' '.join(self._install_manifests.keys()))
 
         # Add dependencies we inferred:
-        for target, deps in self._dependencies.iteritems():
+        for target, deps in self._dependencies.items():
             mk.create_rule([target]).add_dependencies(
                 '$(TOPOBJDIR)/%s' % d for d in deps)
 
@@ -205,7 +205,7 @@ class FasterMakeBackend(MakeBackend, PartialBackend):
             '$(TOPSRCDIR)/third_party/python/compare-locales/compare_locales/paths.py',
         ]
         # Add l10n dependencies we inferred:
-        for target, deps in self._l10n_dependencies.iteritems():
+        for target, deps in self._l10n_dependencies.items():
             mk.create_rule([target]).add_dependencies(
                 '%s' % d[0] for d in deps)
             for (merge, ref_file, l10n_file) in deps:
@@ -224,7 +224,7 @@ class FasterMakeBackend(MakeBackend, PartialBackend):
 
         mk.add_statement('include $(TOPSRCDIR)/config/faster/rules.mk')
 
-        for base, install_manifest in self._install_manifests.iteritems():
+        for base, install_manifest in self._install_manifests.items():
             with self._write_file(
                     mozpath.join(self.environment.topobjdir, 'faster',
                                  'install_%s' % base.replace('/', '_'))) as fh:

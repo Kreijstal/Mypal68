@@ -50,20 +50,23 @@ import mozpack.path as mozpath
 from mozfile import which
 
 
-def ToCAsciiArray(lines):
+def _byte_value(ch):
+    if isinstance(ch, int):
+        return ch
+    return ord(ch)
+
+
+def ToCAsciiArray(data):
     result = []
-    for chr in lines:
-        value = ord(chr)
+    for ch in data:
+        value = _byte_value(ch)
         assert value < 128
         result.append(str(value))
     return ", ".join(result)
 
 
-def ToCArray(lines):
-    result = []
-    for chr in lines:
-        result.append(str(ord(chr)))
-    return ", ".join(result)
+def ToCArray(data):
+    return ", ".join(str(_byte_value(ch)) for ch in data)
 
 
 HEADER_TEMPLATE = """\
@@ -114,7 +117,8 @@ def embed(
     js_out.write(processed)
     import zlib
 
-    compressed = zlib.compress(processed)
+    processed_bytes = processed.encode("utf-8")
+    compressed = zlib.compress(processed_bytes)
     data = ToCArray(compressed)
     c_out.write(
         HEADER_TEMPLATE
@@ -123,7 +127,7 @@ def embed(
             "sources_data": data,
             "sources_name": "compressedSources",
             "compressed_total_length": len(compressed),
-            "raw_total_length": len(processed),
+            "raw_total_length": len(processed_bytes),
             "namespace": namespace,
         }
     )
@@ -143,7 +147,7 @@ def preprocess(cxx, preprocessorOption, source, args=[]):
     outputArg = shlex.split(preprocessorOption + tmpOut)
 
     with open(tmpIn, "wb") as input:
-        input.write(source)
+        input.write(source.encode("utf-8"))
     print(" ".join(cxx + outputArg + args + [tmpIn]))
     result = subprocess.Popen(cxx + outputArg + args + [tmpIn]).wait()
     if result != 0:

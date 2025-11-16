@@ -44,7 +44,7 @@ def _to_text(value):
         return value.decode('utf-8')
     if isinstance(value, list):
         return [_to_text(v) for v in value]
-    return str(value)
+    return value
 
 
 generator_default_variables = {}
@@ -315,7 +315,7 @@ def process_gyp_result(gyp_result, gyp_dir_attrs, path, config, output,
                         if not f:
                             continue
                         # the result may be a string or a list.
-                        if isinstance(f, types.StringTypes):
+                        if isinstance(f, str):
                             context[var].append(f)
                         else:
                             context[var].extend(f)

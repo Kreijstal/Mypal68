@@ -514,8 +514,9 @@ class SandboxValidationError(Exception):
         s.write('The error occurred when validating the result of ')
         s.write('the execution. The reported error is:\n')
         s.write('\n')
+        message = self.args[0] if self.args else ''
         s.write(''.join('    %s\n' % l
-                        for l in self.message.splitlines()))
+                        for l in message.splitlines()))
         s.write('\n')
 
         return s.getvalue()

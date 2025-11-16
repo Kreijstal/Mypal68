@@ -97,7 +97,7 @@ class XPIDLManager(object):
 
         The stem of an IDL file is the basename of the file with no .idl extension.
         """
-        return itertools.chain(*[m.stems() for m in self.modules.itervalues()])
+        return itertools.chain(*[m.stems() for m in self.modules.values()])
 
 
 class BinariesCollection(object):

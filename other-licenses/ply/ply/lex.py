@@ -483,7 +483,10 @@ def _form_master_re(relist,reflags,ldict,toknames):
     if not relist: return []
     regex = "|".join(relist)
     try:
-        lexre = re.compile(regex,re.VERBOSE | reflags)
+        flags = getattr(re.VERBOSE, "value", re.VERBOSE) | getattr(
+            reflags, "value", reflags
+        )
+        lexre = re.compile(regex,flags)
 
         # Build the index to function map for the matching engine
         lexindexfunc = [ None ] * (max(lexre.groupindex.values())+1)
@@ -863,6 +866,7 @@ class LexerReflect(object):
 # Build all of the regular expression rules from definitions in the supplied module
 # -----------------------------------------------------------------------------
 def lex(module=None,object=None,debug=0,optimize=0,lextab="lextab",reflags=0,nowarn=0,outputdir="", debuglog=None, errorlog=None):
+    reflags = getattr(reflags, "value", reflags)
     global lexer
     ldict = None
     stateinfo  = { 'INITIAL' : 'inclusive'}
@@ -1055,4 +1059,3 @@ def TOKEN(r):
 
 # Alternative spelling of the TOKEN decorator
 Token = TOKEN
-

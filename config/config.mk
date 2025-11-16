@@ -82,7 +82,7 @@ ifndef INCLUDED_FUNCTIONS_MK
 include $(MOZILLA_DIR)/config/makefiles/functions.mk
 endif
 
-RM = rm -f
+RM = /usr/bin/rm -f
 
 # FINAL_TARGET specifies the location into which we copy end-user-shipped
 # build products (typelibs, components, chrome). It may already be specified by
@@ -110,7 +110,7 @@ CC := $(CC_WRAPPER) $(CC)
 CXX := $(CXX_WRAPPER) $(CXX)
 MKDIR ?= mkdir
 SLEEP ?= sleep
-TOUCH ?= touch
+TOUCH ?= /usr/bin/touch
 
 PYTHON_PATH = $(PYTHON) $(topsrcdir)/config/pythonpath.py
 
