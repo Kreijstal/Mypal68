@@ -640,7 +640,7 @@ def p_ProtocolSendSemanticsQual(p):
                                  | INTR"""
     if p[1] == 'nested':
         mtype = p[6]
-        nested = p[4]
+        nested = p[4]['nested']
     else:
         mtype = p[1]
         nested = NOT_NESTED

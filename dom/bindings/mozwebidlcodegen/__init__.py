@@ -384,7 +384,7 @@ class WebIDLCodegenManager(LoggingMixin):
             with open(path, "rb") as fh:
                 data = fh.read()
                 hashes[path] = hashlib.sha1(data).hexdigest()
-                parser.parse(data, path)
+                parser.parse(data.decode('utf-8'), path)
 
         # Only these directories may contain WebIDL files with interfaces
         # which are exposed to the web. WebIDL files in these roots may not

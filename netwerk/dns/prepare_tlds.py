@@ -4,7 +4,6 @@
 
 import codecs
 import encodings.idna
-import imp
 import os
 import re
 import sys
@@ -48,7 +47,11 @@ def _normalizeHostname(domain):
   def convertLabel(label):
     if _isASCII(label):
       return label.lower()
-    return encodings.idna.ToASCII(label)
+    result = encodings.idna.ToASCII(label)
+    # In Python 3, ToASCII returns bytes, so decode to string
+    if isinstance(result, bytes):
+      return result.decode('ascii')
+    return result
   return ".".join(map(convertLabel, domain.split(".")))
 
 def _isASCII(s):

@@ -1494,7 +1494,7 @@ class _DecorateWithCxxStuff(ipdl.ast.Visitor):
 
             # Compute a permutation of the fields for in-memory storage such
             # that the memory layout of the structure will be well-packed.
-            permutation = range(len(newfields))
+            permutation = list(range(len(newfields)))
 
             # Note that the results of `pod_size` ensure that non-POD fields
             # sort before POD ones.

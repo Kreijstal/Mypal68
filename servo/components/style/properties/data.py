@@ -777,17 +777,17 @@ def _remove_common_first_line_and_first_letter_properties(props, engine):
 class PropertyRestrictions:
     @staticmethod
     def logical_group(data, group):
-        return map(lambda p: p.name, data.longhands_by_logical_group[group])
+        return list(map(lambda p: p.name, data.longhands_by_logical_group[group]))
 
     @staticmethod
     def shorthand(data, shorthand):
         if shorthand not in data.shorthands_by_name:
             return []
-        return map(lambda p: p.name, data.shorthands_by_name[shorthand].sub_properties)
+        return list(map(lambda p: p.name, data.shorthands_by_name[shorthand].sub_properties))
 
     @staticmethod
     def spec(data, spec_path):
-        return map(lambda p: p.name, filter(lambda p: spec_path in p.spec, data.longhands))
+        return list(map(lambda p: p.name, filter(lambda p: spec_path in p.spec, data.longhands)))
 
     # https://drafts.csswg.org/css-pseudo/#first-letter-styling
     @staticmethod

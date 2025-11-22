@@ -488,7 +488,7 @@ macro_rules! impl_to_css_for_predefined_type {
             where
                 W: Write,
             {
-                ::cssparser::ToCss::to_css(self, dest)
+                CssparserToCss::to_css(self, dest)
             }
         }
     };
@@ -499,10 +499,11 @@ impl_to_css_for_predefined_type!(i8);
 impl_to_css_for_predefined_type!(i32);
 impl_to_css_for_predefined_type!(u16);
 impl_to_css_for_predefined_type!(u32);
-impl_to_css_for_predefined_type!(::cssparser::Token<'a>);
-impl_to_css_for_predefined_type!(::cssparser::RGBA);
-impl_to_css_for_predefined_type!(::cssparser::Color);
-impl_to_css_for_predefined_type!(::cssparser::UnicodeRange);
+use cssparser::{RGBA, Color, UnicodeRange};
+impl_to_css_for_predefined_type!(Token<'a>);
+impl_to_css_for_predefined_type!(RGBA);
+impl_to_css_for_predefined_type!(Color);
+impl_to_css_for_predefined_type!(UnicodeRange);
 
 /// Define an enum type with unit variants that each correspond to a CSS keyword.
 macro_rules! define_css_keyword_enum {
@@ -516,8 +517,8 @@ macro_rules! define_css_keyword_enum {
 
         impl $name {
             /// Parse this property from a CSS input stream.
-            pub fn parse<'i, 't>(input: &mut ::cssparser::Parser<'i, 't>)
-                                 -> Result<$name, $crate::ParseError<'i>> {
+            pub fn parse<'i, 't>(input: &mut cssparser::Parser<'i, 't>)
+                                 -> Result<$name, crate::ParseError<'i>> {
                 use cssparser::Token;
                 let location = input.current_source_location();
                 match *input.next()? {
@@ -543,10 +544,10 @@ macro_rules! define_css_keyword_enum {
             }
         }
 
-        impl $crate::ToCss for $name {
+        impl crate::ToCss for $name {
             fn to_css<W>(
                 &self,
-                dest: &mut $crate::CssWriter<W>,
+                dest: &mut crate::CssWriter<W>,
             ) -> ::std::fmt::Result
             where
                 W: ::std::fmt::Write,

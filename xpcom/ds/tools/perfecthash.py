@@ -114,13 +114,18 @@ class PerfectHash(object):
         stored in that table is used as the offset basis for indexing into the
         values table."""
         for byte in memoryview(key):
-            basis ^= ord(byte)      # xor-in the byte
+            # In Python 3, iterating over memoryview yields integers directly
+            basis ^= byte if isinstance(byte, int) else ord(byte)  # xor-in the byte
             basis *= cls.FNV_PRIME  # Multiply by the FNV prime
             basis &= cls.U32_MAX    # clamp to 32-bits
         return basis
 
     def key(self, entry):
-        return memoryview(self._key(entry))
+        key_data = self._key(entry)
+        # In Python 3, ensure we have bytes, not str
+        if isinstance(key_data, str):
+            key_data = key_data.encode('utf-8')
+        return memoryview(key_data)
 
     def get_raw_index(self, key):
         """Determine the index in self.entries without validating"""
@@ -288,7 +293,7 @@ class CGHelper(object):
                             can be used for additional checks, e.g. for keys
                             not in the table."""
 
-        assert all(ord(b) <= 0x7f
+        assert all(b <= 0x7f
                    for e in self.phf.entries
                    for b in self.phf.key(e)), "non-ASCII key"
 

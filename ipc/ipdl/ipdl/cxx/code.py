@@ -136,7 +136,7 @@ def _line(raw, skip_indent, lineno, context):
             values = eval(expr, context, {})
         except Exception as e:
             msg = "%s in substitution on line %d" % (repr(e), lineno)
-            raise ValueError(msg), None, sys.exc_traceback
+            raise ValueError(msg).with_traceback(sys.exc_info()[2])
 
         # If we aren't dealing with lists, wrap the result into a
         # single-element list.

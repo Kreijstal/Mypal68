@@ -53,7 +53,7 @@ static constexpr Entry kEntries[] = {
         return "DummyGetter"
 
     properties = runpy.run_path(dataFile)["data"]
-    properties = filter(exposed_on_getcs, properties)
+    properties = list(filter(exposed_on_getcs, properties))
     properties.sort(key=order_key)
 
     TEMPLATE = "  {{ eCSSProperty_{}, &nsComputedDOMStyle::{} }},\n"

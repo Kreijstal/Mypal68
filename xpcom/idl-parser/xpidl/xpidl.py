@@ -46,7 +46,7 @@ def attlistToIDL(attlist):
         return ""
 
     attlist = list(attlist)
-    attlist.sort(cmp=lambda a, b: cmp(a[0], b[0]))
+    attlist.sort(key=lambda a: a[0])
 
     return "[%s] " % ",".join(
         [
@@ -245,7 +245,7 @@ class NameMap(object):
         return self._d[key]
 
     def __iter__(self):
-        return self._d.itervalues()
+        return iter(self._d.values())
 
     def __contains__(self, key):
         return key in builtinMap or key in self._d
@@ -472,10 +472,10 @@ class Forward(object):
         # Hack alert: if an identifier is already present, move the doccomments
         # forward.
         if parent.hasName(self.name):
-            for i in xrange(0, len(parent.productions)):
+            for i in range(0, len(parent.productions)):
                 if parent.productions[i] is self:
                     break
-            for i in xrange(i + 1, len(parent.productions)):
+            for i in range(i + 1, len(parent.productions)):
                 if hasattr(parent.productions[i], "doccomments"):
                     parent.productions[i].doccomments[0:0] = self.doccomments
                     break
@@ -1542,13 +1542,13 @@ class IDLParser(object):
     t_ignore = " \t"
 
     def t_multilinecomment(self, t):
-        r"/\*(?s).*?\*/"
+        r"/\*[\s\S]*?\*/"
         t.lexer.lineno += t.value.count("\n")
         if t.value.startswith("/**"):
             self._doccomments.append(t.value)
 
     def t_singlelinecomment(self, t):
-        r"(?m)//.*?$"
+        r"//[^\n]*"
 
     def t_IID(self, t):
         return t
@@ -1561,7 +1561,7 @@ class IDLParser(object):
         return t
 
     def t_LCDATA(self, t):
-        r"(?s)%\{[ ]*C\+\+[ ]*\n(?P<cdata>.*?\n?)%\}[ ]*(C\+\+)?"
+        r"%\{[ ]*C\+\+[ ]*\n(?P<cdata>[\s\S]*?\n?)%\}[ ]*(C\+\+)?"
         t.type = "CDATA"
         t.value = t.lexer.lexmatch.group("cdata")
         t.lexer.lineno += t.value.count("\n")

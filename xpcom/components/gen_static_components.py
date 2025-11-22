@@ -788,7 +788,9 @@ def read_manifest(filename):
         "defined": defined,
         "ProcessSelector": ProcessSelector,
     }
-    execfile(filename, glbl)
+    with open(filename) as f:
+        code = compile(f.read(), filename, "exec")
+        exec(code, glbl)
     return glbl
 
 

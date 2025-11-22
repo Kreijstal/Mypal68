@@ -127,11 +127,13 @@ def main():
             abort(usage)
         template = sys.argv[3]
         header = render(template, data=properties)
-        sys.stdout.write(header)
+        sys.stdout.write(header.decode('utf-8'))
 
 
 def abort(message):
-    sys.stderr.write(message + b"\n")
+    if isinstance(message, bytes):
+        message = message.decode('utf-8')
+    sys.stderr.write(message + "\n")
     sys.exit(1)
 
 

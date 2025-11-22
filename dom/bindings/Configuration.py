@@ -38,7 +38,9 @@ class Configuration(DescriptorProvider):
 
         # Read the configuration file.
         glbl = {}
-        execfile(filename, glbl)
+        with open(filename, 'rb') as f:
+            code = compile(f.read(), filename, 'exec')
+            exec(code, glbl)
         config = glbl['DOMInterfaces']
 
         webRoots = tuple(map(os.path.normpath, webRoots))
@@ -134,7 +136,7 @@ class Configuration(DescriptorProvider):
             self.descriptorsByName[desc.interface.identifier.name] = desc
 
         # Keep the descriptor list sorted for determinism.
-        self.descriptors.sort(lambda x, y: cmp(x.name, y.name))
+        self.descriptors.sort(key=lambda x: x.name)
 
         self.descriptorsByFile = {}
         for d in self.descriptors:
@@ -189,8 +191,8 @@ class Configuration(DescriptorProvider):
                                 # unions for the file where we previously found
                                 # them.
                                 unionsForFilename = self.unionsPerFilename[f]
-                                unionsForFilename = filter(lambda u: u.name != t.name,
-                                                           unionsForFilename)
+                                unionsForFilename = list(filter(lambda u: u.name != t.name,
+                                                           unionsForFilename))
                                 if len(unionsForFilename) == 0:
                                     del self.unionsPerFilename[f]
                                 else:
@@ -270,7 +272,7 @@ class Configuration(DescriptorProvider):
         # Collect up our filters, because we may have a webIDLFile filter that
         # we always want to apply first.
         tofilter = [(lambda x: x.interface.isExternal(), False)]
-        for key, val in filters.iteritems():
+        for key, val in filters.items():
             if key == "webIDLFile":
                 # Special-case this part to make it fast, since most of our
                 # getDescriptors calls are conditioned on a webIDLFile.  We may
@@ -306,17 +308,17 @@ class Configuration(DescriptorProvider):
                 getter = (lambda attrName: lambda x: getattr(x, attrName))(key)
             tofilter.append((getter, val))
         for f in tofilter:
-            curr = filter(lambda x: f[0](x) == f[1], curr)
+            curr = list(filter(lambda x: f[0](x) == f[1], curr))
         return curr
 
     def getEnums(self, webIDLFile):
-        return filter(lambda e: e.filename() == webIDLFile, self.enums)
+        return list(filter(lambda e: e.filename() == webIDLFile, self.enums))
 
     def getDictionaries(self, webIDLFile):
-        return filter(lambda d: d.filename() == webIDLFile, self.dictionaries)
+        return list(filter(lambda d: d.filename() == webIDLFile, self.dictionaries))
 
     def getCallbacks(self, webIDLFile):
-        return filter(lambda c: c.filename() == webIDLFile, self.callbacks)
+        return list(filter(lambda c: c.filename() == webIDLFile, self.callbacks))
 
     def getDescriptor(self, interfaceName):
         """
@@ -336,10 +338,10 @@ class Configuration(DescriptorProvider):
         return self
 
     def getDictionariesConvertibleToJS(self):
-        return filter(lambda d: d.needsConversionToJS, self.dictionaries)
+        return list(filter(lambda d: d.needsConversionToJS, self.dictionaries))
 
     def getDictionariesConvertibleFromJS(self):
-        return filter(lambda d: d.needsConversionFromJS, self.dictionaries)
+        return list(filter(lambda d: d.needsConversionFromJS, self.dictionaries))
 
     def getDictionaryIfExists(self, dictionaryName):
         return self.dictionariesByName.get(dictionaryName, None)
@@ -666,7 +668,7 @@ class Descriptor(DescriptorProvider):
 
     @property
     def prototypeNameChain(self):
-        return map(lambda p: self.getDescriptor(p).name, self.prototypeChain)
+        return list(map(lambda p: self.getDescriptor(p).name, self.prototypeChain))
 
     @property
     def parentPrototypeName(self):

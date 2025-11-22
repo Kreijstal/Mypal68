@@ -592,7 +592,7 @@ def iteractortypes(t, visited=None):
 
 def hasshmem(type):
     """Return true iff |type| is shmem or has it buried within."""
-    class found:
+    class found(Exception):
         pass
 
     class findShmem(TypeVisitor):

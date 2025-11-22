@@ -35,7 +35,9 @@ def process(input_dirs, inc_paths, bindings_conf, cache_dir, header_dir,
     rule = mk.create_rule()
 
     glbl = {}
-    execfile(bindings_conf, glbl)
+    with open(bindings_conf) as f:
+        code = compile(f.read(), bindings_conf, 'exec')
+        exec(code, glbl)
     webidlconfig = glbl['DOMInterfaces']
 
     # Write out dependencies for Python modules we import. If this list isn't

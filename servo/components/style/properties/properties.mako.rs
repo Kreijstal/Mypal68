@@ -723,10 +723,10 @@ impl NonCustomPropertyIdSet {
 <%def name="static_non_custom_property_id_set(name, is_member)">
 static ${name}: NonCustomPropertyIdSet = NonCustomPropertyIdSet {
     <%
-        storage = [0] * ((len(data.longhands) + len(data.shorthands) + len(data.all_aliases()) - 1 + 32) / 32)
+        storage = [0] * ((len(data.longhands) + len(data.shorthands) + len(data.all_aliases()) - 1 + 32) // 32)
         for i, property in enumerate(data.longhands + data.shorthands + data.all_aliases()):
             if is_member(property):
-                storage[i / 32] |= 1 << (i % 32)
+                storage[i // 32] |= 1 << (i % 32)
     %>
     storage: [${", ".join("0x%x" % word for word in storage)}]
 };
@@ -735,10 +735,10 @@ static ${name}: NonCustomPropertyIdSet = NonCustomPropertyIdSet {
 <%def name="static_longhand_id_set(name, is_member)">
 static ${name}: LonghandIdSet = LonghandIdSet {
     <%
-        storage = [0] * ((len(data.longhands) - 1 + 32) / 32)
+        storage = [0] * ((len(data.longhands) - 1 + 32) // 32)
         for i, property in enumerate(data.longhands):
             if is_member(property):
-                storage[i / 32] |= 1 << (i % 32)
+                storage[i // 32] |= 1 << (i % 32)
     %>
     storage: [${", ".join("0x%x" % word for word in storage)}]
 };
@@ -750,7 +750,7 @@ static ${name}: LonghandIdSet = LonghandIdSet {
         if prop.logical_group:
             logical_groups[prop.logical_group].append(prop)
 
-    for group, props in logical_groups.iteritems():
+    for group, props in logical_groups.items():
         logical_count = sum(1 for p in props if p.logical)
         if logical_count * 2 != len(props):
             raise RuntimeError("Logical group {} has ".format(group) +
@@ -784,7 +784,7 @@ static ${name}: LonghandIdSet = LonghandIdSet {
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 #[repr(u8)]
 pub enum LogicalGroup {
-    % for i, group in enumerate(logical_groups.iterkeys()):
+    % for i, group in enumerate(logical_groups.keys()):
     /// ${group}
     ${to_camel_case(group)} = ${i},
     % endfor
@@ -1136,19 +1136,16 @@ impl LonghandId {
 
                     longhand_to_shorthand_map[sub_property.ident].append(shorthand.camel_case)
 
-            def preferred_order(x, y):
+            def preferred_order_key(x):
                 # Since we want properties in order from most subproperties to least,
-                # reverse the arguments to cmp from the expected order.
-                result = cmp(num_sub_properties.get(y, 0), num_sub_properties.get(x, 0))
-                if result:
-                    return result
-                # Fall back to lexicographic comparison.
-                return cmp(x, y)
+                # use negative count for the first element of the tuple.
+                # Fall back to lexicographic comparison (ascending).
+                return (-num_sub_properties.get(x, 0), x)
 
             # Sort the lists of shorthand properties according to preferred order:
             # https://drafts.csswg.org/cssom/#concept-shorthands-preferred-order
-            for shorthand_list in longhand_to_shorthand_map.itervalues():
-                shorthand_list.sort(cmp=preferred_order)
+            for shorthand_list in longhand_to_shorthand_map.values():
+                shorthand_list.sort(key=preferred_order_key)
         %>
 
         // based on lookup results for each longhand, create result arrays

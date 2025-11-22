@@ -6,8 +6,8 @@
 
 """Generate rust bindings information for the IDL file specified"""
 
-import rust
-import xpidl
+from . import rust
+from . import xpidl
 
 
 derive_method_tmpl = """\

@@ -7,7 +7,10 @@
 
 """Generate a json XPT typelib for an IDL file"""
 
-import xpidl
+try:
+    import xpidl.xpidl as xpidl
+except ImportError:
+    import xpidl
 import json
 import itertools
 
