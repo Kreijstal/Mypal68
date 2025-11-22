@@ -2396,6 +2396,10 @@ class IDLType(IDLObject):
     def __ne__(self, other):
         return not self == other
 
+    def __hash__(self):
+        return hash((self.builtin, self.name, self._clamp, self._enforceRange, 
+                     self.legacyNullToEmptyString, self._allowShared))
+
     def __str__(self):
         return str(self.name)
 
@@ -2634,6 +2638,9 @@ class IDLNullableType(IDLParametrizedType):
     def __eq__(self, other):
         return isinstance(other, IDLNullableType) and self.inner == other.inner
 
+    def __hash__(self):
+        return hash(self.inner)
+
     def __str__(self):
         return self.inner.__str__() + "OrNull"
 
@@ -2810,6 +2817,9 @@ class IDLSequenceType(IDLParametrizedType):
     def __eq__(self, other):
         return isinstance(other, IDLSequenceType) and self.inner == other.inner
 
+    def __hash__(self):
+        return hash(self.inner)
+
     def __str__(self):
         return self.inner.__str__() + "Sequence"
 
@@ -2872,6 +2882,9 @@ class IDLRecordType(IDLParametrizedType):
 
     def __eq__(self, other):
         return isinstance(other, IDLRecordType) and self.inner == other.inner
+
+    def __hash__(self):
+        return hash(self.inner)
 
     def __str__(self):
         return self.keyType.__str__() + self.inner.__str__() + "Record"
@@ -3286,6 +3299,9 @@ class IDLWrapperType(IDLType):
             and self.builtin == other.builtin
         )
 
+    def __hash__(self):
+        return hash((self._identifier, self.builtin))
+
     def __str__(self):
         return str(self.name) + " (Wrapper)"
 
@@ -3445,6 +3461,9 @@ class IDLPromiseType(IDLParametrizedType):
             isinstance(other, IDLPromiseType)
             and self.promiseInnerType() == other.promiseInnerType()
         )
+
+    def __hash__(self):
+        return hash(self.inner)
 
     def __str__(self):
         return self.inner.__str__() + "Promise"

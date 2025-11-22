@@ -16,7 +16,7 @@ def grouped_frame_classes():
     for frame in FRAME_CLASSES:
         if frame.is_concrete:
             groups.setdefault(frame.ty, []).append(frame)
-    groups = groups.values()
+    groups = list(groups.values())
     groups.sort(key=lambda x: (-len(x), x[0].ty if len(x) > 1 else x[0].cls))
     return groups
 

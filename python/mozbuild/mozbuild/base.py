@@ -934,29 +934,41 @@ class MachCommandConditions(object):
     @staticmethod
     def is_firefox(cls):
         """Must have a Firefox build."""
-        if hasattr(cls, 'substs'):
-            return cls.substs.get('MOZ_BUILD_APP') == 'browser'
+        try:
+            if hasattr(cls, 'substs'):
+                return cls.substs.get('MOZ_BUILD_APP') == 'browser'
+        except BuildEnvironmentNotFoundException:
+            pass
         return False
 
     @staticmethod
     def is_thunderbird(cls):
         """Must have a Thunderbird build."""
-        if hasattr(cls, 'substs'):
-            return cls.substs.get('MOZ_BUILD_APP') == 'comm/mail'
+        try:
+            if hasattr(cls, 'substs'):
+                return cls.substs.get('MOZ_BUILD_APP') == 'comm/mail'
+        except BuildEnvironmentNotFoundException:
+            pass
         return False
 
     @staticmethod
     def is_android(cls):
         """Must have an Android build."""
-        if hasattr(cls, 'substs'):
-            return cls.substs.get('MOZ_WIDGET_TOOLKIT') == 'android'
+        try:
+            if hasattr(cls, 'substs'):
+                return cls.substs.get('MOZ_WIDGET_TOOLKIT') == 'android'
+        except BuildEnvironmentNotFoundException:
+            pass
         return False
 
     @staticmethod
     def is_not_android(cls):
         """Must not have an Android build."""
-        if hasattr(cls, 'substs'):
-            return cls.substs.get('MOZ_WIDGET_TOOLKIT') != 'android'
+        try:
+            if hasattr(cls, 'substs'):
+                return cls.substs.get('MOZ_WIDGET_TOOLKIT') != 'android'
+        except BuildEnvironmentNotFoundException:
+            return True
         return False
 
     @staticmethod
@@ -983,15 +995,21 @@ class MachCommandConditions(object):
     @staticmethod
     def is_artifact_build(cls):
         """Must be an artifact build."""
-        if hasattr(cls, 'substs'):
-            return getattr(cls, 'substs', {}).get('MOZ_ARTIFACT_BUILDS')
+        try:
+            if hasattr(cls, 'substs'):
+                return getattr(cls, 'substs', {}).get('MOZ_ARTIFACT_BUILDS')
+        except BuildEnvironmentNotFoundException:
+            pass
         return False
 
     @staticmethod
     def is_non_artifact_build(cls):
         """Must not be an artifact build."""
-        if hasattr(cls, 'substs'):
-            return not MachCommandConditions.is_artifact_build(cls)
+        try:
+            if hasattr(cls, 'substs'):
+                return not MachCommandConditions.is_artifact_build(cls)
+        except BuildEnvironmentNotFoundException:
+            return True
         return False
 
 

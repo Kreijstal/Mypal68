@@ -10,6 +10,7 @@ import string
 import math
 import textwrap
 import functools
+from functools import reduce
 
 from perfecthash import PerfectHash
 
@@ -6128,7 +6129,7 @@ def getJSToNativeConversionInfo(
         memberTypes = type.flatMemberTypes
         prettyNames = []
 
-        interfaceMemberTypes = filter(lambda t: t.isNonCallbackInterface(), memberTypes)
+        interfaceMemberTypes = list(filter(lambda t: t.isNonCallbackInterface(), memberTypes))
         if len(interfaceMemberTypes) > 0:
             interfaceObject = []
             for memberType in interfaceMemberTypes:
@@ -6149,7 +6150,7 @@ def getJSToNativeConversionInfo(
         else:
             interfaceObject = None
 
-        sequenceObjectMemberTypes = filter(lambda t: t.isSequence(), memberTypes)
+        sequenceObjectMemberTypes = list(filter(lambda t: t.isSequence(), memberTypes))
         if len(sequenceObjectMemberTypes) > 0:
             assert len(sequenceObjectMemberTypes) == 1
             memberType = sequenceObjectMemberTypes[0]
@@ -6162,7 +6163,7 @@ def getJSToNativeConversionInfo(
         else:
             sequenceObject = None
 
-        callbackMemberTypes = filter(lambda t: t.isCallback() or t.isCallbackInterface(), memberTypes)
+        callbackMemberTypes = list(filter(lambda t: t.isCallback() or t.isCallbackInterface(), memberTypes))
         if len(callbackMemberTypes) > 0:
             assert len(callbackMemberTypes) == 1
             memberType = callbackMemberTypes[0]
@@ -6175,7 +6176,7 @@ def getJSToNativeConversionInfo(
         else:
             callbackObject = None
 
-        dictionaryMemberTypes = filter(lambda t: t.isDictionary(), memberTypes)
+        dictionaryMemberTypes = list(filter(lambda t: t.isDictionary(), memberTypes))
         if len(dictionaryMemberTypes) > 0:
             assert len(dictionaryMemberTypes) == 1
             memberType = dictionaryMemberTypes[0]
@@ -6188,7 +6189,7 @@ def getJSToNativeConversionInfo(
         else:
             setDictionary = None
 
-        recordMemberTypes = filter(lambda t: t.isRecord(), memberTypes)
+        recordMemberTypes = list(filter(lambda t: t.isRecord(), memberTypes))
         if len(recordMemberTypes) > 0:
             assert len(recordMemberTypes) == 1
             memberType = recordMemberTypes[0]
@@ -6201,7 +6202,7 @@ def getJSToNativeConversionInfo(
         else:
             recordObject = None
 
-        objectMemberTypes = filter(lambda t: t.isObject(), memberTypes)
+        objectMemberTypes = list(filter(lambda t: t.isObject(), memberTypes))
         if len(objectMemberTypes) > 0:
             assert len(objectMemberTypes) == 1
             # Very important to NOT construct a temporary Rooted here, since the
@@ -6276,9 +6277,9 @@ def getJSToNativeConversionInfo(
                 )
 
             other = CGList([])
-            stringConversion = map(getStringOrPrimitiveConversion, stringTypes)
-            numericConversion = map(getStringOrPrimitiveConversion, numericTypes)
-            booleanConversion = map(getStringOrPrimitiveConversion, booleanTypes)
+            stringConversion = list(map(getStringOrPrimitiveConversion, stringTypes))
+            numericConversion = list(map(getStringOrPrimitiveConversion, numericTypes))
+            booleanConversion = list(map(getStringOrPrimitiveConversion, booleanTypes))
             if stringConversion:
                 if booleanConversion:
                     other.append(
@@ -10076,7 +10077,7 @@ class CGMethodCall(CGThing):
             # a string overload, then boolean and numeric are conditional, and
             # if not then boolean is conditional if we have a numeric overload.
             def findUniqueSignature(filterLambda):
-                sigs = filter(filterLambda, possibleSignatures)
+                sigs = list(filter(filterLambda, possibleSignatures))
                 assert len(sigs) < 2
                 if len(sigs) > 0:
                     return sigs[0]
@@ -17510,7 +17511,7 @@ class ForwardDeclarationBuilder:
                     ]
                 )
             )
-        for namespace, child in sorted(self.children.iteritems()):
+        for namespace, child in sorted(self.children.items()):
             decls.append(CGNamespace(namespace, child._build(atTopLevel=False)))
 
         cg = CGList(decls, "\n")
@@ -18081,11 +18082,11 @@ class CGBindingRoot(CGThing):
 
         # Add header includes.
         bindingHeaders = [
-            header for header, include in bindingHeaders.iteritems() if include
+            header for header, include in bindingHeaders.items() if include
         ]
         bindingDeclareHeaders = [
             header
-            for header, include in bindingDeclareHeaders.iteritems()
+            for header, include in bindingDeclareHeaders.items()
             if include
         ]
 
@@ -18782,7 +18783,7 @@ class CGBindingImplClass(CGClass):
             )
 
         # Sort things by name so we get stable ordering in the output.
-        ops = descriptor.operations.items()
+        ops = list(descriptor.operations.items())
         ops.sort(key=lambda x: x[0])
         for name, op in ops:
             appendSpecialOperation(name, op)
@@ -22729,7 +22730,7 @@ class GlobalGenRoots:
     @staticmethod
     def UnionConversions(config):
         unionTypes = []
-        for l in config.unionsPerFilename.itervalues():
+        for l in config.unionsPerFilename.values():
             unionTypes.extend(l)
         unionTypes.sort(key=lambda u: u.name)
         headers, unions = UnionConversions(unionTypes, config)
@@ -23040,7 +23041,7 @@ class CGEventMethod(CGNativeMember):
                 # -1 on the right to ignore the .trusted property which bleeds through
                 # here because it is [Unforgeable].
                 len(signature[1]) - 3
-                == len(filter(lambda x: x.isAttr(), iface.members)) - 1
+                == len(list(filter(lambda x: x.isAttr(), iface.members))) - 1
             ):
                 allowed = True
                 self.isInit = True

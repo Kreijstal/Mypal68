@@ -56,9 +56,10 @@ fn generate_properties(engine: &str) {
     let script = Path::new(&env::var_os("CARGO_MANIFEST_DIR").unwrap())
         .join("properties")
         .join("build.py");
+    let script_str = script.to_str().unwrap().replace("\\", "/");
 
     let status = Command::new(&*PYTHON)
-        .arg(&script)
+        .arg(&script_str)
         .arg(engine)
         .arg("style-crate")
         .status()

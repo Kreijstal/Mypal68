@@ -7,9 +7,9 @@ import re
 import yaml
 import itertools
 import string
-import shared_telemetry_utils as utils
+from . import shared_telemetry_utils as utils
 
-from shared_telemetry_utils import ParserError
+from .shared_telemetry_utils import ParserError
 atexit.register(ParserError.exit_func)
 
 MAX_CATEGORY_NAME_LENGTH = 30
@@ -93,14 +93,14 @@ class DictTypeChecker:
         if len(value.keys()) < 1:
             ParserError("%s: Failed check for %s - dict should not be empty." %
                         (identifier, key)).handle_now()
-        for x in value.iterkeys():
+        for x in value.keys():
             if not isinstance(x, self.keys_instance_type):
                 ParserError("%s: Failed dict type check for %s - expected key type %s, got "
                             "%s." %
                             (identifier, key,
                              nice_type_name(self.keys_instance_type),
                              nice_type_name(type(x)))).handle_later()
-        for k, v in value.iteritems():
+        for k, v in value.items():
             if not isinstance(v, self.values_instance_type):
                 ParserError("%s: Failed dict type check for %s - "
                             "expected value type %s for key %s, got %s." %
@@ -141,7 +141,7 @@ def type_check_event_fields(identifier, name, definition):
         ParserError(identifier + ': Unknown fields: ' + ', '.join(unknown_fields)).handle_later()
 
     # Type-check fields.
-    for k, v in definition.iteritems():
+    for k, v in definition.items():
         ALL_FIELDS[k].check(identifier, k, v)
 
 
@@ -215,7 +215,7 @@ class EventData:
         if len(extra_keys.keys()) > MAX_EXTRA_KEYS_COUNT:
             ParserError("%s: Number of extra_keys exceeds limit %d." %
                         (self.identifier, MAX_EXTRA_KEYS_COUNT)).handle_later()
-        for key in extra_keys.iterkeys():
+        for key in extra_keys.keys():
             string_check(self.identifier, field='extra_keys', value=key,
                          min_length=1, max_length=MAX_EXTRA_KEY_NAME_LENGTH,
                          regex=IDENTIFIER_PATTERN)
@@ -346,9 +346,9 @@ def load_events(filename, strict_type_checks):
     try:
         with open(filename, 'r') as f:
             events = yaml.safe_load(f)
-    except IOError, e:
+    except IOError as e:
         ParserError('Error opening ' + filename + ': ' + e.message + ".").handle_now()
-    except ParserError, e:
+    except ParserError as e:
         ParserError('Error parsing events in ' + filename + ': ' + e.message + ".").handle_now()
 
     event_list = []
@@ -361,7 +361,7 @@ def load_events(filename, strict_type_checks):
     #       <event definition>
     #      ...
     #   ...
-    for category_name, category in events.iteritems():
+    for category_name, category in events.items():
         string_check("top level structure", field='category', value=category_name,
                      min_length=1, max_length=MAX_CATEGORY_NAME_LENGTH,
                      regex=IDENTIFIER_PATTERN)
@@ -371,7 +371,7 @@ def load_events(filename, strict_type_checks):
             ParserError('Category ' + category_name + ' must contain at least one entry.'
                         ).handle_now()
 
-        for name, entry in category.iteritems():
+        for name, entry in category.items():
             string_check(category_name, field='event name', value=name,
                          min_length=1, max_length=MAX_METHOD_NAME_LENGTH,
                          regex=IDENTIFIER_PATTERN)

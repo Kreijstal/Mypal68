@@ -48,6 +48,9 @@ class VirtualenvManager(object):
 
     def __init__(self, topsrcdir, topobjdir, virtualenv_path, log_handle,
                  manifest_path):
+        import sys
+        msg = "DEBUG: platform=%s sep=%s IS_NATIVE_WIN=%s IS_MSYS2=%s IS_CYGWIN=%s executable=%s" % (sys.platform, os.sep, IS_NATIVE_WIN, IS_MSYS2, IS_CYGWIN, sys.executable)
+        raise Exception(msg)
         """Create a new manager.
 
         Each manager is associated with a source directory, a path where you
@@ -81,8 +84,10 @@ class VirtualenvManager(object):
         # import virtualenv. The functionality is trivial, so just implement
         # it here.
         if IS_CYGWIN or IS_NATIVE_WIN:
+            print("DEBUG: bin_path returning Scripts", file=sys.stderr)
             return os.path.join(self.virtualenv_root, 'Scripts')
 
+        print("DEBUG: bin_path returning bin", file=sys.stderr)
         return os.path.join(self.virtualenv_root, 'bin')
 
     @property

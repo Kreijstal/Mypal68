@@ -165,7 +165,7 @@ class StringTable:
         :param f: the output stream.
         :param name: the name of the output array.
         """
-        entries = self.table.items()
+        entries = list(self.table.items())
         entries.sort(key=lambda x: x[1])
 
         # Avoid null-in-string warnings with GCC and potentially
@@ -242,8 +242,8 @@ def load_yaml_file(filename):
     try:
         with open(filename, 'r') as f:
             return yaml.safe_load(f)
-    except IOError, e:
+    except IOError as e:
         raise ParserError('Error opening ' + filename + ': ' + e.message)
-    except ValueError, e:
+    except ValueError as e:
         raise ParserError('Error parsing processes in {}: {}'
                           .format(filename, e.message))

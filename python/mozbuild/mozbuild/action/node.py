@@ -70,7 +70,7 @@ def execute_node_cmd(node_cmd_list):
         # XXX Starting with an empty list means that node scripts can
         # (intentionally or inadvertently) remove deps.  Do we want this?
         deps = []
-        for line in stdout.splitlines():
+        for line in stdout.decode('utf-8').splitlines():
             if 'dep:' in line:
                 deps.append(line.replace('dep:', ''))
             else:
@@ -111,7 +111,7 @@ def generate(output, node_script, *files):
             and building again.""", file=sys.stderr)
         sys.exit(1)
 
-    if not isinstance(node_script, (str, unicode)):
+    if not isinstance(node_script, str):
         print("moz.build file didn't pass a valid node script name to execute",
               file=sys.stderr)
         sys.exit(1)

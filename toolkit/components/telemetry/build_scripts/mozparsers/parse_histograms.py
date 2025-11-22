@@ -10,10 +10,10 @@ import os
 import re
 import sys
 import atexit
-import shared_telemetry_utils as utils
+from . import shared_telemetry_utils as utils
 
 from ctypes import c_int
-from shared_telemetry_utils import ParserError
+from .shared_telemetry_utils import ParserError
 from collections import OrderedDict
 atexit.register(ParserError.exit_func)
 
@@ -107,7 +107,7 @@ def load_whitelist():
         with open(whitelist_path, 'r') as f:
             try:
                 whitelists = json.load(f)
-                for name, whitelist in whitelists.iteritems():
+                for name, whitelist in whitelists.items():
                     whitelists[name] = set(whitelist)
             except ValueError:
                 ParserError('Error parsing whitelist: %s' % whitelist_path).handle_now()
@@ -364,7 +364,7 @@ the histogram."""
         if not labels:
             return
 
-        invalid = filter(lambda l: len(l) > MAX_LABEL_LENGTH, labels)
+        invalid = list(filter(lambda l: len(l) > MAX_LABEL_LENGTH, labels))
         if len(invalid) > 0:
             ParserError('Label values for "%s" exceed length limit of %d: %s' %
                         (name, MAX_LABEL_LENGTH, ', '.join(invalid))).handle_later()
@@ -375,7 +375,7 @@ the histogram."""
 
         # To make it easier to generate C++ identifiers from this etc., we restrict
         # the label values to a strict pattern.
-        invalid = filter(lambda l: not re.match(CPP_IDENTIFIER_PATTERN, l, re.IGNORECASE), labels)
+        invalid = list(filter(lambda l: not re.match(CPP_IDENTIFIER_PATTERN, l, re.IGNORECASE), labels))
         if len(invalid) > 0:
             ParserError('Label values for %s are not matching pattern "%s": %s' %
                         (name, CPP_IDENTIFIER_PATTERN, ', '.join(invalid))).handle_later()
@@ -466,7 +466,7 @@ the histogram."""
         if len(keys) > MAX_KEY_COUNT:
             raise ValueError('Label count for %s exceeds limit of %d' % (name, MAX_KEY_COUNT))
 
-        invalid = filter(lambda k: len(k) > MAX_KEY_LENGTH, keys)
+        invalid = list(filter(lambda k: len(k) > MAX_KEY_LENGTH, keys))
         if len(invalid) > 0:
             raise ValueError('"keys" values for %s are exceeding length "%d": %s' %
                              (name, MAX_KEY_LENGTH, ', '.join(invalid)))
@@ -569,7 +569,7 @@ the histogram."""
                 return "string"
             return t.__name__
 
-        for key, key_type in type_checked_fields.iteritems():
+        for key, key_type in type_checked_fields.items():
             if key not in definition:
                 continue
             if not isinstance(definition[key], key_type):
@@ -581,7 +581,7 @@ the histogram."""
             ParserError('Value for high in histogram "{0}" should be lower or equal to INT_MAX.'
                         .format(nice_type_name(c_int))).handle_later()
 
-        for key, key_type in type_checked_list_fields.iteritems():
+        for key, key_type in type_checked_list_fields.items():
             if key not in definition:
                 continue
             if not all(isinstance(x, key_type) for x in definition[key]):
@@ -591,7 +591,7 @@ the histogram."""
     def check_keys(self, name, definition, allowed_keys):
         if not self._strict_type_checks:
             return
-        for key in definition.iterkeys():
+        for key in definition.keys():
             if key not in allowed_keys:
                 ParserError('Key "%s" is not allowed for histogram "%s".' %
                             (key, name)).handle_later()
@@ -696,7 +696,7 @@ def from_Histograms_json(filename, strict_type_checks):
             def hook(ps):
                 return load_histograms_into_dict(ps, strict_type_checks)
             histograms = json.load(f, object_pairs_hook=hook)
-        except ValueError, e:
+        except ValueError as e:
             ParserError("error parsing histograms in %s: %s" % (filename, e.message)).handle_now()
     return histograms
 
@@ -764,15 +764,15 @@ the histograms defined in filenames.
         if not isinstance(histograms, OrderedDict):
             ParserError("Histogram parser did not provide an OrderedDict.").handle_now()
 
-        for (name, definition) in histograms.iteritems():
+        for (name, definition) in histograms.items():
             if name in all_histograms:
                 ParserError('Duplicate histogram name "%s".' % name).handle_later()
             all_histograms[name] = definition
 
     # We require that all USE_COUNTER2_* histograms be defined in a contiguous
     # block.
-    use_counter_indices = filter(lambda x: x[1].startswith("USE_COUNTER2_"),
-                                 enumerate(all_histograms.iterkeys()))
+    use_counter_indices = list(filter(lambda x: x[1].startswith("USE_COUNTER2_"),
+                                 enumerate(all_histograms.keys())))
     if use_counter_indices:
         lower_bound = use_counter_indices[0][0]
         upper_bound = use_counter_indices[-1][0]
@@ -784,12 +784,12 @@ the histograms defined in filenames.
     # Check that histograms that were removed from Histograms.json etc.
     # are also removed from the whitelists.
     if whitelists is not None:
-        all_whitelist_entries = itertools.chain.from_iterable(whitelists.itervalues())
+        all_whitelist_entries = itertools.chain.from_iterable(whitelists.values())
         orphaned = set(all_whitelist_entries) - set(all_histograms.keys())
         if len(orphaned) > 0:
             msg = 'The following entries are orphaned and should be removed from ' \
                   'histogram-whitelists.json:\n%s'
             ParserError(msg % (', '.join(sorted(orphaned)))).handle_later()
 
-    for (name, definition) in all_histograms.iteritems():
+    for (name, definition) in all_histograms.items():
         yield Histogram(name, definition, strict_type_checks=strict_type_checks)
