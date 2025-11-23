@@ -338,12 +338,14 @@ pub trait Separator {
     ///
     /// This method returns `Err(_)` the first time a closure does or if
     /// the separators aren't correct.
+/*
     fn parse<'i, 't, F, T, E>(
         parser: &mut Parser<'i, 't>,
         parse_one: F,
     ) -> Result<Vec<T>, ParseError<'i, E>>
     where
         F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>;
+*/
 }
 
 impl Separator for Comma {
@@ -351,6 +353,7 @@ impl Separator for Comma {
         ", "
     }
 
+/*
     fn parse<'i, 't, F, T, E>(
         input: &mut Parser<'i, 't>,
         parse_one: F,
@@ -360,6 +363,7 @@ impl Separator for Comma {
     {
         input.parse_comma_separated(parse_one)
     }
+*/
 }
 
 impl Separator for Space {
@@ -367,6 +371,7 @@ impl Separator for Space {
         " "
     }
 
+/*
     fn parse<'i, 't, F, T, E>(
         input: &mut Parser<'i, 't>,
         mut parse_one: F,
@@ -385,6 +390,7 @@ impl Separator for Space {
             }
         }
     }
+*/
 }
 
 impl Separator for CommaWithSpace {
@@ -392,6 +398,7 @@ impl Separator for CommaWithSpace {
         ", "
     }
 
+/*
     fn parse<'i, 't, F, T, E>(
         input: &mut Parser<'i, 't>,
         mut parse_one: F,
@@ -416,6 +423,7 @@ impl Separator for CommaWithSpace {
         }
         Ok(results)
     }
+*/
 }
 
 /// Marker trait on T to automatically implement ToCss for Vec<T> when T's are
@@ -481,25 +489,50 @@ impl ToCss for Au {
     }
 }
 
-macro_rules! impl_to_css_for_predefined_type {
-    ($name: ty) => {
-        impl ToCss for $name {
-            fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
-            where
-                W: Write,
-            {
-                CssparserToCss::to_css(self, dest)
-            }
-        }
-    };
-}
 
-impl_to_css_for_predefined_type!(f32);
-impl_to_css_for_predefined_type!(i8);
-impl_to_css_for_predefined_type!(i32);
-impl_to_css_for_predefined_type!(u16);
-impl_to_css_for_predefined_type!(u32);
+
+impl ToCss for f32 {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for i8 {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for i32 {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for u16 {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for u32 {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
 use cssparser::{RGBA, Color};
+/*
 impl<'a> ToCss for Token<'a> {
     fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
     where
@@ -508,9 +541,31 @@ impl<'a> ToCss for Token<'a> {
         CssparserToCss::to_css(self, dest)
     }
 }
-impl_to_css_for_predefined_type!(RGBA);
-impl_to_css_for_predefined_type!(Color);
-impl_to_css_for_predefined_type!(UnicodeRange);
+*/
+impl ToCss for RGBA {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for Color {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
+impl ToCss for UnicodeRange {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
 
 /// Define an enum type with unit variants that each correspond to a CSS keyword.
 macro_rules! define_css_keyword_enum {
@@ -610,8 +665,8 @@ pub mod specified {
         #[inline]
         pub fn clamp(&self, val: f32) -> f32 {
             match *self {
-                AllowedNumericType::NonNegative if val < 0. => 0.,
-                AllowedNumericType::AtLeastOne if val < 1. => 1.,
+                AllowedNumericType::NonNegative if val < 0.0 => 0.0,
+                AllowedNumericType::AtLeastOne if val < 1.0 => 1.0,
                 _ => val,
             }
         }
