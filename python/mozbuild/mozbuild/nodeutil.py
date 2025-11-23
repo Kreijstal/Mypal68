@@ -10,9 +10,29 @@ import platform
 from mozboot.util import get_state_dir
 import which
 
-from distutils.version import (
-    StrictVersion,
-)
+class StrictVersion(object):
+    def __init__(self, vstring):
+        if isinstance(vstring, bytes):
+            vstring = vstring.decode('utf-8')
+        self.version = tuple(map(int, vstring.split('.')))
+
+    def __ge__(self, other):
+        return self.version >= other.version
+
+    def __gt__(self, other):
+        return self.version > other.version
+
+    def __le__(self, other):
+        return self.version <= other.version
+
+    def __lt__(self, other):
+        return self.version < other.version
+
+    def __eq__(self, other):
+        return self.version == other.version
+
+    def __str__(self):
+        return '.'.join(map(str, self.version))
 
 NODE_MIN_VERSION = StrictVersion("8.11.0")
 NPM_MIN_VERSION = StrictVersion("6.13.4")

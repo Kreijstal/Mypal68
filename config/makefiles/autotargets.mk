@@ -13,7 +13,7 @@ ifndef INCLUDED_AUTOTARGETS_MK #{
 ###########################################################################
 
 MKDIR ?= mkdir -p
-TOUCH ?= /usr/bin/touch
+TOUCH ?= touch
 
 # declare for local use, rules.mk may not have been loaded
 space = $(NULL) $(NULL)

@@ -204,7 +204,7 @@ option(env='PYTHON', nargs=1, help='Python interpreter')
 @imports(_from='mozbuild.configure.util', _import='LineIO')
 @imports(_from='mozbuild.virtualenv', _import='VirtualenvManager')
 @imports(_from='mozbuild.virtualenv', _import='verify_python_version')
-@imports('distutils.sysconfig')
+@imports('sysconfig')
 def virtualenv_python(env_python, build_env, mozconfig, help):
     if help:
         return
@@ -266,7 +266,7 @@ def virtualenv_python(env_python, build_env, mozconfig, help):
         sys.exit(subprocess.call([python] + sys.argv))
 
     # We are now in the virtualenv
-    if not distutils.sysconfig.get_python_lib():
+    if not sysconfig.get_path('purelib'):
         die('Could not determine python site packages directory')
 
     return python
@@ -797,7 +797,7 @@ def config_sub(shell, triplet):
         triplet = triplet.decode('utf-8')
     elif not isinstance(triplet, six.string_types):
         triplet = six.text_type(triplet)
-    result = subprocess.check_output([shell, config_sub, triplet]).strip()
+    result = subprocess.check_output([shell, config_sub, triplet]).strip().decode('utf-8')
     if isinstance(result, six.binary_type):
         result = result.decode('utf-8')
     return result
@@ -821,7 +821,7 @@ def real_host(value, shell):
     if not value:
         config_guess = os.path.join(os.path.dirname(__file__), '..',
                                     'autoconf', 'config.guess')
-        host = subprocess.check_output([shell, config_guess]).strip()
+        host = subprocess.check_output([shell, config_guess]).strip().decode('utf-8')
         try:
             return split_triplet(host)
         except ValueError:

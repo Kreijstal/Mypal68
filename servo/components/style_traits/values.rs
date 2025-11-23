@@ -483,7 +483,7 @@ impl ToCss for Au {
 
 macro_rules! impl_to_css_for_predefined_type {
     ($name: ty) => {
-        impl<'a> ToCss for $name {
+        impl ToCss for $name {
             fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
             where
                 W: Write,
@@ -499,8 +499,15 @@ impl_to_css_for_predefined_type!(i8);
 impl_to_css_for_predefined_type!(i32);
 impl_to_css_for_predefined_type!(u16);
 impl_to_css_for_predefined_type!(u32);
-use cssparser::{RGBA, Color, UnicodeRange};
-impl_to_css_for_predefined_type!(Token<'a>);
+use cssparser::{RGBA, Color};
+impl<'a> ToCss for Token<'a> {
+    fn to_css<W>(&self, dest: &mut CssWriter<W>) -> fmt::Result
+    where
+        W: Write,
+    {
+        CssparserToCss::to_css(self, dest)
+    }
+}
 impl_to_css_for_predefined_type!(RGBA);
 impl_to_css_for_predefined_type!(Color);
 impl_to_css_for_predefined_type!(UnicodeRange);

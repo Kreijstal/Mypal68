@@ -167,6 +167,13 @@ impl BuilderExt for Builder {
             builder = builder.clang_arg(item.as_str().expect("Expect string in list"));
         }
 
+        // Suppress Clang 21 warnings that prevent bindgen from working
+        builder = builder
+            .clang_arg("-Wno-inline-new-delete")
+            .clang_arg("-Wno-deprecated-declarations")
+            .clang_arg("-Wno-deprecated-literal-operator")
+            .clang_arg("-Wno-invalid-offsetof");
+
         builder
     }
     fn include<T: Into<String>>(self, file: T) -> Builder {

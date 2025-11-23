@@ -7,14 +7,12 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import distutils.sysconfig
+import sysconfig
 import os
 import shutil
 import subprocess
 import sys
 import warnings
-
-from distutils.version import LooseVersion
 
 IS_NATIVE_WIN = (sys.platform == 'win32' and os.sep == '\\')
 IS_MSYS2 = (sys.platform == 'win32' and os.sep == '/')
@@ -22,8 +20,8 @@ IS_CYGWIN = (sys.platform == 'cygwin')
 
 # Minimum versions of Python required to build.
 MINIMUM_PYTHON_VERSIONS = {
-    2: LooseVersion('2.7.3'),
-    3: LooseVersion('3.5.0')
+    2: (2, 7, 3),
+    3: (3, 5, 0)
 }
 
 
@@ -48,13 +46,7 @@ class VirtualenvManager(object):
 
     def __init__(self, topsrcdir, topobjdir, virtualenv_path, log_handle,
                  manifest_path):
-        import sys
-        msg = "DEBUG: platform=%s sep=%s IS_NATIVE_WIN=%s IS_MSYS2=%s IS_CYGWIN=%s executable=%s" % (sys.platform, os.sep, IS_NATIVE_WIN, IS_MSYS2, IS_CYGWIN, sys.executable)
-        raise Exception(msg)
-        """Create a new manager.
-
-        Each manager is associated with a source directory, a path where you
-        want the virtualenv to be created, and a handle to write output to.
+        """Create a new manager. to write output to.
         """
         assert os.path.isabs(
             manifest_path), "manifest_path must be an absolute path: %s" % (manifest_path)
@@ -84,10 +76,12 @@ class VirtualenvManager(object):
         # import virtualenv. The functionality is trivial, so just implement
         # it here.
         if IS_CYGWIN or IS_NATIVE_WIN:
-            print("DEBUG: bin_path returning Scripts", file=sys.stderr)
-            return os.path.join(self.virtualenv_root, 'Scripts')
+            scripts_path = os.path.join(self.virtualenv_root, 'Scripts')
+            bin_path = os.path.join(self.virtualenv_root, 'bin')
+            if os.path.exists(bin_path) and not os.path.exists(scripts_path):
+                return bin_path
+            return scripts_path
 
-        print("DEBUG: bin_path returning bin", file=sys.stderr)
         return os.path.join(self.virtualenv_root, 'bin')
 
     @property
@@ -96,7 +90,11 @@ class VirtualenvManager(object):
         if sys.platform in ('win32', 'cygwin'):
             binary += '.exe'
 
-        return os.path.join(self.bin_path, binary)
+        path = os.path.join(self.bin_path, binary)
+        if not os.path.exists(path) and os.path.exists(os.path.join(self.bin_path, 'python')):
+            return os.path.join(self.bin_path, 'python')
+
+        return path
 
     @property
     def version_info(self):
@@ -105,7 +103,7 @@ class VirtualenvManager(object):
 
     @property
     def activate_path(self):
-        return os.path.join(self.bin_path, 'activate_this.py')
+        return os.path.join(self.bin_path, 'activate')
 
     def get_exe_info(self):
         """Returns the version and file size of the python executable that was in
@@ -277,7 +275,7 @@ class VirtualenvManager(object):
         into the wrong place. This is how virtualenv's work.
         """
         packages = self.packages()
-        python_lib = distutils.sysconfig.get_python_lib()
+        python_lib = sysconfig.get_path('purelib')
 
         def handle_package(package):
             if package[0] == 'setup.py':
@@ -386,7 +384,7 @@ class VirtualenvManager(object):
         try:
             old_target = os.environ.get('MACOSX_DEPLOYMENT_TARGET', None)
             sysconfig_target = \
-                distutils.sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
+                sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
 
             if sysconfig_target is not None:
                 os.environ['MACOSX_DEPLOYMENT_TARGET'] = sysconfig_target
@@ -649,7 +647,7 @@ def verify_python_version(log_handle):
     """Ensure the current version of Python is sufficient."""
     major, minor, micro = sys.version_info[:3]
 
-    our = LooseVersion('%d.%d.%d' % (major, minor, micro))
+    our = (major, minor, micro)
 
     if major not in MINIMUM_PYTHON_VERSIONS or our < MINIMUM_PYTHON_VERSIONS[major]:
         log_handle.write('One of the following Python versions are required to build:\n')

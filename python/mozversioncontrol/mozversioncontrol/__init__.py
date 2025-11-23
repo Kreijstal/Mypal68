@@ -11,8 +11,9 @@ import re
 import subprocess
 import sys
 
-from distutils.spawn import find_executable
-from distutils.version import LooseVersion
+import shutil
+
+from mozbuild.configure.util import LooseVersion
 
 
 class MissingVCSTool(Exception):
@@ -49,7 +50,7 @@ def get_tool_path(tool):
     if os.path.isabs(tool) and os.path.exists(tool):
         return tool
 
-    path = find_executable(tool)
+    path = shutil.which(tool)
     if not path:
         raise MissingVCSTool('Unable to obtain %s path. Try running '
                              '|mach bootstrap| to ensure your environment is up to '

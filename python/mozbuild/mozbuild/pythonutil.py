@@ -8,9 +8,29 @@ import os
 import subprocess
 import sys
 
-from distutils.version import (
-    StrictVersion,
-)
+class StrictVersion(object):
+    def __init__(self, vstring):
+        if isinstance(vstring, bytes):
+            vstring = vstring.decode('utf-8')
+        self.version = tuple(map(int, vstring.split('.')))
+
+    def __ge__(self, other):
+        return self.version >= other.version
+
+    def __gt__(self, other):
+        return self.version > other.version
+
+    def __le__(self, other):
+        return self.version <= other.version
+
+    def __lt__(self, other):
+        return self.version < other.version
+
+    def __eq__(self, other):
+        return self.version == other.version
+
+    def __str__(self):
+        return '.'.join(map(str, self.version))
 
 
 def iter_modules_in_path(*paths):

@@ -17,7 +17,7 @@ from mako.template import Template
 
 import data
 
-RE_PYTHON_ADDR = re.compile(r'<.+? object at 0x[0-9a-fA-F]+>')
+RE_PYTHON_ADDR = re.compile(rb'<.+? object at 0x[0-9a-fA-F]+>')
 
 OUT_DIR = os.environ.get("OUT_DIR", "")
 
@@ -160,6 +160,9 @@ def write(directory, filename, content):
     if not os.path.exists(directory):
         os.makedirs(directory)
     full_path = os.path.join(directory, filename)
+    # Ensure content is bytes
+    if isinstance(content, str):
+        content = content.encode('utf-8')
     open(full_path, "wb").write(content)
 
     python_addr = RE_PYTHON_ADDR.search(content)

@@ -8,7 +8,7 @@ header = """/* This Source Code Form is subject to the terms of the Mozilla Publ
 #  pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
 #endif
 // Work-around silly windows.h define.
-#pragma push_macro("STRICT")
+#pragma push_macro("STRICT")    
 #undef STRICT
 """
 trailer = """
