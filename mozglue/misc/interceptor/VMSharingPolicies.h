@@ -11,6 +11,22 @@
 namespace mozilla {
 namespace interceptor {
 
+// RAII wrapper for CRITICAL_SECTION
+class AutoCriticalSection {
+ public:
+  explicit AutoCriticalSection(CRITICAL_SECTION* aCS) : mCS(aCS) {
+    ::EnterCriticalSection(mCS);
+  }
+  ~AutoCriticalSection() { ::LeaveCriticalSection(mCS); }
+
+  AutoCriticalSection(const AutoCriticalSection&) = delete;
+  AutoCriticalSection& operator=(const AutoCriticalSection&) = delete;
+
+ private:
+  CRITICAL_SECTION* mCS;
+};
+
+
 template <typename MMPolicy, uint32_t kChunkSize>
 class VMSharingPolicyUnique : public MMPolicy {
  public:

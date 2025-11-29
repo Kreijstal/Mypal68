@@ -2,11 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/UniquePtr.h"
+
 #include <winsock2.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
-
-#include "mozilla/UniquePtr.h"
 
 #include "NetworkInfoServiceImpl.h"
 

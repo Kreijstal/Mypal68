@@ -8672,18 +8672,14 @@ void CodeGenerator::visitModPowTwoD(LModPowTwoD* ins) {
       // The pattern |n % 1 == 0| is used to detect integer numbers. We can skip
       // the multiplication by one in this case.
       masm.moveDouble(lhs, output);
-      // masm.nearbyIntDouble(RoundingMode::TowardsZero, output, scratch);
-      masm.vroundsd(Assembler::ToX86RoundingMode(RoundingMode::TowardsZero),
-                    output, scratch);
+      masm.nearbyIntDouble(RoundingMode::TowardsZero, output, scratch);
       masm.subDouble(scratch, output);
     } else {
       masm.loadConstantDouble(1.0 / double(divisor), scratch);
       masm.loadConstantDouble(double(divisor), output);
 
       masm.mulDouble(lhs, scratch);
-      // masm.nearbyIntDouble(RoundingMode::TowardsZero, scratch, scratch);
-      masm.vroundsd(Assembler::ToX86RoundingMode(RoundingMode::TowardsZero),
-                    scratch, scratch);
+      masm.nearbyIntDouble(RoundingMode::TowardsZero, scratch, scratch);
       masm.mulDouble(output, scratch);
 
       masm.moveDouble(lhs, output);

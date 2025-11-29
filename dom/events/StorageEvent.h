@@ -10,6 +10,7 @@
 #include "mozilla/Assertions.h"
 #include "mozilla/RefPtr.h"
 #include "mozilla/dom/Event.h"
+#include "mozilla/dom/Storage.h"
 #include "nsCOMPtr.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIPrincipal.h"

@@ -5,13 +5,14 @@
 #ifndef __SECURITY_SANDBOX_SANDBOXBROKER_H__
 #define __SECURITY_SANDBOX_SANDBOXBROKER_H__
 
-#include <stdint.h>
-#include <windows.h>
+#include <cstdint>
 
 #include "build/build_config.h"
 #include "mozilla/ipc/EnvironmentMap.h"
 #include "nsXULAppAPI.h"
 #include "nsISupportsImpl.h"
+
+#include <windows.h>
 
 namespace sandbox {
 class BrokerServices;

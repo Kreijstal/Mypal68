@@ -515,7 +515,7 @@ class TErrorResult {
     dom::CStringArrayAppender::Append(messageArgsArray, argCount,
                                       std::forward<Ts>(messageArgs)...);
     for (nsCString& arg : messageArgsArray) {
-      size_t validUpTo = Utf8ValidUpTo(arg);
+      size_t validUpTo = AsciiValidUpTo(arg);
       if (validUpTo != arg.Length()) {
         EnsureUTF8Validity(arg, validUpTo);
       }

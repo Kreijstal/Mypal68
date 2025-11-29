@@ -2,6 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+// Include WebExtension bindings early to ensure complete type definitions
+#include "mozilla/dom/WebExtensionContentScriptBinding.h"
+#include "mozilla/extensions/MatchPattern.h"
+
 #include "ChannelEventQueue.h"
 
 #include "mozilla/Assertions.h"

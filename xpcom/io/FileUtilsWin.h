@@ -5,10 +5,10 @@
 #ifndef mozilla_FileUtilsWin_h
 #define mozilla_FileUtilsWin_h
 
-#include <windows.h>
-
 #include "mozilla/Scoped.h"
 #include "nsString.h"
+
+#include <windows.h>
 
 namespace mozilla {
 

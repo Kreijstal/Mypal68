@@ -492,6 +492,7 @@ enum class nsXPTInterface : uint16_t {
 #include "xptinfo.h"
 #include "mozilla/PerfectHash.h"
 #include "mozilla/dom/BindingUtils.h"
+#include "nsGlobalWindowInner.h"
 
 // These template methods are specialized to be used in the sDOMObjects table.
 template<mozilla::dom::prototypes::ID PrototypeID, typename T>

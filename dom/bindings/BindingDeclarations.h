@@ -12,12 +12,10 @@
 #define mozilla_dom_BindingDeclarations_h__
 
 #include "js/RootingAPI.h"
-#include "js/TypeDecls.h"
-
+#include "js/RootingAPI.h"
+#include "js/Value.h"
 #include "mozilla/Maybe.h"
-
-#include "mozilla/dom/DOMString.h"
-
+#include "mozilla/dom/Record.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsTArray.h"

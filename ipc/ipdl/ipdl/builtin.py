@@ -68,4 +68,6 @@ CppIncludes = (
     "mozilla/ipc/ProtocolUtils.h",
     "mozilla/ipc/ShmemMessageUtils.h",
     "mozilla/ipc/TaintingIPCUtils.h",
+    "nsGlobalWindowInner.h",
+    "mozilla/dom/FetchObserverBinding.h",
 )

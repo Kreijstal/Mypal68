@@ -2,13 +2,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include <windows.h>
-#include <winternl.h>
-
 #pragma warning(push)
 #pragma warning(disable : 4275 4530)  // See msvc-stl-wrapper.template.h
 #include <map>
 #pragma warning(pop)
+
+#include "mozilla/UniquePtr.h"
+#include "mozilla/Vector.h"
+
+#include <windows.h>
+#include <winternl.h>
 
 //#include "Authenticode.h"
 #include "BaseProfiler.h"
@@ -22,8 +25,7 @@
 #include "mozilla/ScopeExit.h"
 #include "mozilla/StackWalk_windows.h"
 #include "mozilla/TimeStamp.h"
-#include "mozilla/UniquePtr.h"
-#include "mozilla/Vector.h"
+
 #include "mozilla/WindowsVersion.h"
 #include "nsWindowsHelpers.h"
 #include "WindowsDllBlocklist.h"

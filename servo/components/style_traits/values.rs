@@ -280,23 +280,27 @@ where
         }
 
         let old_prefix = before(&mut self.inner.prefix, self.separator);
-        f(self.inner)?;
+        let result = f(self.inner);
         after(old_prefix, &mut self.inner.prefix, self.separator);
-        Ok(())
+        result
     }
 
-    /// Serialises a CSS value, writing any separator as necessary.
-    ///
-    /// The separator is never written before any `item` produces any output,
-    /// and is written in subsequent calls only if the `item` produces some
-    /// output on its own again. This lets us handle `Option<T>` fields by
-    /// just not printing anything on `None`.
+    /// Serialise a single item in the sequence.
     #[inline]
     pub fn item<T>(&mut self, item: &T) -> fmt::Result
     where
-        T: ToCss,
+        T: ToCss + ?Sized,
     {
-        self.write_item(|inner| item.to_css(inner))
+        self.write_item(|w| item.to_css(w))
+    }
+
+    /// Serialise a single item in the sequence, using a closure.
+    #[inline]
+    pub fn item_with<F>(&mut self, f: F) -> fmt::Result
+    where
+        F: FnOnce(&mut CssWriter<'b, W>) -> fmt::Result,
+    {
+        self.write_item(f)
     }
 
     /// Writes a string as-is (i.e. not escaped or wrapped in quotes)
@@ -308,6 +312,7 @@ where
         self.write_item(|inner| inner.write_str(item))
     }
 }
+
 
 /// Type used as the associated type in the `OneOrMoreSeparated` trait on a
 /// type to indicate that a serialized list of elements of this type is
@@ -329,102 +334,101 @@ pub struct CommaWithSpace;
 pub trait Separator {
     /// The separator string that the satisfying separator type corresponds to.
     fn separator() -> &'static str;
-
-    /// Parses a sequence of values separated by this separator.
-    ///
-    /// The given closure is called repeatedly for each item in the sequence.
-    ///
-    /// Successful results are accumulated in a vector.
-    ///
-    /// This method returns `Err(_)` the first time a closure does or if
-    /// the separators aren't correct.
-/*
-    fn parse<'i, 't, F, T, E>(
-        parser: &mut Parser<'i, 't>,
-        parse_one: F,
-    ) -> Result<Vec<T>, ParseError<'i, E>>
-    where
-        F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>;
-*/
 }
 
 impl Separator for Comma {
     fn separator() -> &'static str {
         ", "
     }
-
-/*
-    fn parse<'i, 't, F, T, E>(
-        input: &mut Parser<'i, 't>,
-        parse_one: F,
-    ) -> Result<Vec<T>, ParseError<'i, E>>
-    where
-        F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
-    {
-        input.parse_comma_separated(parse_one)
-    }
-*/
 }
 
 impl Separator for Space {
     fn separator() -> &'static str {
         " "
     }
-
-/*
-    fn parse<'i, 't, F, T, E>(
-        input: &mut Parser<'i, 't>,
-        mut parse_one: F,
-    ) -> Result<Vec<T>, ParseError<'i, E>>
-    where
-        F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
-    {
-        input.skip_whitespace(); // Unnecessary for correctness, but may help try() rewind less.
-        let mut results = vec![parse_one(input)?];
-        loop {
-            input.skip_whitespace(); // Unnecessary for correctness, but may help try() rewind less.
-            if let Ok(item) = input.try(&mut parse_one) {
-                results.push(item);
-            } else {
-                return Ok(results);
-            }
-        }
-    }
-*/
 }
 
 impl Separator for CommaWithSpace {
     fn separator() -> &'static str {
         ", "
     }
+}
 
-/*
-    fn parse<'i, 't, F, T, E>(
-        input: &mut Parser<'i, 't>,
-        mut parse_one: F,
-    ) -> Result<Vec<T>, ParseError<'i, E>>
-    where
-        F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
-    {
-        input.skip_whitespace(); // Unnecessary for correctness, but may help try() rewind less.
-        let mut results = vec![parse_one(input)?];
-        loop {
-            input.skip_whitespace(); // Unnecessary for correctness, but may help try() rewind less.
-            let comma_location = input.current_source_location();
-            let comma = input.try(|i| i.expect_comma()).is_ok();
-            input.skip_whitespace(); // Unnecessary for correctness, but may help try() rewind less.
-            if let Ok(item) = input.try(&mut parse_one) {
-                results.push(item);
-            } else if comma {
-                return Err(comma_location.new_unexpected_token_error(Token::Comma));
-            } else {
-                break;
+macro_rules! define_separator_parse {
+    () => {
+        pub trait SeparatorParse: Separator {
+            /// Parses a sequence of values separated by this separator.
+            fn parse<'i, 't, F, T, E>(
+                parser: &mut Parser<'i, 't>,
+                parse_one: F,
+            ) -> Result<Vec<T>, ParseError<'i, E>>
+            where
+                F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>;
+        }
+
+        impl SeparatorParse for Comma {
+            fn parse<'i, 't, F, T, E>(
+                input: &mut Parser<'i, 't>,
+                parse_one: F,
+            ) -> Result<Vec<T>, ParseError<'i, E>>
+            where
+                F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
+            {
+                input.parse_comma_separated(parse_one)
             }
         }
-        Ok(results)
+
+        impl SeparatorParse for Space {
+            fn parse<'i, 't, F, T, E>(
+                input: &mut Parser<'i, 't>,
+                mut parse_one: F,
+            ) -> Result<Vec<T>, ParseError<'i, E>>
+            where
+                F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
+            {
+                input.skip_whitespace();
+                let mut results = vec![parse_one(input)?];
+                loop {
+                    input.skip_whitespace();
+                    if let Ok(item) = input.try(&mut parse_one) {
+                        results.push(item);
+                    } else {
+                        return Ok(results);
+                    }
+                }
+            }
+        }
+
+        impl SeparatorParse for CommaWithSpace {
+            fn parse<'i, 't, F, T, E>(
+                input: &mut Parser<'i, 't>,
+                mut parse_one: F,
+            ) -> Result<Vec<T>, ParseError<'i, E>>
+            where
+                F: for<'tt> FnMut(&mut Parser<'i, 'tt>) -> Result<T, ParseError<'i, E>>,
+            {
+                input.skip_whitespace();
+                let mut results = vec![parse_one(input)?];
+                loop {
+                    input.skip_whitespace();
+                    let comma_location = input.current_source_location();
+                    let comma = input.try(|i| i.expect_comma()).is_ok();
+                    input.skip_whitespace();
+                    if let Ok(item) = input.try(&mut parse_one) {
+                        results.push(item);
+                    } else if comma {
+                        return Err(comma_location.new_unexpected_token_error(Token::Comma));
+                    } else {
+                        break;
+                    }
+                }
+                Ok(results)
+            }
+        }
     }
-*/
 }
+
+define_separator_parse!();
 
 /// Marker trait on T to automatically implement ToCss for Vec<T> when T's are
 /// separated by some delimiter `delim`.
@@ -599,10 +603,12 @@ macro_rules! define_css_keyword_enum {
 
             /// Parse this property from an already-tokenized identifier.
             pub fn from_ident(ident: &str) -> Result<$name, ()> {
-                match_ignore_ascii_case! { ident,
-                    $($css => Ok($name::$variant),)+
-                    _ => Err(())
-                }
+                $(
+                    if ident.eq_ignore_ascii_case($css) {
+                        return Ok($name::$variant);
+                    }
+                )+
+                Err(())
             }
         }
 

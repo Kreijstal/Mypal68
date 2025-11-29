@@ -12,6 +12,31 @@
 
 #if defined(OS_WIN)
 #include <windows.h>
+#include <synchapi.h>
+
+// MinGW compatibility: Ensure SRWLOCK functions are declared
+#ifdef __MINGW32__
+#ifndef SRWLOCK_INIT
+typedef struct _RTL_SRWLOCK {
+    PVOID Ptr;
+} RTL_SRWLOCK, *PRTL_SRWLOCK;
+
+typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
+
+#define SRWLOCK_INIT {0}
+#endif // SRWLOCK_INIT
+
+// Always declare these functions for MinGW, even if SRWLOCK is already defined
+extern "C" {
+WINBASEAPI VOID WINAPI InitializeSRWLock(PSRWLOCK SRWLock);
+WINBASEAPI VOID WINAPI ReleaseSRWLockExclusive(PSRWLOCK SRWLock);
+WINBASEAPI VOID WINAPI ReleaseSRWLockShared(PSRWLOCK SRWLock);
+WINBASEAPI VOID WINAPI AcquireSRWLockExclusive(PSRWLOCK SRWLock);
+WINBASEAPI VOID WINAPI AcquireSRWLockShared(PSRWLOCK SRWLock);
+WINBASEAPI BOOLEAN WINAPI TryAcquireSRWLockExclusive(PSRWLOCK SRWLock);
+WINBASEAPI BOOLEAN WINAPI TryAcquireSRWLockShared(PSRWLOCK SRWLock);
+}
+#endif // __MINGW32__
 #elif defined(OS_POSIX)
 #include <errno.h>
 #include <pthread.h>

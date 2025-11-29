@@ -3,8 +3,11 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "Localization.h"
+#include "Localization.h"
 #include "nsContentUtils.h"
 #include "nsIObserverService.h"
+#include "mozilla/dom/Record.h"
+#include "mozilla/dom/BindingUtils.h"
 #include "mozilla/BasePrincipal.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Services.h"
@@ -258,11 +261,11 @@ uint32_t Localization::RemoveResourceIds(
 }
 
 already_AddRefed<Promise> Localization::FormatValue(
-    const nsACString& aId, const Optional<L10nArgs>& aArgs, ErrorResult& aRv) {
+    const nsACString& aId, const Nullable<L10nArgs>& aArgs, ErrorResult& aRv) {
   nsTArray<ffi::L10nArg> l10nArgs;
   nsTArray<nsCString> errors;
 
-  if (aArgs.WasPassed()) {
+  if (!aArgs.IsNull()) {
     const L10nArgs& args = aArgs.Value();
     FluentBundle::ConvertArgs(args, l10nArgs);
   }
@@ -351,12 +354,12 @@ already_AddRefed<Promise> Localization::FormatMessages(
 }
 
 void Localization::FormatValueSync(const nsACString& aId,
-                                   const Optional<L10nArgs>& aArgs,
+                                   const Nullable<L10nArgs>& aArgs,
                                    nsACString& aRetVal, ErrorResult& aRv) {
   nsTArray<ffi::L10nArg> l10nArgs;
   nsTArray<nsCString> errors;
 
-  if (aArgs.WasPassed()) {
+  if (!aArgs.IsNull()) {
     const L10nArgs& args = aArgs.Value();
     FluentBundle::ConvertArgs(args, l10nArgs);
   }

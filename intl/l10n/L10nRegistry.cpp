@@ -71,6 +71,25 @@ JSObject* FluentBundleAsyncIterator::WrapObject(
   return FluentBundleAsyncIterator_Binding::Wrap(aCx, this, aGivenProto);
 }
 
+
+static void BundleIteratorCallback(const dom::Promise* aPromise,
+                                   ffi::FluentBundleRc* aBundle) {
+  dom::Promise* promise = const_cast<dom::Promise*>(aPromise);
+
+  FluentBundleIteratorResult res;
+
+  if (aBundle) {
+    // The Rust caller will transfer the ownership to us.
+    UniquePtr<ffi::FluentBundleRc> b(aBundle);
+    nsIGlobalObject* global = promise->GetGlobalObject();
+    res.mValue = new FluentBundle(global, std::move(b));
+    res.mDone = false;
+  } else {
+    res.mDone = true;
+  }
+  promise->MaybeResolve(res);
+}
+
 already_AddRefed<Promise> FluentBundleAsyncIterator::Next() {
   ErrorResult rv;
   RefPtr<Promise> promise = Promise::Create(mGlobal, rv);
@@ -82,22 +101,7 @@ already_AddRefed<Promise> FluentBundleAsyncIterator::Next() {
       mRaw.get(), promise,
       // callback function which will be invoked by the rust code, passing the
       // promise back in.
-      [](auto* aPromise, ffi::FluentBundleRc* aBundle) {
-        Promise* promise = const_cast<Promise*>(aPromise);
-
-        FluentBundleIteratorResult res;
-
-        if (aBundle) {
-          // The Rust caller will transfer the ownership to us.
-          UniquePtr<ffi::FluentBundleRc> b(aBundle);
-          nsIGlobalObject* global = promise->GetGlobalObject();
-          res.mValue = new FluentBundle(global, std::move(b));
-          res.mDone = false;
-        } else {
-          res.mDone = true;
-        }
-        promise->MaybeResolve(res);
-      });
+      BundleIteratorCallback);
 
   return promise.forget();
 }

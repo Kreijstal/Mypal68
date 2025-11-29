@@ -3,6 +3,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "BackgroundChildImpl.h"
+#include "nsGlobalWindowInner.h"
 
 #include "ActorsChild.h"  // IndexedDB
 #include "BroadcastChannelChild.h"

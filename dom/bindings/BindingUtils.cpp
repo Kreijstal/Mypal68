@@ -3,6 +3,18 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "BindingUtils.h"
+#include "mozilla/dom/DOMJSClass.h"
+
+namespace mozilla {
+namespace dom {
+namespace binding_detail {
+bool CheckInterfaceChain(const DOMJSClass* domClass, uint32_t protoDepth,
+                         prototypes::ID protoID) {
+  return domClass->mInterfaceChain[protoDepth] == protoID;
+}
+}  // namespace binding_detail
+}  // namespace dom
+}  // namespace mozilla
 
 #include <algorithm>
 #include <stdarg.h>
@@ -4406,3 +4418,24 @@ already_AddRefed<Promise> CreateRejectedPromiseFromThrownException(
 
 }  // namespace dom
 }  // namespace mozilla
+
+
+// Template specialization for nsIGlobalObject
+template <>
+JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p) {
+  if (!p) {
+    return JS::CurrentGlobalOrNull(cx);
+  }
+
+  JSObject* global = p->GetGlobalJSObject();
+  if (!global) {
+    // nsIGlobalObject doesn't have a JS object anymore,
+    // fallback to the current global.
+    return JS::CurrentGlobalOrNull(cx);
+  }
+
+  MOZ_ASSERT(JS_IsGlobalObject(global));
+  JS::AssertObjectIsNotGray(global);
+  return global;
+}
+

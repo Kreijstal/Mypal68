@@ -103,7 +103,7 @@ impl Parse for ImplicitGridTracks<TrackSize<LengthPercentage>> {
         context: &ParserContext,
         input: &mut Parser<'i, 't>,
     ) -> Result<Self, ParseError<'i>> {
-        use style_traits::{Separator, Space};
+        use style_traits::{Separator, SeparatorParse, Space};
         let track_sizes = Space::parse(input, |i| TrackSize::parse(context, i))?;
         if track_sizes.len() == 1 && track_sizes[0].is_initial() {
             // A single track with the initial value is always represented by an empty slice.

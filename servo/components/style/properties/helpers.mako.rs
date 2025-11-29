@@ -351,7 +351,7 @@
             context: &ParserContext,
             input: &mut Parser<'i, 't>,
         ) -> Result<SpecifiedValue, ParseError<'i>> {
-            use style_traits::Separator;
+            use style_traits::{Separator, SeparatorParse};
 
             % if allow_empty:
             if input.try_parse(|input| input.expect_ident_matching("none")).is_ok() {

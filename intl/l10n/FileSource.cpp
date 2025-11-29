@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "FileSource.h"
+#include "FluentResource.h"
 #include "mozilla/dom/Promise.h"
 
 using namespace mozilla::dom;

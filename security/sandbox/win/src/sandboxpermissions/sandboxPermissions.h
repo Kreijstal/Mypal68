@@ -5,8 +5,8 @@
 #ifndef mozilla_sandboxing_sandboxPermissions_h
 #define mozilla_sandboxing_sandboxPermissions_h
 
-#include <stdint.h>
-#include <windows.h>
+#include <cstdint>
+
 
 namespace mozilla {
 

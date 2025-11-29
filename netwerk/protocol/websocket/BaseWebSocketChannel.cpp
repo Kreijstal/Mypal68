@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "WebSocketLog.h"
+#include "nsGlobalWindowInner.h"
 #include "BaseWebSocketChannel.h"
 #include "MainThreadUtils.h"
 #include "nsILoadGroup.h"

@@ -8,7 +8,7 @@ use crate::context::QuirksMode;
 use crate::error_reporting::{ContextualParseError, ParseErrorReporter};
 use crate::stylesheets::{CssRuleType, Namespaces, Origin, UrlExtraData};
 use cssparser::{Parser, SourceLocation, UnicodeRange};
-use style_traits::{OneOrMoreSeparated, ParseError, ParsingMode, Separator};
+use style_traits::{OneOrMoreSeparated, ParseError, ParsingMode, Separator, SeparatorParse};
 
 /// Asserts that all ParsingMode flags have a matching ParsingMode value in gecko.
 #[cfg(feature = "gecko")]
@@ -170,7 +170,7 @@ pub trait Parse: Sized {
 impl<T> Parse for Vec<T>
 where
     T: Parse + OneOrMoreSeparated,
-    <T as OneOrMoreSeparated>::S: Separator,
+    <T as OneOrMoreSeparated>::S: SeparatorParse,
 {
     fn parse<'i, 't>(
         context: &ParserContext,

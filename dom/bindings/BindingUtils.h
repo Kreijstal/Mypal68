@@ -65,6 +65,18 @@ class WindowProxyHolder;
 
 enum class DeprecatedOperations : uint16_t;
 
+// Forward declarations for types from DOMJSClass.h that may not be visible
+// due to circular dependency with WebIDLPrefs.h -> UnionTypes.h -> BindingUtils.h
+struct DOMJSClass;
+struct DOMIfaceAndProtoJSClass;
+struct ConstantSpec;
+template <typename T>
+struct Prefable;
+enum DOMObjectType : uint8_t;
+
+// Typedef for prototype getter function pointers used in CreateGlobal
+typedef JS::Handle<JSObject*> (*ProtoHandleGetter)(JSContext* aCx);
+
 nsresult UnwrapArgImpl(JSContext* cx, JS::Handle<JSObject*> src,
                        const nsIID& iid, void** ppArg);
 
@@ -92,9 +104,7 @@ inline bool IsNonProxyDOMClass(const JSClass* clasp) {
 
 // Returns true if the JSClass is used for DOM interface and interface
 // prototype objects.
-inline bool IsDOMIfaceAndProtoClass(const JSClass* clasp) {
-  return clasp->flags & JSCLASS_IS_DOMIFACEANDPROTOJSCLASS;
-}
+bool IsDOMIfaceAndProtoClass(const JSClass* clasp);
 
 static_assert(DOM_OBJECT_SLOT == 0,
               "DOM_OBJECT_SLOT doesn't match the proxy private slot.  "
@@ -124,22 +134,11 @@ inline T* UnwrapPossiblyNotInitializedDOMObject(JSObject* obj) {
   return static_cast<T*>(val.toPrivate());
 }
 
-inline const DOMJSClass* GetDOMClass(const JSClass* clasp) {
-  return IsDOMClass(clasp) ? DOMJSClass::FromJSClass(clasp) : nullptr;
-}
+const DOMJSClass* GetDOMClass(const JSClass* clasp);
 
-inline const DOMJSClass* GetDOMClass(JSObject* obj) {
-  return GetDOMClass(JS::GetClass(obj));
-}
+const DOMJSClass* GetDOMClass(JSObject* obj);
 
-inline nsISupports* UnwrapDOMObjectToISupports(JSObject* aObject) {
-  const DOMJSClass* clasp = GetDOMClass(aObject);
-  if (!clasp || !clasp->mDOMObjectIsISupports) {
-    return nullptr;
-  }
-
-  return UnwrapPossiblyNotInitializedDOMObject<nsISupports>(aObject);
-}
+nsISupports* UnwrapDOMObjectToISupports(JSObject* aObject);
 
 inline bool IsDOMObject(JSObject* obj) { return IsDOMClass(JS::GetClass(obj)); }
 
@@ -204,6 +203,11 @@ inline bool IsDOMObject(JSObject* obj) { return IsDOMClass(JS::GetClass(obj)); }
 // CheckedUnwrapDynamic.  This all only matters if mayBeWrapper is true; if it's
 // false just pass nullptr for the cx arg.
 namespace binding_detail {
+
+// Helper to avoid circular dependency with DOMJSClass.h
+bool CheckInterfaceChain(const DOMJSClass* domClass, uint32_t protoDepth,
+                         prototypes::ID protoID);
+
 template <class T, bool mayBeWrapper, typename U, typename V, typename CxType>
 MOZ_ALWAYS_INLINE nsresult UnwrapObjectInternal(V& obj, U& value,
                                                 prototypes::ID protoID,
@@ -220,7 +224,7 @@ MOZ_ALWAYS_INLINE nsresult UnwrapObjectInternal(V& obj, U& value,
     /* This object is a DOM object.  Double-check that it is safely
        castable to T by checking whether it claims to inherit from the
        class identified by protoID. */
-    if (domClass->mInterfaceChain[protoDepth] == protoID) {
+    if (CheckInterfaceChain(domClass, protoDepth, protoID)) {
       value = UnwrapDOMObject<T>(obj);
       return NS_OK;
     }
@@ -612,16 +616,8 @@ class ProtoAndIfaceCache {
   Kind mKind;
 };
 
-inline void AllocateProtoAndIfaceCache(JSObject* obj,
-                                       ProtoAndIfaceCache::Kind aKind) {
-  MOZ_ASSERT(JS::GetClass(obj)->flags & JSCLASS_DOM_GLOBAL);
-  MOZ_ASSERT(JS::GetReservedSlot(obj, DOM_PROTOTYPE_SLOT).isUndefined());
-
-  ProtoAndIfaceCache* protoAndIfaceCache = new ProtoAndIfaceCache(aKind);
-
-  JS::SetReservedSlot(obj, DOM_PROTOTYPE_SLOT,
-                      JS::PrivateValue(protoAndIfaceCache));
-}
+void AllocateProtoAndIfaceCache(JSObject* obj,
+                                ProtoAndIfaceCache::Kind aKind);
 
 #ifdef DEBUG
 struct VerifyTraceProtoAndIfaceCacheCalledTracer : public JS::CallbackTracer {
@@ -638,34 +634,9 @@ struct VerifyTraceProtoAndIfaceCacheCalledTracer : public JS::CallbackTracer {
 };
 #endif
 
-inline void TraceProtoAndIfaceCache(JSTracer* trc, JSObject* obj) {
-  MOZ_ASSERT(JS::GetClass(obj)->flags & JSCLASS_DOM_GLOBAL);
+void TraceProtoAndIfaceCache(JSTracer* trc, JSObject* obj);
 
-#ifdef DEBUG
-  if (trc->kind() == JS::TracerKind::VerifyTraceProtoAndIface) {
-    // We don't do anything here, we only want to verify that
-    // TraceProtoAndIfaceCache was called.
-    static_cast<VerifyTraceProtoAndIfaceCacheCalledTracer*>(trc)->ok = true;
-    return;
-  }
-#endif
-
-  if (!DOMGlobalHasProtoAndIFaceCache(obj)) return;
-  ProtoAndIfaceCache* protoAndIfaceCache = GetProtoAndIfaceCache(obj);
-  protoAndIfaceCache->Trace(trc);
-}
-
-inline void DestroyProtoAndIfaceCache(JSObject* obj) {
-  MOZ_ASSERT(JS::GetClass(obj)->flags & JSCLASS_DOM_GLOBAL);
-
-  if (!DOMGlobalHasProtoAndIFaceCache(obj)) {
-    return;
-  }
-
-  ProtoAndIfaceCache* protoAndIfaceCache = GetProtoAndIfaceCache(obj);
-
-  delete protoAndIfaceCache;
-}
+void DestroyProtoAndIfaceCache(JSObject* obj);
 
 /**
  * Add constants to an object.
@@ -747,6 +718,9 @@ struct LegacyFactoryFunction {
  * |name|, which must also be non-null.
  */
 // clang-format on
+template<int N> struct NativePropertiesN;
+typedef NativePropertiesN<7> NativeProperties;
+
 void CreateInterfaceObjects(
     JSContext* cx, JS::Handle<JSObject*> global,
     JS::Handle<JSObject*> protoProto, const JSClass* protoClass,
@@ -1660,23 +1634,7 @@ static inline JSObject* FindAssociatedGlobal(JSContext* cx, const T& p) {
 // Specialization for the case of nsIGlobalObject, since in that case
 // we can just get the JSObject* directly.
 template <>
-inline JSObject* FindAssociatedGlobal(JSContext* cx,
-                                      nsIGlobalObject* const& p) {
-  if (!p) {
-    return JS::CurrentGlobalOrNull(cx);
-  }
-
-  JSObject* global = p->GetGlobalJSObject();
-  if (!global) {
-    // nsIGlobalObject doesn't have a JS object anymore,
-    // fallback to the current global.
-    return JS::CurrentGlobalOrNull(cx);
-  }
-
-  MOZ_ASSERT(JS_IsGlobalObject(global));
-  JS::AssertObjectIsNotGray(global);
-  return global;
-}
+JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p);
 
 template <typename T,
           bool hasAssociatedGlobal = NativeHasMember<T>::GetParentObject>
@@ -2272,33 +2230,8 @@ bool XrayOwnPropertyKeys(JSContext* cx, JS::Handle<JSObject*> wrapper,
  * obj is the target object of the Xray, a binding's instance object or an
  *     interface or interface prototype object.
  */
-inline bool XrayGetNativeProto(JSContext* cx, JS::Handle<JSObject*> obj,
-                               JS::MutableHandle<JSObject*> protop) {
-  JS::Rooted<JSObject*> global(cx, JS::GetNonCCWObjectGlobal(obj));
-  {
-    JSAutoRealm ar(cx, global);
-    const DOMJSClass* domClass = GetDOMClass(obj);
-    if (domClass) {
-      ProtoHandleGetter protoGetter = domClass->mGetProto;
-      if (protoGetter) {
-        protop.set(protoGetter(cx));
-      } else {
-        protop.set(JS::GetRealmObjectPrototype(cx));
-      }
-    } else if (JS_ObjectIsFunction(obj)) {
-      MOZ_ASSERT(JS_IsNativeFunction(obj, Constructor));
-      protop.set(JS::GetRealmFunctionPrototype(cx));
-    } else {
-      const JSClass* clasp = JS::GetClass(obj);
-      MOZ_ASSERT(IsDOMIfaceAndProtoClass(clasp));
-      ProtoGetter protoGetter =
-          DOMIfaceAndProtoJSClass::FromJSClass(clasp)->mGetParentProto;
-      protop.set(protoGetter(cx));
-    }
-  }
-
-  return JS_WrapObject(cx, protop);
-}
+bool XrayGetNativeProto(JSContext* cx, JS::Handle<JSObject*> obj,
+                        JS::MutableHandle<JSObject*> protop);
 
 /**
  * Get the Xray expando class to use for the given DOM object.
@@ -2372,24 +2305,12 @@ inline bool UseDOMXray(JSObject* obj) {
          IsDOMIfaceAndProtoClass(clasp);
 }
 
-inline bool IsDOMConstructor(JSObject* obj) {
-  if (JS_IsNativeFunction(obj, dom::Constructor)) {
-    // LegacyFactoryFunction, like Image
-    return true;
-  }
-
-  const JSClass* clasp = JS::GetClass(obj);
-  // Check for a DOM interface object.
-  return dom::IsDOMIfaceAndProtoClass(clasp) &&
-         dom::DOMIfaceAndProtoJSClass::FromJSClass(clasp)->mType ==
-             dom::eInterface;
-}
+// Forward declarations for functions that require full DOMJSClass.h definitions
+// Implementations are in BindingUtilsInlines.h
+bool IsDOMConstructor(JSObject* obj);
 
 #ifdef DEBUG
-inline bool HasConstructor(JSObject* obj) {
-  return JS_IsNativeFunction(obj, Constructor) ||
-         JS::GetClass(obj)->getConstruct();
-}
+bool HasConstructor(JSObject* obj);
 #endif
 
 // Helpers for creating a const version of a type.

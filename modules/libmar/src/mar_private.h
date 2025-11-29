@@ -6,8 +6,19 @@
 #define MAR_PRIVATE_H__
 
 #include <assert.h>  // for C11 static_assert
+#include <stdio.h>
 #include "limits.h"
 #include <stdint.h>
+
+#ifndef static_assert
+#  if defined(__cplusplus)
+     /* static_assert is a keyword in C++11 */
+#  elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#    define static_assert _Static_assert
+#  else
+#    define static_assert(cond, msg) typedef char static_assertion_##__LINE__[(cond)?1:-1]
+#  endif
+#endif
 
 #define BLOCKSIZE 4096
 #define ROUND_UP(n, incr) (((n) / (incr) + 1) * (incr))
@@ -67,7 +78,7 @@ static_assert(sizeof(BLOCKSIZE) < (SIGNATURE_BLOCK_OFFSET + sizeof(uint32_t)),
 #  include <unistd.h>
 #endif
 
-#include <stdio.h>
+
 
 #define HOST_TO_NETWORK64(x)                                               \
   (((((uint64_t)x) & 0xFF) << 56) | ((((uint64_t)x) >> 8) & 0xFF) << 48) | \

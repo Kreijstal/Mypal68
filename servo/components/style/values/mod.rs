@@ -17,7 +17,7 @@ use precomputed_hash::PrecomputedHash;
 use selectors::parser::SelectorParseErrorKind;
 use std::fmt::{self, Debug, Write};
 use std::hash;
-use style_traits::{CssWriter, ParseError, StyleParseErrorKind, ToCss};
+pub use style_traits::{CssWriter, ParseError, SequenceWriter, StyleParseErrorKind, ToCss};
 use to_shmem::impl_trivial_to_shmem;
 
 #[cfg(feature = "gecko")]

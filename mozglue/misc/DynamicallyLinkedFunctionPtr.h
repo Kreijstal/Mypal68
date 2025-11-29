@@ -5,9 +5,9 @@
 #ifndef mozilla_DynamicallyLinkedFunctionPtr_h
 #define mozilla_DynamicallyLinkedFunctionPtr_h
 
-#include <windows.h>
-
 #include <utility>
+
+#include <windows.h>
 
 #include "mozilla/Attributes.h"
 

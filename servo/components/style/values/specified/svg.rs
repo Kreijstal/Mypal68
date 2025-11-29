@@ -14,7 +14,7 @@ use crate::values::specified::{NonNegativeLengthPercentage, Opacity};
 use crate::values::CustomIdent;
 use cssparser::{Parser, Token};
 use std::fmt::{self, Write};
-use style_traits::{CommaWithSpace, CssWriter, ParseError, Separator};
+use style_traits::{CommaWithSpace, CssWriter, ParseError, Separator, SeparatorParse};
 use style_traits::{StyleParseErrorKind, ToCss};
 
 /// Specified SVG Paint value

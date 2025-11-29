@@ -79,9 +79,10 @@ void __cpuid(int cpu_info[4], int info_type) {
 
 #endif
 
-// _xgetbv returns the value of an Intel Extended Control Register (XCR).
+// xgetbv_chromium returns the value of an Intel Extended Control Register (XCR).
 // Currently only XCR0 is defined by Intel so |xcr| should always be zero.
-uint64_t _xgetbv(uint32_t xcr) {
+// Renamed from _xgetbv to avoid conflict with compiler intrinsic macro.
+uint64_t xgetbv_chromium(uint32_t xcr) {
   uint32_t eax, edx;
 
   __asm__ volatile (
@@ -184,7 +185,7 @@ void CPU::Initialize() {
         (cpu_info[2] & 0x10000000) != 0 &&
         (cpu_info[2] & 0x04000000) != 0 /* XSAVE */ &&
         (cpu_info[2] & 0x08000000) != 0 /* OSXSAVE */ &&
-        (_xgetbv(0) & 6) == 6 /* XSAVE enabled by kernel */;
+        (xgetbv_chromium(0) & 6) == 6 /* XSAVE enabled by kernel */;
     has_aesni_ = (cpu_info[2] & 0x02000000) != 0;
     has_avx2_ = has_avx_ && (cpu_info7[1] & 0x00000020) != 0;
   }

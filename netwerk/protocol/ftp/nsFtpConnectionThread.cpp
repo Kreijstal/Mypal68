@@ -38,6 +38,7 @@
 #include "nsILoadInfo.h"
 #include "nsIAuthPrompt2.h"
 #include "nsIFTPChannelParentInternal.h"
+#include "nsComponentManagerUtils.h"
 
 using namespace mozilla;
 using namespace mozilla::net;

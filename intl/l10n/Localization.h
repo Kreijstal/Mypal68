@@ -16,6 +16,7 @@
 #include "mozilla/dom/LocalizationBinding.h"
 #include "mozilla/intl/LocalizationBindings.h"
 #include "mozilla/intl/L10nRegistry.h"
+#include "mozilla/intl/FluentBundle.h"
 
 namespace mozilla {
 namespace intl {
@@ -48,7 +49,7 @@ class Localization : public nsIObserver,
   void SetIsSync(bool aIsSync);
 
   already_AddRefed<dom::Promise> FormatValue(
-      const nsACString& aId, const dom::Optional<L10nArgs>& aArgs,
+      const nsACString& aId, const dom::Nullable<L10nArgs>& aArgs,
       ErrorResult& aRv);
 
   already_AddRefed<dom::Promise> FormatValues(
@@ -60,7 +61,7 @@ class Localization : public nsIObserver,
       ErrorResult& aRv);
 
   void FormatValueSync(const nsACString& aId,
-                       const dom::Optional<L10nArgs>& aArgs,
+                       const dom::Nullable<L10nArgs>& aArgs,
                        nsACString& aRetVal, ErrorResult& aRv);
   void FormatValuesSync(
       const dom::Sequence<dom::OwningUTF8StringOrL10nIdArgs>& aKeys,

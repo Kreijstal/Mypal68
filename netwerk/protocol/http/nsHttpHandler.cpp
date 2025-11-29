@@ -64,6 +64,16 @@
 #include "mozilla/LazyIdleThread.h"
 #include "mozilla/SyncRunnable.h"
 
+// Include binding headers before dom headers to ensure complete types
+#include "mozilla/dom/FetchObserverBinding.h"
+#include "mozilla/dom/HeadersBinding.h"
+#include "mozilla/dom/ReadableStreamBinding.h"
+#include "mozilla/dom/WritableStreamBinding.h"
+#include "mozilla/dom/ReadableStreamDefaultReaderBinding.h"
+
+// Include complete types for cycle collection
+#include "mozilla/dom/WritableStream.h"
+
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/Navigator.h"
 #include "mozilla/dom/Promise.h"

@@ -1,4 +1,16 @@
-#ifndef InitOnceExecOnceXP_h
+#ifndef mozilla_InitOnceExecOnceXP_h
+#define mozilla_InitOnceExecOnceXP_h
+
+// Define missing SAL annotations for MinGW/non-MSVC compilers
+#ifndef __kernel_entry
+#  define __kernel_entry
+#endif
+#ifndef __in
+#  define __in
+#endif
+#ifndef __out
+#  define __out
+#endif
 
 #include <windows.h>
 #include <ntstatus.h>

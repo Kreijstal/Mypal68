@@ -5,6 +5,10 @@
 // HttpLog.h should generally be included first
 #include "HttpLog.h"
 
+// Include WebExtension bindings early to ensure complete type definitions
+#include "mozilla/dom/WebExtensionContentScriptBinding.h"
+#include "mozilla/extensions/MatchPattern.h"
+
 #include "mozilla/ipc/FileDescriptorSetParent.h"
 #include "mozilla/ipc/IPCStreamUtils.h"
 #include "mozilla/net/HttpChannelParent.h"
@@ -13,6 +17,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ServiceWorkerUtils.h"
 #include "mozilla/dom/BrowserParent.h"
+
 #include "mozilla/net/NeckoParent.h"
 #include "mozilla/InputStreamLengthHelper.h"
 #include "mozilla/IntegerPrintfMacros.h"

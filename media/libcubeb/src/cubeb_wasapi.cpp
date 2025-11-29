@@ -7,6 +7,16 @@
 #define _WIN32_WINNT 0x0600
 #define NOMINMAX
 
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <memory>
+#include <limits>
+#include <atomic>
+#include <vector>
+
 #include <initguid.h>
 #include <windows.h>
 #include <mmdeviceapi.h>
@@ -15,16 +25,6 @@
 #include <devicetopology.h>
 #include <process.h>
 #include <avrt.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <cmath>
-#include <algorithm>
-#include <memory>
-#include <limits>
-#include <atomic>
-#include <vector>
 
 #include "cubeb/cubeb.h"
 #include "cubeb-internal.h"

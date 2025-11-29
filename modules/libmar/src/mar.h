@@ -8,6 +8,16 @@
 #include <assert.h>  // for C11 static_assert
 #include <stdint.h>
 
+#ifndef static_assert
+#  if defined(__cplusplus)
+     /* static_assert is a keyword in C++11 */
+#  elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#    define static_assert _Static_assert
+#  else
+#    define static_assert(cond, msg) typedef char static_assertion_##__LINE__[(cond)?1:-1]
+#  endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

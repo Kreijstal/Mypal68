@@ -6,6 +6,7 @@
 #include "nsStringStream.h"
 #include "mozilla/net/ChannelEventQueue.h"
 #include "mozilla/dom/BrowserParent.h"
+#include "nsGlobalWindowInner.h"
 #include "nsFTPChannel.h"
 #include "nsNetCID.h"
 #include "nsNetUtil.h"

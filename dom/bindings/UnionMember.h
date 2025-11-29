@@ -9,6 +9,7 @@
 
 #include "mozilla/Alignment.h"
 #include "mozilla/Attributes.h"
+#include "mozilla/dom/FakeString.h"
 
 namespace mozilla {
 namespace dom {

@@ -2,14 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "nsNetworkInfoService.h"
+#include "mozilla/ScopeExit.h"
+
 #if defined(XP_MACOSX) || defined(XP_LINUX)
 #  include <unistd.h>
 #elif defined(XP_WIN)
 #  include <winsock2.h>
 #endif
-
-#include "nsNetworkInfoService.h"
-#include "mozilla/ScopeExit.h"
 
 #if defined(XP_MACOSX) || defined(XP_WIN) || defined(XP_LINUX)
 #  include "NetworkInfoServiceImpl.h"

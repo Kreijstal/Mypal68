@@ -65,7 +65,7 @@ impl Transform {
         context: &ParserContext,
         input: &mut Parser<'i, 't>,
     ) -> Result<Self, ParseError<'i>> {
-        use style_traits::{Separator, Space};
+        use style_traits::{Separator, SeparatorParse, Space};
 
         if input
             .try_parse(|input| input.expect_ident_matching("none"))

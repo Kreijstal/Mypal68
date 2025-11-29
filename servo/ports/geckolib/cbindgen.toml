@@ -78,6 +78,7 @@ include = [
   "BreakBetween",
   "BreakWithin",
   "BorderStyle",
+  "AllowedNumericType",
   "OutlineStyle",
   "CaptionSide",
   "FontSizeAdjust",

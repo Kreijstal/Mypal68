@@ -5,6 +5,8 @@
 #ifndef mozilla_sandboxing_permissionsService_h
 #define mozilla_sandboxing_permissionsService_h
 
+#include <cstdint>
+#include <string>
 #include <unordered_map>
 
 namespace mozilla {

@@ -5,6 +5,10 @@
 // HttpLog.h should generally be included first
 #include "HttpLog.h"
 
+// Include WebExtension bindings early to ensure complete type definitions
+#include "mozilla/dom/WebExtensionContentScriptBinding.h"
+#include "mozilla/extensions/MatchPattern.h"
+
 #include "Http2Session.h"
 #include "nsHttp.h"
 #include "nsHttpHandler.h"

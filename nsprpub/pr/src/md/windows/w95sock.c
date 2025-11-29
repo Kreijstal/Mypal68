@@ -7,6 +7,7 @@
  */
 
 #include "primpl.h"
+#include <winsock2.h>
 
 #define READ_FD     1
 #define WRITE_FD    2
@@ -129,7 +130,7 @@ PROsfd _MD_Accept(
     SOCKET sock;
     PRInt32 rv, err;
 
-    while ((sock = accept(osfd, (struct sockaddr *) raddr, rlen)) == -1)
+    while ((sock = accept(osfd, (struct sockaddr *) raddr, (int*)rlen)) == -1)
     {
         err = WSAGetLastError();
         if ((err == WSAEWOULDBLOCK) && (!fd->secret->nonblocking))
@@ -487,7 +488,7 @@ _PR_MD_TCPSENDTO(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
             if ( rv < 0 ) {
                 return -1;
             }
-            rv = GetOverlappedResult(osfd, &fd->secret->ol, &rvSent, FALSE);
+            rv = GetOverlappedResult((HANDLE)osfd, &fd->secret->ol, &rvSent, FALSE);
             if ( rv == TRUE ) {
                 return rvSent;
             } else {
@@ -511,7 +512,7 @@ _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
     PRInt32 rv, err;
 
     while ((rv = recvfrom( osfd, buf, amount, 0, (struct sockaddr *) addr,
-                           addrlen)) == -1)
+                           (int*)addrlen)) == -1)
     {
         if (((err = WSAGetLastError()) == WSAEWOULDBLOCK)
             && (!fd->secret->nonblocking))
@@ -584,7 +585,7 @@ _PR_MD_GETSOCKNAME(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *len)
 {
     PRInt32 rv;
 
-    rv = getsockname((SOCKET)fd->secret->md.osfd, (struct sockaddr *)addr, len);
+    rv = getsockname((SOCKET)fd->secret->md.osfd, (struct sockaddr *)addr, (int*)len);
     if (rv==0) {
         return PR_SUCCESS;
     } else {
@@ -598,7 +599,7 @@ _PR_MD_GETPEERNAME(PRFileDesc *fd, PRNetAddr *addr, PRUint32 *len)
 {
     PRInt32 rv;
 
-    rv = getpeername((SOCKET)fd->secret->md.osfd, (struct sockaddr *)addr, len);
+    rv = getpeername((SOCKET)fd->secret->md.osfd, (struct sockaddr *)addr, (int*)len);
     if (rv==0) {
         return PR_SUCCESS;
     } else {

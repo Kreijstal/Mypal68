@@ -8,10 +8,11 @@
 #include "nsIStreamLoader.h"
 #include "nsWrapperCache.h"
 #include "nsCycleCollectionParticipant.h"
+#include "mozilla/dom/FluentBinding.h"
 #include "mozilla/dom/L10nRegistryBinding.h"
 #include "mozilla/dom/BindingDeclarations.h"
-#include "mozilla/intl/RegistryBindings.h"
 #include "mozilla/intl/FluentBindings.h"
+#include "mozilla/intl/RegistryBindings.h"
 
 class nsIGlobalObject;
 

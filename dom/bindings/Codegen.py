@@ -1354,6 +1354,13 @@ class CGHeaders(CGWrapper):
             d.headerFile for d in descriptors if d.needsHeaderInclude()
         )
 
+        # Binding files may use union types, so include UnionTypes.h
+        # This ensures union types have their full definitions available
+        if isinstance(declareIncludes, list):
+            declareIncludes.append("mozilla/dom/UnionTypes.h")
+        else:
+            declareIncludes.add("mozilla/dom/UnionTypes.h")
+
         # Now find all the things we'll need as arguments because we
         # need to wrap or unwrap them.
         bindingHeaders = set()
@@ -1426,6 +1433,11 @@ class CGHeaders(CGWrapper):
                     # should just have out-of-line constructors and
                     # destructors?
                     headerSet.add(typeDesc.headerFile)
+                    # For dictionaries, we also need the binding header because
+                    # cycle collection code is inline and needs the full type definition
+                    if dictionary:
+                        bindingHeader = self.getDeclarationFilename(unrolled.inner)
+                        headerSet.add(bindingHeader)
             elif unrolled.isDictionary():
                 headerSet.add(self.getDeclarationFilename(unrolled.inner))
                 # And if it needs rooting, we need RootedDictionary too
@@ -1439,7 +1451,12 @@ class CGHeaders(CGWrapper):
                 bindingHeaders.add("mozilla/dom/PrimitiveConversions.h")
             elif unrolled.isEnum():
                 filename = self.getDeclarationFilename(unrolled.inner)
+                with open("e:/msys64/home/topkek/git/Mypal68/debug_enum.txt", "a") as f:
+                    f.write(f"DEBUG: Enum {unrolled.inner.identifier.name} -> {filename}\\n")
+                    f.write(f"DEBUG: declareIncludes before: {len(declareIncludes)} items\\n")
                 declareIncludes.add(filename)
+                with open("e:/msys64/home/topkek/git/Mypal68/debug_enum.txt", "a") as f:
+                    f.write(f"DEBUG: declareIncludes after: {len(declareIncludes)} items\\n")
             elif unrolled.isPrimitive():
                 bindingHeaders.add("mozilla/dom/PrimitiveConversions.h")
             elif unrolled.isRecord():

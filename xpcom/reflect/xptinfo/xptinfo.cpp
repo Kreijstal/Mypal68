@@ -5,7 +5,7 @@
 #include "xptinfo.h"
 #include "nsISupports.h"
 #include "mozilla/dom/DOMJSClass.h"
-#include "mozilla/dom/BindingUtils.h"
+// BindingUtils.h is already included via DOMJSClass.h -> WebIDLPrefs.h -> UnionTypes.h -> BindingUtils.h
 #include "mozilla/ArrayUtils.h"
 
 #include "jsfriendapi.h"

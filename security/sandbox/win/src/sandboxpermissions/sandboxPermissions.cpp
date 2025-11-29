@@ -5,6 +5,7 @@
 #include "sandboxPermissions.h"
 #include "mozilla/Assertions.h"
 #include "mozilla/sandboxing/permissionsService.h"
+#include <windows.h>
 
 namespace mozilla {
 

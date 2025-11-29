@@ -26,6 +26,7 @@ EXPORTS.mozilla.dom += [
     "BindingCallContext.h",
     "BindingDeclarations.h",
     "BindingUtils.h",
+    "BindingUtilsInlines.h",
     "CallbackFunction.h",
     "CallbackInterface.h",
     "CallbackObject.h",

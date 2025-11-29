@@ -5,6 +5,7 @@
 #include "FluentBundle.h"
 #include "nsContentUtils.h"
 #include "mozilla/dom/UnionTypes.h"
+#include "mozilla/dom/Record.h"
 #include "mozilla/intl/NumberFormat.h"
 #include "mozilla/intl/DateTimeFormat.h"
 #include "mozilla/intl/DateTimePatternGenerator.h"
