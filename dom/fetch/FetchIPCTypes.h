@@ -8,6 +8,7 @@
 #include "ipc/EnumSerializer.h"
 
 #include "mozilla/dom/HeadersBinding.h"
+#include "mozilla/dom/ReferrerPolicyBinding.h"
 #include "mozilla/dom/RequestBinding.h"
 #include "mozilla/dom/ResponseBinding.h"
 

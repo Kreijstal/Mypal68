@@ -8,6 +8,7 @@
 #define mozilla_PresShell_h
 
 #include "mozilla/PresShellForwards.h"
+#include "mozilla/dom/DocumentBinding.h"
 
 #include <stdio.h>  // for FILE definition
 #include "FrameMetrics.h"

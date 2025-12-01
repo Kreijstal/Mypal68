@@ -7,6 +7,7 @@
 
 #include "mozilla/dom/BindingDeclarations.h"
 #include "mozilla/dom/Nullable.h"
+#include "mozilla/dom/WebExtensionContentScriptBinding.h"
 #include "mozilla/dom/WebExtensionPolicyBinding.h"
 #include "mozilla/dom/WindowProxyHolder.h"
 #include "mozilla/extensions/MatchPattern.h"

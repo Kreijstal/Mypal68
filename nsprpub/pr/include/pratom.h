@@ -13,6 +13,13 @@
 #include "prtypes.h"
 #include "prlock.h"
 
+/* Include intrin.h before extern "C" to avoid template linkage errors
+ * when the include chain pulls in C++ templates via STL wrappers */
+#if defined(_WIN32) && !defined(_WIN32_WCE) && \
+    (!defined(_MSC_VER) || (_MSC_VER >= 1310))
+#include <intrin.h>
+#endif
+
 PR_BEGIN_EXTERN_C
 
 /*
@@ -80,7 +87,7 @@ NSPR_API(PRInt32)   PR_AtomicAdd(PRInt32 *ptr, PRInt32 val);
 #if defined(_WIN32) && !defined(_WIN32_WCE) && \
     (!defined(_MSC_VER) || (_MSC_VER >= 1310))
 
-#include <intrin.h>
+/* intrin.h already included above before extern "C" */
 
 #ifdef _MSC_VER
 #pragma intrinsic(_InterlockedIncrement)

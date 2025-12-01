@@ -4420,8 +4420,7 @@ already_AddRefed<Promise> CreateRejectedPromiseFromThrownException(
 }  // namespace mozilla
 
 
-// Template specialization for nsIGlobalObject
-template <>
+// Overload for nsIGlobalObject
 JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p) {
   if (!p) {
     return JS::CurrentGlobalOrNull(cx);

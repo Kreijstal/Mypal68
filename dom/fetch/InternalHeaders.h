@@ -7,7 +7,6 @@
 
 // needed for HeadersGuardEnum.
 #include "mozilla/dom/HeadersBinding.h"
-#include "mozilla/dom/RequestBinding.h"
 #include "mozilla/dom/UnionTypes.h"
 
 #include "nsClassHashtable.h"
@@ -20,6 +19,8 @@ namespace mozilla {
 class ErrorResult;
 
 namespace dom {
+
+enum class RequestCredentials : uint8_t;
 
 template <typename K, typename V>
 class Record;
@@ -115,7 +116,10 @@ class InternalHeaders final {
 
   static already_AddRefed<InternalHeaders> CORSHeaders(
       InternalHeaders* aHeaders,
-      RequestCredentials mCredentialsMode = RequestCredentials::Omit);
+      RequestCredentials mCredentialsMode);
+
+  static already_AddRefed<InternalHeaders> CORSHeaders(
+      InternalHeaders* aHeaders);
 
   void GetEntries(nsTArray<InternalHeaders::Entry>& aEntries) const;
 

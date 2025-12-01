@@ -154,6 +154,10 @@ class Configuration(DescriptorProvider):
         # Dictionary mapping from a union type name to a set of filenames where
         # union types with that name are used.
         self.filenamesPerUnion = defaultdict(set)
+        
+        # HACK: Force BodyInit union to be considered shared so it goes to UnionTypes.h
+        # This resolves circular dependency between RequestBinding.h and FetchBinding.h
+        self.filenamesPerUnion["BlobOrArrayBufferViewOrArrayBufferOrFormDataOrURLSearchParamsOrUSVString"].add("<forced-shared>")
 
         # Dictionary mapping from a filename to a list of types for
         # the union types used in that file. If a union type is used

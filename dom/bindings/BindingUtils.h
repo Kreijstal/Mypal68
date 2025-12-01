@@ -1633,7 +1633,6 @@ static inline JSObject* FindAssociatedGlobal(JSContext* cx, const T& p) {
 
 // Specialization for the case of nsIGlobalObject, since in that case
 // we can just get the JSObject* directly.
-template <>
 JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p);
 
 template <typename T,

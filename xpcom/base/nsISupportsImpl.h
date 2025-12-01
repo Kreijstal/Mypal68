@@ -473,7 +473,7 @@ class ThreadSafeAutoRefCnt {
       mRefCnt.incr(static_cast<void*>(this),                                  \
                    _class::NS_CYCLE_COLLECTION_INNERCLASS::GetParticipant()); \
   NS_LOG_ADDREF(this, count, #_class, sizeof(*this));                         \
-  return count;
+  return (MozExternalRefCountType)count;
 
 #define NS_IMPL_CC_MAIN_THREAD_ONLY_NATIVE_ADDREF_BODY(_class)         \
   MOZ_ASSERT_TYPE_OK_FOR_REFCOUNTING(_class)                           \
@@ -483,7 +483,7 @@ class ThreadSafeAutoRefCnt {
       static_cast<void*>(this),                                        \
       _class::NS_CYCLE_COLLECTION_INNERCLASS::GetParticipant());       \
   NS_LOG_ADDREF(this, count, #_class, sizeof(*this));                  \
-  return count;
+  return (MozExternalRefCountType)count;
 
 #define NS_IMPL_CC_NATIVE_RELEASE_BODY(_class)                                \
   MOZ_ASSERT(int32_t(mRefCnt) > 0, "dup release");                            \
@@ -492,7 +492,7 @@ class ThreadSafeAutoRefCnt {
       mRefCnt.decr(static_cast<void*>(this),                                  \
                    _class::NS_CYCLE_COLLECTION_INNERCLASS::GetParticipant()); \
   NS_LOG_RELEASE(this, count, #_class);                                       \
-  return count;
+  return (MozExternalRefCountType)count;
 
 #define NS_IMPL_CC_MAIN_THREAD_ONLY_NATIVE_RELEASE_BODY(_class)        \
   MOZ_ASSERT(int32_t(mRefCnt) > 0, "dup release");                     \
@@ -501,7 +501,7 @@ class ThreadSafeAutoRefCnt {
       static_cast<void*>(this),                                        \
       _class::NS_CYCLE_COLLECTION_INNERCLASS::GetParticipant());       \
   NS_LOG_RELEASE(this, count, #_class);                                \
-  return count;
+  return (MozExternalRefCountType)count;
 
 #define NS_IMPL_CYCLE_COLLECTING_NATIVE_ADDREF(_class)       \
   NS_METHOD_(MozExternalRefCountType) _class::AddRef(void) { \
@@ -588,7 +588,7 @@ class ThreadSafeAutoRefCnt {
     NS_ASSERT_OWNINGTHREAD(_class);                                            \
     ++mRefCnt;                                                                 \
     NS_LOG_ADDREF(this, mRefCnt, #_class, sizeof(*this));                      \
-    return mRefCnt;                                                            \
+    return (MozExternalRefCountType)mRefCnt;                                   \
   }                                                                            \
   _decl(MozExternalRefCountType) Release(void) __VA_ARGS__ {                   \
     MOZ_ASSERT(int32_t(mRefCnt) > 0, "dup release");                           \
@@ -600,7 +600,7 @@ class ThreadSafeAutoRefCnt {
       _destroy;                                                                \
       return 0;                                                                \
     }                                                                          \
-    return mRefCnt;                                                            \
+    return (MozExternalRefCountType)mRefCnt;                                   \
   }                                                                            \
   using HasThreadSafeRefCnt = std::false_type;                                 \
                                                                                \
@@ -658,7 +658,7 @@ class ThreadSafeAutoRefCnt {
     MOZ_ASSERT(int32_t(mRefCnt) >= 0, "illegal refcnt");                    \
     nsrefcnt count = ++mRefCnt;                                             \
     NS_LOG_ADDREF(this, count, #_class, sizeof(*this));                     \
-    return (nsrefcnt)count;                                                 \
+    return (MozExternalRefCountType)count;                                                 \
   }                                                                         \
   _decl(MozExternalRefCountType) Release(void) __VA_ARGS__ {                \
     MOZ_ASSERT(int32_t(mRefCnt) > 0, "dup release");                        \
@@ -668,7 +668,7 @@ class ThreadSafeAutoRefCnt {
       _destroy;                                                             \
       return 0;                                                             \
     }                                                                       \
-    return count;                                                           \
+    return (MozExternalRefCountType)count;                                                           \
   }                                                                         \
   using HasThreadSafeRefCnt = std::true_type;                               \
                                                                             \
@@ -749,7 +749,7 @@ class ThreadSafeAutoRefCnt {
     if (!mRefCnt.isThreadSafe) NS_ASSERT_OWNINGTHREAD(_class);   \
     nsrefcnt count = ++mRefCnt;                                  \
     NS_LOG_ADDREF(this, count, _name, sizeof(*this));            \
-    return count;                                                \
+    return (MozExternalRefCountType)count;                                                \
   }
 
 /**
@@ -818,7 +818,7 @@ class ThreadSafeAutoRefCnt {
       _destroy;                                                     \
       return 0;                                                     \
     }                                                               \
-    return count;                                                   \
+    return (MozExternalRefCountType)count;                                                   \
   }
 
 #define NS_IMPL_RELEASE_WITH_DESTROY(_class, _destroy) \
@@ -864,7 +864,7 @@ class ThreadSafeAutoRefCnt {
     nsISupports* base = NS_CYCLE_COLLECTION_CLASSNAME(_class)::Upcast(this); \
     nsrefcnt count = mRefCnt.incr(base);                                     \
     NS_LOG_ADDREF(this, count, #_class, sizeof(*this));                      \
-    return count;                                                            \
+    return (MozExternalRefCountType)count;                                                            \
   }
 
 #define NS_IMPL_MAIN_THREAD_ONLY_CYCLE_COLLECTING_ADDREF(_class)               \
@@ -875,7 +875,7 @@ class ThreadSafeAutoRefCnt {
     nsISupports* base = NS_CYCLE_COLLECTION_CLASSNAME(_class)::Upcast(this);   \
     nsrefcnt count = mRefCnt.incr<NS_CycleCollectorSuspectUsingNursery>(base); \
     NS_LOG_ADDREF(this, count, #_class, sizeof(*this));                        \
-    return count;                                                              \
+    return (MozExternalRefCountType)count;                                                              \
   }
 
 #define NS_IMPL_CYCLE_COLLECTING_RELEASE_WITH_DESTROY(_class, _destroy)      \
@@ -885,7 +885,7 @@ class ThreadSafeAutoRefCnt {
     nsISupports* base = NS_CYCLE_COLLECTION_CLASSNAME(_class)::Upcast(this); \
     nsrefcnt count = mRefCnt.decr(base);                                     \
     NS_LOG_RELEASE(this, count, #_class);                                    \
-    return count;                                                            \
+    return (MozExternalRefCountType)count;                                                            \
   }                                                                          \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { _destroy; }
 
@@ -911,7 +911,7 @@ class ThreadSafeAutoRefCnt {
         DeleteCycleCollectable();                                            \
       }                                                                      \
     }                                                                        \
-    return count;                                                            \
+    return (MozExternalRefCountType)count;                                                            \
   }                                                                          \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { delete this; }
 
@@ -935,7 +935,7 @@ class ThreadSafeAutoRefCnt {
         DeleteCycleCollectable();                                            \
       }                                                                      \
     }                                                                        \
-    return count;                                                            \
+    return (MozExternalRefCountType)count;                                                            \
   }                                                                          \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { _destroy; }
 
@@ -946,7 +946,7 @@ class ThreadSafeAutoRefCnt {
     nsISupports* base = NS_CYCLE_COLLECTION_CLASSNAME(_class)::Upcast(this);   \
     nsrefcnt count = mRefCnt.decr<NS_CycleCollectorSuspectUsingNursery>(base); \
     NS_LOG_RELEASE(this, count, #_class);                                      \
-    return count;                                                              \
+    return (MozExternalRefCountType)count;                                                              \
   }                                                                            \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { delete this; }
 
@@ -971,7 +971,7 @@ class ThreadSafeAutoRefCnt {
         DeleteCycleCollectable();                                            \
       }                                                                      \
     }                                                                        \
-    return count;                                                            \
+    return (MozExternalRefCountType)count;                                                            \
   }                                                                          \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { delete this; }
 
@@ -1000,14 +1000,14 @@ class ThreadSafeAutoRefCnt {
       mRefCnt.decr<NS_CycleCollectorSuspectUsingNursery>(base);                            \
       if (_maybeInterrupt) {                                                               \
         MOZ_ASSERT(mRefCnt.get() > 0);                                                     \
-        return mRefCnt.get();                                                              \
+        return (MozExternalRefCountType)mRefCnt.get();                                                              \
       }                                                                                    \
       if (shouldDelete) {                                                                  \
         mRefCnt.stabilizeForDeletion();                                                    \
         DeleteCycleCollectable();                                                          \
       }                                                                                    \
     }                                                                                      \
-    return count;                                                                          \
+    return (MozExternalRefCountType)count;                                                                          \
   }                                                                                        \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { delete this; }
 
@@ -1032,7 +1032,7 @@ class ThreadSafeAutoRefCnt {
         DeleteCycleCollectable();                                                        \
       }                                                                                  \
     }                                                                                    \
-    return count;                                                                        \
+    return (MozExternalRefCountType)count;                                                                        \
   }                                                                                      \
   NS_IMETHODIMP_(void) _class::DeleteCycleCollectable(void) { _destroy; }
 
@@ -1294,7 +1294,7 @@ class Runnable;
   if (!std::is_convertible_v<Class*, mozilla::Runnable*>) { \
     NS_LOG_ADDREF(this, r, #Class, sizeof(*this));          \
   }                                                         \
-  return r /* Purposefully no trailing semicolon */
+  return (MozExternalRefCountType)r /* Purposefully no trailing semicolon */
 
 #define NS_IMPL_ADDREF_INHERITED(Class, Super)                  \
   NS_IMETHODIMP_(MozExternalRefCountType) Class::AddRef(void) { \
@@ -1306,7 +1306,7 @@ class Runnable;
   if (!std::is_convertible_v<Class*, mozilla::Runnable*>) { \
     NS_LOG_RELEASE(this, r, #Class);                        \
   }                                                         \
-  return r /* Purposefully no trailing semicolon */
+  return (MozExternalRefCountType)r /* Purposefully no trailing semicolon */
 
 #define NS_IMPL_RELEASE_INHERITED(Class, Super)                  \
   NS_IMETHODIMP_(MozExternalRefCountType) Class::Release(void) { \

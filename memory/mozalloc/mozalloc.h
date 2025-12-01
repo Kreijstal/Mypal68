@@ -10,12 +10,14 @@
  */
 
 #if defined(__cplusplus)
+extern "C++" {
 #  include <new>
 // Since libstdc++ 6, including the C headers (e.g. stdlib.h) instead of the
 // corresponding C++ header (e.g. cstdlib) can cause confusion in C++ code
 // using things defined there. Specifically, with stdlib.h, the use of abs()
 // in gfx/graphite2/src/inc/UtfCodec.h somehow ends up picking the wrong abs()
 #  include <cstdlib>
+}
 #else
 #  include <stdlib.h>
 #endif
@@ -37,9 +39,11 @@
 
 
 #if defined(__cplusplus)
+extern "C++" {
 #  include "mozilla/fallible.h"
 #  include "mozilla/mozalloc_abort.h"
 #  include "mozilla/TemplateLib.h"
+}
 #endif
 #include "mozilla/Attributes.h"
 #include "mozilla/Types.h"
@@ -105,6 +109,7 @@ MFBT_API size_t moz_malloc_enclosing_size_of(const void* ptr);
 MOZ_END_EXTERN_C
 
 #ifdef __cplusplus
+extern "C++" {
 
 /* NB: This is defined just to silence vacuous warnings about symbol
  * visibility on OS X/gcc. These symbols are force-inline and not
@@ -170,6 +175,7 @@ class InfallibleAllocPolicy {
   bool checkSimulatedOOM() const { return true; }
 };
 
+} // extern "C++"
 #endif /* ifdef __cplusplus */
 
 #ifdef malloc_impl_

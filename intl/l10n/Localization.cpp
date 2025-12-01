@@ -261,11 +261,11 @@ uint32_t Localization::RemoveResourceIds(
 }
 
 already_AddRefed<Promise> Localization::FormatValue(
-    const nsACString& aId, const Nullable<L10nArgs>& aArgs, ErrorResult& aRv) {
+    const nsACString& aId, const Optional<L10nArgs>& aArgs, ErrorResult& aRv) {
   nsTArray<ffi::L10nArg> l10nArgs;
   nsTArray<nsCString> errors;
 
-  if (!aArgs.IsNull()) {
+  if (aArgs.WasPassed()) {
     const L10nArgs& args = aArgs.Value();
     FluentBundle::ConvertArgs(args, l10nArgs);
   }
@@ -354,12 +354,12 @@ already_AddRefed<Promise> Localization::FormatMessages(
 }
 
 void Localization::FormatValueSync(const nsACString& aId,
-                                   const Nullable<L10nArgs>& aArgs,
+                                   const Optional<L10nArgs>& aArgs,
                                    nsACString& aRetVal, ErrorResult& aRv) {
   nsTArray<ffi::L10nArg> l10nArgs;
   nsTArray<nsCString> errors;
 
-  if (!aArgs.IsNull()) {
+  if (aArgs.WasPassed()) {
     const L10nArgs& args = aArgs.Value();
     FluentBundle::ConvertArgs(args, l10nArgs);
   }

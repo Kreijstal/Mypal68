@@ -19,6 +19,9 @@
 #include <stddef.h>
 #include <type_traits>
 
+/* Force C++ linkage for templates, even if included inside an extern "C" block */
+extern "C++" {
+
 namespace mozilla {
 
 namespace tl {
@@ -132,5 +135,7 @@ struct And : std::integral_constant<bool, (C && ...)> {};
 }  // namespace tl
 
 }  // namespace mozilla
+
+} // extern "C++"
 
 #endif /* mozilla_TemplateLib_h */

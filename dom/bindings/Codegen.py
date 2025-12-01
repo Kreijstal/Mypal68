@@ -1356,22 +1356,38 @@ class CGHeaders(CGWrapper):
 
         # Binding files may use union types, so include UnionTypes.h
         # This ensures union types have their full definitions available
-        if isinstance(declareIncludes, list):
-            declareIncludes.append("mozilla/dom/UnionTypes.h")
-        else:
-            declareIncludes.add("mozilla/dom/UnionTypes.h")
+        # However, skip this for WebIDLPrefs to avoid circular dependency:
+        # DOMJSClass.h -> WebIDLPrefs.h -> UnionTypes.h -> BindingUtils.h -> DOMJSClass.h
+        if prefix != "WebIDLPrefs":
+            if isinstance(declareIncludes, list):
+                declareIncludes.append("mozilla/dom/UnionTypes.h")
+            else:
+                declareIncludes.add("mozilla/dom/UnionTypes.h")
 
         # Now find all the things we'll need as arguments because we
         # need to wrap or unwrap them.
         bindingHeaders = set()
         declareIncludes = set(declareIncludes)
 
+        # Debug: Print dictionaries being processed
+        for d in dictionaries:
+            if d.identifier.name == "RequestInit":
+                print(f"DEBUG: Found RequestInit dictionary")
+                for m in d.members:
+                    print(f"DEBUG: RequestInit member: {m.identifier.name}, type: {m.type.name}")
+
+        def addHeadersForType(typeAndPossibleDictionary):
+            """
+            Add the relevant headers for this type.  We use dictionary, if
+            passed, to decide what to do with interface types.
+            """
         def addHeadersForType(typeAndPossibleDictionary):
             """
             Add the relevant headers for this type.  We use dictionary, if
             passed, to decide what to do with interface types.
             """
             t, dictionary = typeAndPossibleDictionary
+
             # Dictionaries have members that need to be actually
             # declared, not just forward-declared.
             if dictionary:
@@ -1397,11 +1413,12 @@ class CGHeaders(CGWrapper):
                 else:
                     break
                 unrolled = unrolled.inner
+            
             if unrolled.isUnion():
                 headerSet.add(self.getUnionDeclarationFilename(config, unrolled))
                 bindingHeaders.add("mozilla/dom/UnionConversions.h")
                 for t in unrolled.flatMemberTypes:
-                    addHeadersForType((t, None))
+                    addHeadersForType((t, dictionary))
             elif unrolled.isPromise():
                 # See comment in the isInterface() case for why we add
                 # Promise.h to headerSet, not bindingHeaders.
@@ -1450,13 +1467,7 @@ class CGHeaders(CGWrapper):
                 bindingHeaders.add("mozilla/FloatingPoint.h")
                 bindingHeaders.add("mozilla/dom/PrimitiveConversions.h")
             elif unrolled.isEnum():
-                filename = self.getDeclarationFilename(unrolled.inner)
-                with open("e:/msys64/home/topkek/git/Mypal68/debug_enum.txt", "a") as f:
-                    f.write(f"DEBUG: Enum {unrolled.inner.identifier.name} -> {filename}\\n")
-                    f.write(f"DEBUG: declareIncludes before: {len(declareIncludes)} items\\n")
-                declareIncludes.add(filename)
-                with open("e:/msys64/home/topkek/git/Mypal68/debug_enum.txt", "a") as f:
-                    f.write(f"DEBUG: declareIncludes after: {len(declareIncludes)} items\\n")
+                declareIncludes.add(self.getDeclarationFilename(unrolled.inner))
             elif unrolled.isPrimitive():
                 bindingHeaders.add("mozilla/dom/PrimitiveConversions.h")
             elif unrolled.isRecord():
@@ -1468,9 +1479,10 @@ class CGHeaders(CGWrapper):
                 # parametrized over, if needed.
                 addHeadersForType((t.inner, dictionary))
 
-        map(addHeadersForType,
+        # Force execution of map in Python 3
+        list(map(addHeadersForType,
             getAllTypes(descriptors + callbackDescriptors, dictionaries,
-                        callbacks))
+                        callbacks)))
 
         def addHeaderForFunc(func, desc):
             if func is None:
@@ -1729,6 +1741,10 @@ def UnionTypes(unionTypes, config):
             for f in t.flatMemberTypes:
                 assert not f.nullable()
                 addHeadersForType(f)
+            
+            # For BodyInit union, we need FetchBinding.h for the complete type definition
+            if "BlobOrArrayBufferViewOrArrayBufferOrFormDataOrURLSearchParamsOrUSVString" in name:
+                headers.add("mozilla/dom/FetchBinding.h")
 
             if idlTypeNeedsCycleCollection(t):
                 declarations.add(

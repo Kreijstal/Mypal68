@@ -60,6 +60,7 @@ HeaderIncludes = (
 )
 
 CppIncludes = (
+    "mozilla/dom/FetchBinding.h",
     "ipc/IPCMessageUtils.h",
     "nsIFile.h",
     "GeckoProfiler.h",
@@ -70,4 +71,6 @@ CppIncludes = (
     "mozilla/ipc/TaintingIPCUtils.h",
     "nsGlobalWindowInner.h",
     "mozilla/dom/FetchObserverBinding.h",
+    "mozilla/dom/WebExtensionContentScriptBinding.h",
+    "mozilla/dom/AbortSignal.h",
 )

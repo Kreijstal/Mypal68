@@ -5,6 +5,7 @@
 #include "mozilla/dom/InternalHeaders.h"
 
 #include "mozilla/dom/FetchTypes.h"
+#include "mozilla/dom/RequestBinding.h"
 #include "mozilla/ErrorResult.h"
 
 #include "nsCharSeparatedTokenizer.h"
@@ -504,6 +505,12 @@ already_AddRefed<InternalHeaders> InternalHeaders::BasicHeaders(
   basic->Delete("Set-Cookie2"_ns, result);
   MOZ_ASSERT(!result.Failed());
   return basic.forget();
+}
+
+// static
+already_AddRefed<InternalHeaders> InternalHeaders::CORSHeaders(
+    InternalHeaders* aHeaders) {
+  return CORSHeaders(aHeaders, RequestCredentials::Omit);
 }
 
 // static

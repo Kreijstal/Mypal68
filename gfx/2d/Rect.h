@@ -13,6 +13,8 @@
 #include "mozilla/Maybe.h"
 
 #include <cmath>
+#include <cstdint>
+#include <limits>
 
 namespace mozilla {
 
