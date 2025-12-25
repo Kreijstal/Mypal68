@@ -147,7 +147,7 @@ class nsAttrName {
     // mBits and uint32_t might have different size. This should silence
     // any warnings or compile-errors. This is what the implementation of
     // NS_PTR_TO_INT32 does to take care of the same problem.
-    return mBits - 0;
+    return static_cast<uint32_t>(mBits);
   }
 
   bool IsSmaller(const nsAtom* aOther) const {

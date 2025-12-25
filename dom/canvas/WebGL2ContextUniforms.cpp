@@ -164,6 +164,7 @@ void WebGL2Context::GetActiveUniforms(
   }
 
   const auto& count = uniformIndices.Length();
+  const GLsizei glCount = static_cast<GLsizei>(count);
 
   JS::Rooted<JSObject*> array(cx, JS::NewArrayObject(cx, count));
   UniquePtr<GLint[]> samples(new GLint[count]);
@@ -173,8 +174,8 @@ void WebGL2Context::GetActiveUniforms(
   }
   retval.setObject(*array);
 
-  gl->fGetActiveUniformsiv(program.mGLName, count, uniformIndices.Elements(),
-                           pname, samples.get());
+  gl->fGetActiveUniformsiv(program.mGLName, glCount,
+                           uniformIndices.Elements(), pname, samples.get());
 
   switch (pname) {
     case LOCAL_GL_UNIFORM_TYPE:
@@ -186,14 +187,18 @@ void WebGL2Context::GetActiveUniforms(
       for (size_t i = 0; i < count; ++i) {
         JS::RootedValue value(cx);
         value = JS::Int32Value(samples[i]);
-        if (!JS_DefineElement(cx, array, i, value, JSPROP_ENUMERATE)) return;
+        if (!JS_DefineElement(cx, array, static_cast<uint32_t>(i), value,
+                              JSPROP_ENUMERATE))
+          return;
       }
       break;
     case LOCAL_GL_UNIFORM_IS_ROW_MAJOR:
       for (size_t i = 0; i < count; ++i) {
         JS::RootedValue value(cx);
         value = JS::BooleanValue(samples[i]);
-        if (!JS_DefineElement(cx, array, i, value, JSPROP_ENUMERATE)) return;
+        if (!JS_DefineElement(cx, array, static_cast<uint32_t>(i), value,
+                              JSPROP_ENUMERATE))
+          return;
       }
       break;
 

@@ -278,7 +278,7 @@ struct ParamTraits<nsTArray<E>> {
       (std::is_integral_v<E> || std::is_floating_point_v<E>);
 
   static void Write(Message* aMsg, const paramType& aParam) {
-    uint32_t length = aParam.Length();
+    uint32_t length = static_cast<uint32_t>(aParam.Length());
     WriteParam(aMsg, length);
 
     if (sUseWriteBytes) {

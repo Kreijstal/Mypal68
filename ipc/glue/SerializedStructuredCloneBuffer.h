@@ -66,7 +66,8 @@ struct ParamTraits<JSStructuredCloneData> {
     MOZ_ASSERT(!(aParam.Size() % sizeof(uint64_t)));
     WriteParam(aMsg, aParam.Size());
     aParam.ForEachDataChunk([&](const char* aData, size_t aSize) {
-      return aMsg->WriteBytes(aData, aSize, sizeof(uint64_t));
+      return aMsg->WriteBytes(aData, static_cast<uint32_t>(aSize),
+                              sizeof(uint64_t));
     });
   }
 

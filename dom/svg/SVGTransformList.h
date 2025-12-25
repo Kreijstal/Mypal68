@@ -42,7 +42,7 @@ class SVGTransformList {
 
   bool IsEmpty() const { return mItems.IsEmpty(); }
 
-  uint32_t Length() const { return mItems.Length(); }
+  uint32_t Length() const { return static_cast<uint32_t>(mItems.Length()); }
 
   const SVGTransform& operator[](uint32_t aIndex) const {
     return mItems[aIndex];
@@ -94,7 +94,7 @@ class SVGTransformList {
 
   bool InsertItem(uint32_t aIndex, const SVGTransform& aTransform) {
     if (aIndex >= mItems.Length()) {
-      aIndex = mItems.Length();
+      aIndex = static_cast<uint32_t>(mItems.Length());
     }
     return !!mItems.InsertElementAt(aIndex, aTransform, fallible);
   }

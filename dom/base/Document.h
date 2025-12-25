@@ -1543,7 +1543,7 @@ class Document : public nsINode,
   // array but they are not removed when those nodes are removed from the tree
   // or even garbage collected.
   long BlockedNodeByClassifierCount() const {
-    return mBlockedNodesByClassifier.Length();
+    return static_cast<long>(mBlockedNodesByClassifier.Length());
   }
 
   //

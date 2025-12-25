@@ -176,8 +176,10 @@ class InstallManifest(object):
             if record_type == self.CONTENT:
                 dest, content = fields[1:]
 
-                self.add_content(
-                    self._decode_field_entry(content).encode('utf-8'), dest)
+                # Stored content is JSON text; keep it as str for Python 3 so
+                # json.dumps in add_content can serialize it without choking on
+                # bytes.
+                self.add_content(self._decode_field_entry(content), dest)
                 continue
 
             # Don't fail for non-actionable items, allowing

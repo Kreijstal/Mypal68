@@ -673,8 +673,10 @@ option('--disable-printing', help='Disable printing support')
 
 @depends('--disable-printing')
 def printing(value):
+    # Printing is enabled by default; only disable when explicitly requested.
     if value:
-        return True
+        return False
+    return True
 
 set_config('NS_PRINTING', printing)
 set_define('NS_PRINTING', printing)

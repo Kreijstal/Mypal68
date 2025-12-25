@@ -258,7 +258,7 @@ static UniquePtr<webgl::TexUnpackBlob> FromImageData(
   const void* const data = scopedArr->Data();
 
   const gfx::IntSize size(imageData.Width(), imageData.Height());
-  const size_t stride = size.width * 4;
+  const int32_t stride = static_cast<int32_t>(size.width * 4);
   const gfx::SurfaceFormat surfFormat = gfx::SurfaceFormat::R8G8B8A8;
 
   // WhatWG "HTML Living Standard" (30 October 2015):
@@ -1426,7 +1426,7 @@ void WebGLTexture::CompressedTexImage(TexImageTarget target, GLint level,
   // Warning: Possibly shared memory.  See bug 1225033.
   const auto error = DoCompressedTexImage(
       mContext->gl, target, level, internalFormat, blob->mWidth, blob->mHeight,
-      blob->mDepth, blob->mAvailBytes, blob->mPtr);
+      blob->mDepth, static_cast<GLsizei>(blob->mAvailBytes), blob->mPtr);
   mContext->OnDataAllocCall();
   if (error == LOCAL_GL_OUT_OF_MEMORY) {
     mContext->ErrorOutOfMemory("Ran out of memory during upload.");
@@ -1573,8 +1573,8 @@ void WebGLTexture::CompressedTexSubImage(
   // Warning: Possibly shared memory.  See bug 1225033.
   const auto error = DoCompressedTexSubImage(
       mContext->gl, target, level, xOffset, yOffset, zOffset, blob->mWidth,
-      blob->mHeight, blob->mDepth, sizedUnpackFormat, blob->mAvailBytes,
-      blob->mPtr);
+      blob->mHeight, blob->mDepth, sizedUnpackFormat,
+      static_cast<GLsizei>(blob->mAvailBytes), blob->mPtr);
   if (error == LOCAL_GL_OUT_OF_MEMORY) {
     mContext->ErrorOutOfMemory("Ran out of memory during upload.");
     Truncate();

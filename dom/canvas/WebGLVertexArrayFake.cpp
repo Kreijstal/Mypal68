@@ -24,7 +24,7 @@ void WebGLVertexArrayFake::BindVertexArray() {
   WebGLRefPtr<WebGLBuffer> prevBuffer = mContext->mBoundArrayBuffer;
   mContext->BindBuffer(LOCAL_GL_ELEMENT_ARRAY_BUFFER, mElementArrayBuffer);
 
-  size_t i = 0;
+  uint32_t i = 0;
   for (const auto& vd : mAttribs) {
     mContext->BindBuffer(LOCAL_GL_ARRAY_BUFFER, vd.mBuf);
     vd.DoVertexAttribPointer(gl, i);
@@ -37,7 +37,8 @@ void WebGLVertexArrayFake::BindVertexArray() {
     ++i;
   }
 
-  size_t len = prevVertexArray->mAttribs.size();
+  const uint32_t len =
+      static_cast<uint32_t>(prevVertexArray->mAttribs.size());
   for (; i < len; ++i) {
     const auto& vd = prevVertexArray->mAttribs[i];
 

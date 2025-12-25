@@ -112,7 +112,7 @@ class gfxSparseBitSet {
     // start point is beyond the end of the block array? return false
     // immediately
     uint32_t startBlock = aStart / BLOCK_SIZE_BITS;
-    uint32_t blockLen = mBlockIndex.Length();
+    uint32_t blockLen = static_cast<uint32_t>(mBlockIndex.Length());
     if (startBlock >= blockLen) {
       return false;
     }
@@ -287,7 +287,7 @@ class gfxSparseBitSet {
   // set this bitset to the union of its current contents and another
   void Union(const gfxSparseBitSet& aBitset) {
     // ensure mBlocks is large enough
-    uint32_t blockCount = aBitset.mBlockIndex.Length();
+    uint32_t blockCount = static_cast<uint32_t>(aBitset.mBlockIndex.Length());
     while (blockCount > mBlockIndex.Length()) {
       mBlockIndex.AppendElement(NO_BLOCK);
     }
@@ -326,11 +326,12 @@ class gfxSparseBitSet {
   }
 
   uint32_t GetChecksum() const {
-    uint32_t check =
-        adler32(0, reinterpret_cast<const uint8_t*>(mBlockIndex.Elements()),
-                mBlockIndex.Length() * sizeof(uint16_t));
-    check = adler32(check, reinterpret_cast<const uint8_t*>(mBlocks.Elements()),
-                    mBlocks.Length() * sizeof(Block));
+    uint32_t check = adler32(
+        0, reinterpret_cast<const uint8_t*>(mBlockIndex.Elements()),
+        static_cast<uInt>(mBlockIndex.Length() * sizeof(uint16_t)));
+    check = adler32(
+        check, reinterpret_cast<const uint8_t*>(mBlocks.Elements()),
+        static_cast<uInt>(mBlocks.Length() * sizeof(Block)));
     return check;
   }
 
@@ -475,7 +476,8 @@ class SharedBitSet {
     for (uint16_t i = 0; i < mBlockIndexCount; i++) {
       if (aBitset.mBlockIndex[i] != NO_BLOCK) {
         const Block& srcBlock = aBitset.mBlocks[aBitset.mBlockIndex[i]];
-        std::memcpy(&blocks[mBlockCount], &srcBlock, sizeof(Block));
+        std::memcpy(static_cast<void*>(&blocks[mBlockCount]), &srcBlock,
+                    sizeof(Block));
         blockIndex[i] = mBlockCount;
         mBlockCount++;
       } else {

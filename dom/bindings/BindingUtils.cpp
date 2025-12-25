@@ -4419,6 +4419,8 @@ already_AddRefed<Promise> CreateRejectedPromiseFromThrownException(
 }  // namespace dom
 }  // namespace mozilla
 
+namespace mozilla {
+namespace dom {
 
 // Overload for nsIGlobalObject
 JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p) {
@@ -4438,3 +4440,5 @@ JSObject* FindAssociatedGlobal(JSContext* cx, nsIGlobalObject* const& p) {
   return global;
 }
 
+}  // namespace dom
+}  // namespace mozilla

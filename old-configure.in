@@ -2069,6 +2069,11 @@ Linux)
 ;;
 esac
 
+# The Windows sandbox implementation relies on MSVC/clang-cl tooling.
+if test "$OS_TARGET" = WINNT -a -n "$GNU_CC"; then
+    MOZ_SANDBOX=
+fi
+
 if test -n "$MOZ_SANDBOX"; then
     AC_DEFINE(MOZ_SANDBOX)
 fi

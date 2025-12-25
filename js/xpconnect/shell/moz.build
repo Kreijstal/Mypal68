@@ -39,14 +39,16 @@ if CONFIG['OS_ARCH'] == 'WINNT':
             'sandbox_s',
         ]
 
-        DELAYLOAD_DLLS += [
-            'winmm.dll',
-            'user32.dll',
-        ]
+        if CONFIG['CC_TYPE'] in ('msvc', 'clang-cl'):
+            DELAYLOAD_DLLS += [
+                'winmm.dll',
+                'user32.dll',
+            ]
 
-    DELAYLOAD_DLLS += [
-        'xul.dll',
-    ]
+    if CONFIG['CC_TYPE'] in ('msvc', 'clang-cl'):
+        DELAYLOAD_DLLS += [
+            'xul.dll',
+        ]
 
 CFLAGS += CONFIG['TK_CFLAGS']
 CXXFLAGS += CONFIG['TK_CFLAGS']

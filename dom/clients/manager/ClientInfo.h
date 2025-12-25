@@ -21,6 +21,8 @@ class PrincipalInfo;
 namespace dom {
 
 class IPCClientInfo;
+enum class ClientType : uint8_t;
+enum class FrameType : uint8_t;
 
 // This class provides a simple structure that represents a global living
 // in the system.  Its thread safe and can be transferred across process

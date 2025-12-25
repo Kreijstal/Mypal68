@@ -61,7 +61,7 @@ int VsprintfLiteral(char (&buffer)[N], const char* format, va_list args) {
   ss.vprint(format, args);
   size_t len = ss.emitted();
   buffer[std::min(len, N - 1)] = '\0';
-  return len;
+  return static_cast<int>(len);
 #  endif
 }
 

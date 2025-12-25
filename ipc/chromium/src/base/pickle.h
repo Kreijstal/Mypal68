@@ -84,7 +84,9 @@ class Pickle {
 
   const BufferList& Buffers() const { return buffers_; }
 
-  uint32_t CurrentSize() const { return buffers_.Size(); }
+  uint32_t CurrentSize() const {
+    return static_cast<uint32_t>(buffers_.Size());
+  }
 
   // Methods for reading the payload of the Pickle.  To read from the start of
   // the Pickle, initialize *iter to NULL.  If successful, these methods return

@@ -134,7 +134,9 @@ class nsDocLoader : public nsIDocumentLoader,
     mTreatAsBackgroundLoad = false;
   };
 
-  uint32_t ChildCount() const { return mChildList.Length(); }
+  uint32_t ChildCount() const {
+    return static_cast<uint32_t>(mChildList.Length());
+  }
 
  protected:
   virtual ~nsDocLoader();

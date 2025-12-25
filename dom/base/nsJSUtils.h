@@ -83,7 +83,7 @@ class nsJSUtils {
 
 inline void AssignFromStringBuffer(nsStringBuffer* buffer, size_t len,
                                    nsAString& dest) {
-  buffer->ToString(len, dest);
+  buffer->ToString(static_cast<uint32_t>(len), dest);
 }
 
 template <typename T, typename std::enable_if_t<std::is_same<
@@ -106,14 +106,16 @@ inline bool AssignJSString(JSContext* cx, T& dest, JSString* s) {
   } else if (XPCStringConvert::MaybeGetLiteralStringChars(s, &chars)) {
     // The characters represent a literal char16_t string constant
     // compiled into libxul; we can just use it as-is.
-    dest.AssignLiteral(chars, len);
+    dest.AssignLiteral(chars, static_cast<nsAString::size_type>(len));
     return true;
   }
 
   // We don't bother checking for a dynamic-atom external string, because we'd
   // just need to copy out of it anyway.
 
-  if (MOZ_UNLIKELY(!dest.SetLength(len, mozilla::fallible))) {
+  if (MOZ_UNLIKELY(
+          !dest.SetLength(static_cast<nsAString::size_type>(len),
+                          mozilla::fallible))) {
     JS_ReportOutOfMemory(cx);
     return false;
   }
@@ -169,7 +171,7 @@ inline void AssignJSLinearString(nsAString& dest, JSLinearString* s) {
   size_t len = JS::GetLinearStringLength(s);
   static_assert(JS::MaxStringLength < (1 << 30),
                 "Shouldn't overflow here or in SetCapacity");
-  dest.SetLength(len);
+  dest.SetLength(static_cast<uint32_t>(len));
   JS::CopyLinearStringChars(dest.BeginWriting(), s, len);
 }
 
@@ -177,7 +179,7 @@ inline void AssignJSLinearString(nsACString& dest, JSLinearString* s) {
   size_t len = JS::GetLinearStringLength(s);
   static_assert(JS::MaxStringLength < (1 << 30),
                 "Shouldn't overflow here or in SetCapacity");
-  dest.SetLength(len);
+  dest.SetLength(static_cast<uint32_t>(len));
   JS::LossyCopyLinearStringChars(dest.BeginWriting(), s, len);
 }
 

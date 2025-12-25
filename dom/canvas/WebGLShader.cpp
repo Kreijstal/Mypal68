@@ -252,7 +252,8 @@ bool WebGLShader::UnmapUniformBlockName(
     const nsACString& baseMappedName, nsCString* const out_baseUserName) const {
   for (const auto& interface : mCompileResults->mInterfaceBlocks) {
     const nsDependentCString interfaceMappedName(interface.mappedName.data(),
-                                                 interface.mappedName.size());
+                                                 static_cast<uint32_t>(
+                                                     interface.mappedName.size()));
     if (baseMappedName == interfaceMappedName) {
       *out_baseUserName = interface.name.data();
       return true;

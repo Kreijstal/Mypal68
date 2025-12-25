@@ -28,6 +28,7 @@
 #include "gfxContext.h"
 #include "gfxPlatform.h"
 #include "GLContext.h"
+#include "mozilla/CheckedInt.h"
 
 #include "nsContentUtils.h"
 #include "nsError.h"
@@ -1274,7 +1275,14 @@ void WebGLContext::ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height,
 
   ////
 
-  ReadPixelsImpl(x, y, width, height, format, type, bytes, byteLen);
+  const auto checkedByteLen = CheckedInt<uint32_t>(byteLen);
+  if (!checkedByteLen.isValid()) {
+    ErrorInvalidValue("`pixels` buffer is too large.");
+    return;
+  }
+
+  ReadPixelsImpl(x, y, width, height, format, type, bytes,
+                 checkedByteLen.value());
 }
 
 void WebGLContext::ReadPixels(GLint x, GLint y, GLsizei width, GLsizei height,
@@ -1801,8 +1809,15 @@ void WebGLContext::UniformNiv(const char* funcName, uint8_t N,
   }
   const auto elemBytes = arr.elemBytes + elemOffset;
 
+  const auto checkedElemCount = CheckedInt<uint32_t>(elemCount);
+  if (!checkedElemCount.isValid()) {
+    ErrorInvalidValue("Array length is too large.");
+    return;
+  }
+
   uint32_t numElementsToUpload;
-  if (!ValidateUniformArraySetter(loc, N, webgl::AttribBaseType::Int, elemCount,
+  if (!ValidateUniformArraySetter(loc, N, webgl::AttribBaseType::Int,
+                                  checkedElemCount.value(),
                                   &numElementsToUpload)) {
     return;
   }
@@ -1832,9 +1847,16 @@ void WebGLContext::UniformNuiv(const char* funcName, uint8_t N,
   }
   const auto elemBytes = arr.elemBytes + elemOffset;
 
+  const auto checkedElemCount = CheckedInt<uint32_t>(elemCount);
+  if (!checkedElemCount.isValid()) {
+    ErrorInvalidValue("Array length is too large.");
+    return;
+  }
+
   uint32_t numElementsToUpload;
   if (!ValidateUniformArraySetter(loc, N, webgl::AttribBaseType::UInt,
-                                  elemCount, &numElementsToUpload)) {
+                                  checkedElemCount.value(),
+                                  &numElementsToUpload)) {
     return;
   }
   MOZ_ASSERT(!loc->mInfo->mSamplerTexList, "Should not be a sampler.");
@@ -1859,9 +1881,16 @@ void WebGLContext::UniformNfv(const char* funcName, uint8_t N,
   }
   const auto elemBytes = arr.elemBytes + elemOffset;
 
+  const auto checkedElemCount = CheckedInt<uint32_t>(elemCount);
+  if (!checkedElemCount.isValid()) {
+    ErrorInvalidValue("Array length is too large.");
+    return;
+  }
+
   uint32_t numElementsToUpload;
   if (!ValidateUniformArraySetter(loc, N, webgl::AttribBaseType::Float,
-                                  elemCount, &numElementsToUpload)) {
+                                  checkedElemCount.value(),
+                                  &numElementsToUpload)) {
     return;
   }
   MOZ_ASSERT(!loc->mInfo->mSamplerTexList, "Should not be a sampler.");
@@ -1899,10 +1928,16 @@ void WebGLContext::UniformMatrixAxBfv(const char* funcName, uint8_t A,
   }
   const auto elemBytes = arr.elemBytes + elemOffset;
 
+  const auto checkedElemCount = CheckedInt<uint32_t>(elemCount);
+  if (!checkedElemCount.isValid()) {
+    ErrorInvalidValue("Array length is too large.");
+    return;
+  }
+
   uint32_t numMatsToUpload;
-  if (!ValidateUniformMatrixArraySetter(loc, A, B, webgl::AttribBaseType::Float,
-                                        elemCount, transpose,
-                                        &numMatsToUpload)) {
+  if (!ValidateUniformMatrixArraySetter(
+          loc, A, B, webgl::AttribBaseType::Float, checkedElemCount.value(),
+          transpose, &numMatsToUpload)) {
     return;
   }
   MOZ_ASSERT(!loc->mInfo->mSamplerTexList, "Should not be a sampler.");

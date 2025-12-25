@@ -1602,7 +1602,9 @@ class HashTable : private AllocPolicy {
     // integral division: <http://stackoverflow.com/a/2745086>.)
     uint32_t capacity = (aLen * sAlphaDenominator + sMaxAlphaNumerator - 1) /
                         sMaxAlphaNumerator;
-    capacity = (capacity < sMinCapacity) ? sMinCapacity : RoundUpPow2(capacity);
+    capacity = (capacity < sMinCapacity)
+                   ? sMinCapacity
+                   : static_cast<uint32_t>(RoundUpPow2(capacity));
 
     MOZ_ASSERT(capacity >= aLen);
     MOZ_ASSERT(capacity <= sMaxCapacity);

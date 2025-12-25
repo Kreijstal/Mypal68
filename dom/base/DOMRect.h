@@ -158,7 +158,7 @@ class DOMRectList final : public nsISupports, public nsWrapperCache {
 
   void Append(DOMRect* aElement) { mArray.AppendElement(aElement); }
 
-  uint32_t Length() { return mArray.Length(); }
+  uint32_t Length() { return static_cast<uint32_t>(mArray.Length()); }
   DOMRect* Item(uint32_t aIndex) { return mArray.SafeElementAt(aIndex); }
   DOMRect* IndexedGetter(uint32_t aIndex, bool& aFound) {
     aFound = aIndex < mArray.Length();

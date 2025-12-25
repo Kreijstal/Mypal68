@@ -216,7 +216,7 @@ class DocumentOrShadowRoot : public RadioGroupManager {
   // with them.
   template <typename Callback>
   void EnumerateUniqueAdoptedStyleSheetsBackToFront(Callback aCallback) {
-    StyleSheetSet set(mAdoptedStyleSheets.Length());
+    StyleSheetSet set(static_cast<uint32_t>(mAdoptedStyleSheets.Length()));
     for (StyleSheet* sheet : Reversed(mAdoptedStyleSheets)) {
       if (MOZ_UNLIKELY(!set.EnsureInserted(sheet))) {
         continue;

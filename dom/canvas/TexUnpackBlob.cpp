@@ -249,7 +249,8 @@ static bool ValidateUnpackBytes(WebGLContext* webgl,
   const auto bodyBytes = fullRows.value() * rowStride.value();
   const auto tailPixels = (availByteCount - bodyBytes) / bytesPerPixel;
 
-  return ValidateUnpackPixels(webgl, fullRows.value(), tailPixels, blob);
+  return ValidateUnpackPixels(webgl, fullRows.value(),
+                              static_cast<uint32_t>(tailPixels), blob);
 }
 
 ////////////////////

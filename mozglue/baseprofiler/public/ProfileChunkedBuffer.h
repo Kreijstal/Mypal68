@@ -127,7 +127,8 @@ class InChunkPointer {
           mChunk->RangeStart() + mChunk->OffsetPastLastBlock()) {
         // Target position is in this chunk's written space, move to it.
         mOffsetInChunk =
-            aBlockIndex.ConvertToProfileBufferIndex() - mChunk->RangeStart();
+            static_cast<Length>(
+                aBlockIndex.ConvertToProfileBufferIndex() - mChunk->RangeStart());
         return ShouldPointAtValidBlock();
       }
       // Position is after this chunk, try next chunk.
@@ -1417,7 +1418,7 @@ class ProfileChunkedBuffer {
             next->SetRangeStart(mNextChunkRangeStart);
             mNextChunkRangeStart += next->BufferBytes();
             const auto mem1 = next->ReserveInitialBlockAsTail(
-                blockBytes - mem0.LengthBytes());
+                static_cast<Length>(blockBytes - mem0.LengthBytes()));
             MOZ_ASSERT(next->RemainingBytes() != 0);
             currentChunkFilled = true;
             nextChunkInitialized = true;

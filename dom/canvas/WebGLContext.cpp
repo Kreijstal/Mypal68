@@ -2048,8 +2048,8 @@ bool Intersect(const int32_t srcSize, const int32_t read0,
   }
 
   *out_intRead0 = intRead0;
-  *out_intWrite0 = intWrite0;
-  *out_intSize = intSize;
+  *out_intWrite0 = static_cast<int32_t>(intWrite0);
+  *out_intSize = static_cast<int32_t>(intSize);
   return true;
 }
 

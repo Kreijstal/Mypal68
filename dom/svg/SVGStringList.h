@@ -41,7 +41,9 @@ class SVGStringList {
 
   bool IsEmpty() const { return mStrings.IsEmpty(); }
 
-  uint32_t Length() const { return mStrings.Length(); }
+  uint32_t Length() const {
+    return static_cast<uint32_t>(mStrings.Length());
+  }
 
   const nsAString& operator[](uint32_t aIndex) const {
     return mStrings[aIndex];
@@ -92,7 +94,7 @@ class SVGStringList {
 
   bool InsertItem(uint32_t aIndex, const nsAString& aString) {
     if (aIndex >= mStrings.Length()) {
-      aIndex = mStrings.Length();
+      aIndex = static_cast<uint32_t>(mStrings.Length());
     }
     if (mStrings.InsertElementAt(aIndex, aString, fallible)) {
       mIsSet = true;

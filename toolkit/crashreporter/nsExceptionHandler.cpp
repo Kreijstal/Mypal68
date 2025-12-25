@@ -2029,9 +2029,10 @@ nsresult AnnotateCrashReport(Annotation key, const nsACString& data) {
     nsDependentCString str(AnnotationToString(key));
     const nsCString& entry = crashReporterAPIData_Table[key];
     if (!entry.IsEmpty()) {
-      NS_NAMED_LITERAL_CSTRING(kEquals, "=");
-      NS_NAMED_LITERAL_CSTRING(kNewline, "\n");
-      nsAutoCString line = str + kEquals + entry + kNewline;
+      nsAutoCString line(str);
+      line.Append('=');
+      line.Append(entry);
+      line.Append('\n');
 
       crashReporterAPIData->Append(line);
       crashEventAPIData->Append(line);

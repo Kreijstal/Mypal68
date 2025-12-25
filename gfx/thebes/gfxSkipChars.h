@@ -57,7 +57,7 @@ class gfxSkipChars {
 
   void SkipChars(uint32_t aChars) {
     NS_ASSERTION(mCharCount + aChars > mCharCount, "Character count overflow");
-    uint32_t rangeCount = mRanges.Length();
+    uint32_t rangeCount = static_cast<uint32_t>(mRanges.Length());
     uint32_t delta = 0;
     if (rangeCount > 0) {
       SkippedRange& lastRange = mRanges[rangeCount - 1];

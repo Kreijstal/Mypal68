@@ -227,7 +227,8 @@ bool WebGLContext::ValidateUniformArraySetter(
 
   const auto& elemCount = loc->mInfo->mActiveInfo->mElemCount;
   MOZ_ASSERT(elemCount > loc->mArrayIndex);
-  const uint32_t uniformElemCount = elemCount - loc->mArrayIndex;
+  const uint32_t uniformElemCount =
+      static_cast<uint32_t>(elemCount - loc->mArrayIndex);
 
   *out_numElementsToUpload =
       std::min(uniformElemCount, setterArraySize / setterElemSize);
@@ -256,7 +257,8 @@ bool WebGLContext::ValidateUniformMatrixArraySetter(
 
   const auto& elemCount = loc->mInfo->mActiveInfo->mElemCount;
   MOZ_ASSERT(elemCount > loc->mArrayIndex);
-  const uint32_t uniformElemCount = elemCount - loc->mArrayIndex;
+  const uint32_t uniformElemCount =
+      static_cast<uint32_t>(elemCount - loc->mArrayIndex);
 
   *out_numElementsToUpload =
       std::min(uniformElemCount, setterArraySize / setterElemSize);

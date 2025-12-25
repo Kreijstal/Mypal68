@@ -940,7 +940,9 @@ class WidgetCompositionEvent : public WidgetGUIEvent {
     return length == UINT32_MAX ? mData.Length() : length;
   }
 
-  uint32_t RangeCount() const { return mRanges ? mRanges->Length() : 0; }
+  uint32_t RangeCount() const {
+    return mRanges ? static_cast<uint32_t>(mRanges->Length()) : 0;
+  }
 
   bool CausesDOMTextEvent() const {
     return mMessage == eCompositionChange || mMessage == eCompositionCommit ||

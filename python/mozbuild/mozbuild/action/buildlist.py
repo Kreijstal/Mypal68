@@ -26,7 +26,7 @@ def addEntriesToListFile(listFile, entries):
     lock = lock_file(listFile + ".lck")
     try:
         if os.path.exists(listFile):
-            f = open(listFile)
+            f = open(listFile, "r", encoding="utf-8", errors="replace")
             existing = set(x.strip() for x in f.readlines())
             f.close()
         else:
@@ -34,8 +34,8 @@ def addEntriesToListFile(listFile, entries):
         for e in entries:
             if e not in existing:
                 existing.add(e)
-        with open(listFile, 'wb') as f:
-            f.write("\n".join(sorted(existing))+"\n")
+        with open(listFile, "w", encoding="utf-8", newline="") as f:
+            f.write("\n".join(sorted(existing)) + "\n")
     finally:
         del lock  # Explicitly release the lock_file to free it
 

@@ -638,7 +638,7 @@ class nsIContent : public nsINode {
   void RemovePurple() { mRefCnt.RemovePurple(); }
 
   bool OwnedOnlyByTheDOMTree() {
-    uint32_t rc = mRefCnt.get();
+    nsrefcnt rc = mRefCnt.get();
     if (GetParent()) {
       --rc;
     }

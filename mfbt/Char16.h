@@ -63,19 +63,23 @@ class char16ptr_t {
   explicit operator wchar_t*() const {
     return const_cast<wchar_t*>(static_cast<const wchar_t*>(*this));
   }
-  explicit operator int() const { return reinterpret_cast<intptr_t>(mPtr); }
-  explicit operator unsigned int() const {
-    return reinterpret_cast<uintptr_t>(mPtr);
+  explicit operator int() const {
+    return static_cast<int>(reinterpret_cast<intptr_t>(mPtr));
   }
-  explicit operator long() const { return reinterpret_cast<intptr_t>(mPtr); }
+  explicit operator unsigned int() const {
+    return static_cast<unsigned int>(reinterpret_cast<uintptr_t>(mPtr));
+  }
+  explicit operator long() const {
+    return static_cast<long>(reinterpret_cast<intptr_t>(mPtr));
+  }
   explicit operator unsigned long() const {
-    return reinterpret_cast<uintptr_t>(mPtr);
+    return static_cast<unsigned long>(reinterpret_cast<uintptr_t>(mPtr));
   }
   explicit operator long long() const {
-    return reinterpret_cast<intptr_t>(mPtr);
+    return static_cast<long long>(reinterpret_cast<intptr_t>(mPtr));
   }
   explicit operator unsigned long long() const {
-    return reinterpret_cast<uintptr_t>(mPtr);
+    return static_cast<unsigned long long>(reinterpret_cast<uintptr_t>(mPtr));
   }
 
   /**

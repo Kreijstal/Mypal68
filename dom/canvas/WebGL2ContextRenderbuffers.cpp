@@ -68,11 +68,13 @@ void WebGL2Context::GetInternalformatParameter(JSContext* cx, GLenum target,
                              LOCAL_GL_NUM_SAMPLE_COUNTS, 1, &sampleCount);
     samples.resize(uint32_t(sampleCount));
     gl->fGetInternalformativ(LOCAL_GL_RENDERBUFFER, internalformat,
-                             LOCAL_GL_SAMPLES, samples.size(), samples.data());
+                             LOCAL_GL_SAMPLES,
+                             static_cast<GLsizei>(samples.size()),
+                             samples.data());
   }
 
-  JSObject* obj =
-      dom::Int32Array::Create(cx, this, samples.size(), samples.data());
+  JSObject* obj = dom::Int32Array::Create(
+      cx, this, static_cast<uint32_t>(samples.size()), samples.data());
   if (!obj) {
     out_rv = NS_ERROR_OUT_OF_MEMORY;
   }

@@ -89,7 +89,7 @@ bool TruncateComments(const nsAString& src, nsAString* const out) {
   }
 
   MOZ_ASSERT((dstBegin + 1) - dstBegin == 1);
-  const uint32_t dstCharLen = dstItr - dstBegin;
+  const uint32_t dstCharLen = static_cast<uint32_t>(dstItr - dstBegin);
   if (!out->Assign(dstBegin, dstCharLen, mozilla::fallible)) return false;
 
   return true;
@@ -158,7 +158,8 @@ static bool IsValidGLSLPreprocChar(char16_t c) {
 ////
 
 bool ValidateGLSLPreprocString(WebGLContext* webgl, const nsAString& string) {
-  for (size_t i = 0; i < string.Length(); ++i) {
+  const uint32_t length = string.Length();
+  for (uint32_t i = 0; i < length; ++i) {
     const auto& cur = string[i];
 
     if (!IsValidGLSLPreprocChar(cur)) {
@@ -190,7 +191,8 @@ bool ValidateGLSLVariableName(const nsAString& name, WebGLContext* webgl) {
     return false;
   }
 
-  for (size_t i = 0; i < name.Length(); ++i) {
+  const uint32_t length = name.Length();
+  for (uint32_t i = 0; i < length; ++i) {
     const auto& cur = name[i];
     if (!IsValidGLSLChar(cur)) {
       webgl->ErrorInvalidValue("String contains the illegal character 0x%x'.",

@@ -954,7 +954,7 @@ class nsTSubstring : public mozilla::detail::nsTStringRepr<T> {
   void Append(mozilla::Span<const char_type> aSpan) {
     auto len = aSpan.Length();
     MOZ_RELEASE_ASSERT(len <= std::numeric_limits<size_type>::max());
-    Append(aSpan.Elements(), len);
+    Append(aSpan.Elements(), static_cast<size_type>(len));
   }
 
   [[nodiscard]] bool Append(mozilla::Span<const char_type> aSpan,

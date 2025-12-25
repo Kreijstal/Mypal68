@@ -1154,7 +1154,7 @@ class gfxShapedText {
     }
 
     DetailedGlyph* Allocate(uint32_t aOffset, uint32_t aCount) {
-      uint32_t detailIndex = mDetails.Length();
+      uint32_t detailIndex = static_cast<uint32_t>(mDetails.Length());
       DetailedGlyph* details = mDetails.AppendElements(aCount);
       // We normally set up glyph records sequentially, so the common case
       // here is to append new records to the mOffsetToIndex array;
@@ -1433,7 +1433,7 @@ class gfxFont {
     return mRefCnt;
   }
 
-  int32_t GetRefCount() { return mRefCnt; }
+  int32_t GetRefCount() { return static_cast<int32_t>(mRefCnt); }
 
   // options to specify the kind of AA to be used when creating a font
   typedef enum : uint8_t {

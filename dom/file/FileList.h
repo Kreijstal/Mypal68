@@ -49,7 +49,7 @@ class FileList final : public nsISupports, public nsWrapperCache {
 
   File* IndexedGetter(uint32_t aIndex, bool& aFound) const;
 
-  uint32_t Length() const { return mFiles.Length(); }
+  uint32_t Length() const { return static_cast<uint32_t>(mFiles.Length()); }
 
   void ToSequence(Sequence<RefPtr<File>>& aSequence, ErrorResult& aRv) const;
 

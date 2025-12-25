@@ -370,7 +370,7 @@ inline UnsignedInteger ToUnsignedInteger(double d) {
   }
 
   // Compute the congruent value in the signed range.
-  return (bits & mozilla::FloatingPoint<double>::kSignBit) ? ~result + 1
+  return (bits & mozilla::FloatingPoint<double>::kSignBit) ? static_cast<UnsignedInteger>(~result + 1)
                                                            : result;
 }
 

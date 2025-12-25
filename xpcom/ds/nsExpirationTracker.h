@@ -157,7 +157,7 @@ class ExpirationTrackerImpl {
       return NS_ERROR_UNEXPECTED;
     }
     nsTArray<T*>& generation = mGenerations[mNewestGeneration];
-    uint32_t index = generation.Length();
+    uint32_t index = static_cast<uint32_t>(generation.Length());
     if (index > nsExpirationState::MAX_INDEX_IN_GENERATION) {
       NS_WARNING("More than 256M elements tracked, this is probably a problem");
       return NS_ERROR_OUT_OF_MEMORY;
@@ -573,14 +573,14 @@ NS_IMETHODIMP ExpirationTrackerImpl<T, K, Mutex, AutoLock>::
 }
 
 template <class T, uint32_t K, typename Mutex, typename AutoLock>
-NS_IMETHODIMP_(MozExternalRefCountType)
-ExpirationTrackerImpl<T, K, Mutex, AutoLock>::ExpirationTrackerObserver::AddRef(
-    void) {
+  NS_IMETHODIMP_(MozExternalRefCountType)
+  ExpirationTrackerImpl<T, K, Mutex, AutoLock>::ExpirationTrackerObserver::AddRef(
+      void) {
   MOZ_ASSERT(int32_t(mRefCnt) >= 0, "illegal refcnt");
   NS_ASSERT_OWNINGTHREAD(ExpirationTrackerObserver);
   ++mRefCnt;
   NS_LOG_ADDREF(this, mRefCnt, "ExpirationTrackerObserver", sizeof(*this));
-  return mRefCnt;
+  return static_cast<MozExternalRefCountType>(mRefCnt);
 }
 
 template <class T, uint32_t K, typename Mutex, typename AutoLock>
@@ -597,7 +597,7 @@ ExpirationTrackerImpl<T, K, Mutex,
     delete (this);
     return 0;
   }
-  return mRefCnt;
+  return static_cast<MozExternalRefCountType>(mRefCnt);
 }
 
 template <class T, uint32_t K, typename Mutex, typename AutoLock>

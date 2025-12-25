@@ -159,7 +159,7 @@ class nsDynamicAtom : public nsAtom {
     if (count == 1) {
       gUnusedAtomCount--;
     }
-    return count;
+    return static_cast<MozExternalRefCountType>(count);
   }
 
   MozExternalRefCountType Release() {
@@ -179,7 +179,7 @@ class nsDynamicAtom : public nsAtom {
       }
     }
 
-    return count;
+    return static_cast<MozExternalRefCountType>(count);
   }
 
   const char16_t* String() const {

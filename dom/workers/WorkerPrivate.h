@@ -506,7 +506,7 @@ class WorkerPrivate final : public RelativeTimeline {
 
   // This method is used by RuntimeService to know what is going wrong the
   // shutting down.
-  uint32_t BusyCount() { return mBusyCount; }
+  uint32_t BusyCount() { return static_cast<uint32_t>(mBusyCount); }
 
   // Check whether this worker is a secure context.  For use from the parent
   // thread only; the canonical "is secure context" boolean is stored on the
@@ -1245,7 +1245,8 @@ class AutoSyncLoopHolder {
   AutoSyncLoopHolder(WorkerPrivate* aWorkerPrivate, WorkerStatus aFailStatus)
       : mWorkerPrivate(aWorkerPrivate),
         mTarget(aWorkerPrivate->CreateNewSyncLoop(aFailStatus)),
-        mIndex(aWorkerPrivate->mSyncLoopStack.Length() - 1) {
+        mIndex(static_cast<uint32_t>(
+            aWorkerPrivate->mSyncLoopStack.Length() - 1)) {
     aWorkerPrivate->AssertIsOnWorkerThread();
   }
 

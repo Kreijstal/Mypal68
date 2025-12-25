@@ -619,7 +619,8 @@ struct AssignRangeAlgorithm<true, true> {
   static void implementation(ElemType* aElements, IndexType aStart,
                              SizeType aCount, const Item* aValues) {
     if (aValues) {
-      memcpy(aElements + aStart, aValues, aCount * sizeof(ElemType));
+      memcpy(static_cast<void*>(aElements + aStart), aValues,
+             aCount * sizeof(ElemType));
     }
   }
 };
@@ -2221,7 +2222,7 @@ class nsTArray_Impl
     const size_type oldLen = Length();
     if (oldLen) {
       DestructRange(aNewLen, oldLen - aNewLen);
-      base_type::mHdr->mLength = aNewLen;
+      base_type::mHdr->mLength = static_cast<uint32_t>(aNewLen);
     }
   }
 
@@ -2508,7 +2509,7 @@ auto nsTArray_Impl<E, Alloc>::RemoveElementsBy(Predicate aPredicate)
     }
   }
 
-  base_type::mHdr->mLength = j;
+  base_type::mHdr->mLength = static_cast<uint32_t>(j);
   return len - j;
 }
 

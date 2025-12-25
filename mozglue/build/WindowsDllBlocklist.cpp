@@ -873,65 +873,21 @@ NTSTATUS NTAPI LdrRegisterDllNotification(
     ULONG aFlags, PLDR_DLL_NOTIFICATION_FUNCTION aCallback, PVOID aContext,
     PVOID* aCookie);
 
-/*static PVOID gNotificationCookie;
+static PVOID gNotificationCookie;
 
 static VOID CALLBACK DllLoadNotification(
-    ULONG aReason, PCLDR_DLL_NOTIFICATION_DATA aNotificationData,
-    PVOID aContext) {
-    return;
-  if (aReason != LDR_DLL_NOTIFICATION_REASON_LOADED) {
-    // We don't care about unloads
-    return;
-  }
-
-  glue::AutoSharedLock lock(gDllServicesLock);
-  if (!gDllServices) {
-    return;
-  }
-
-  PCUNICODE_STRING fullDllName = aNotificationData->Loaded.FullDllName;
-  gDllServices->DispatchDllLoadNotification(fullDllName);
+    ULONG, PCLDR_DLL_NOTIFICATION_DATA, PVOID) {
+  // Stubbed out on this configuration.
 }
 
 namespace mozilla {
-Authenticode* GetAuthenticode();
 }  // namespace mozilla
 
+// The full DLL services hooks are not wired up in this MinGW build; provide
+// minimal stubs to satisfy consumers without pulling in the omitted
+// infrastructure.
 MFBT_API void DllBlocklist_SetFullDllServices(
-    mozilla::glue::detail::DllServicesBase* aSvc) {
-  glue::AutoExclusiveLock lock(gDllServicesLock);
-  if (aSvc) {
-    aSvc->SetAuthenticodeImpl(GetAuthenticode());
-
-    if (!gNotificationCookie) {
-      auto pLdrRegisterDllNotification =
-          reinterpret_cast<decltype(&::LdrRegisterDllNotification)>(
-              ::GetProcAddress(::GetModuleHandleW(L"ntdll.dll"),
-                               "LdrRegisterDllNotification"));
-
-      MOZ_DIAGNOSTIC_ASSERT(pLdrRegisterDllNotification);
-
-      mozilla::DebugOnly<NTSTATUS> ntStatus = pLdrRegisterDllNotification(
-          0, &DllLoadNotification, nullptr, &gNotificationCookie);
-      MOZ_ASSERT(NT_SUCCESS(ntStatus));
-    }
-  }
-
-  gDllServices = aSvc;
-
-  if (IsUntrustedDllsHandlerEnabled() && gDllServices) {
-    Vector<glue::ModuleLoadEvent, 0, InfallibleAllocPolicy> events;
-    if (glue::UntrustedDllsHandler::TakePendingEvents(events)) {
-      gDllServices->NotifyUntrustedModuleLoads(events);
-    }
-  }
-}
+    mozilla::glue::detail::DllServicesBase*) {}
 
 MFBT_API void DllBlocklist_SetBasicDllServices(
-    mozilla::glue::detail::DllServicesBase* aSvc) {
-  if (!aSvc) {
-    return;
-  }
-
-  aSvc->SetAuthenticodeImpl(GetAuthenticode());
-}*/
+    mozilla::glue::detail::DllServicesBase*) {}

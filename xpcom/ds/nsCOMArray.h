@@ -97,9 +97,9 @@ class nsCOMArray_base {
 
  public:
   // elements in the array (including null elements!)
-  int32_t Count() const { return mArray.Length(); }
+  int32_t Count() const { return static_cast<int32_t>(mArray.Length()); }
   // nsTArray-compatible version
-  uint32_t Length() const { return mArray.Length(); }
+  uint32_t Length() const { return static_cast<uint32_t>(mArray.Length()); }
   bool IsEmpty() const { return mArray.IsEmpty(); }
 
   // If the array grows, the newly created entries will all be null;
@@ -108,7 +108,9 @@ class nsCOMArray_base {
   // nsTArray-compatible version
   void TruncateLength(uint32_t aNewLength) {
     if (mArray.Length() > aNewLength) {
-      RemoveElementsAt(aNewLength, mArray.Length() - aNewLength);
+      RemoveElementsAt(
+          aNewLength,
+          static_cast<uint32_t>(mArray.Length() - aNewLength));
     }
   }
 
@@ -150,7 +152,9 @@ class nsCOMArray_base {
   // Ensures there is enough space to store a total of aCapacity objects.
   // This method never deletes any objects.
   void SetCapacity(uint32_t aCapacity) { mArray.SetCapacity(aCapacity); }
-  uint32_t Capacity() { return mArray.Capacity(); }
+  uint32_t Capacity() {
+    return static_cast<uint32_t>(mArray.Capacity());
+  }
 
   // Measures the size of the array's element storage. If you want to measure
   // anything hanging off the array, you must iterate over the elements and

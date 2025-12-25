@@ -58,7 +58,7 @@ class SRIMetadata final {
   }
   bool IsValid() const { return !IsMalformed() && IsAlgorithmSupported(); }
 
-  uint32_t HashCount() const { return mHashes.Length(); }
+  uint32_t HashCount() const { return static_cast<uint32_t>(mHashes.Length()); }
   void GetHash(uint32_t aIndex, nsCString* outHash) const;
   void GetAlgorithm(nsCString* outAlg) const { *outAlg = mAlgorithm; }
   void GetHashType(int8_t* outType, uint32_t* outLength) const;

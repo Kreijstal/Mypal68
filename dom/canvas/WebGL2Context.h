@@ -280,7 +280,8 @@ class WebGL2Context : public WebGLContext {
   void VertexAttribI4iv(GLuint index, const Int32ListU& list) {
     const FuncScope funcScope(*this, "VertexAttribI4iv");
     const auto& arr = Int32Arr::From(list);
-    if (!ValidateAttribArraySetter(4, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(4, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     const auto& itr = arr.elemBytes;
     VertexAttribI4i(index, itr[0], itr[1], itr[2], itr[3]);
@@ -289,7 +290,8 @@ class WebGL2Context : public WebGLContext {
   void VertexAttribI4uiv(GLuint index, const Uint32ListU& list) {
     const FuncScope funcScope(*this, "vertexAttribI4uiv");
     const auto& arr = Uint32Arr::From(list);
-    if (!ValidateAttribArraySetter(4, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(4, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     const auto& itr = arr.elemBytes;
     VertexAttribI4ui(index, itr[0], itr[1], itr[2], itr[3]);

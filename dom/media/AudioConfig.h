@@ -57,7 +57,8 @@ class AudioConfig {
       UpdateChannelMap();
     }
     explicit ChannelLayout(std::initializer_list<Channel> aChannelList)
-        : ChannelLayout(aChannelList.size(), aChannelList.begin()) {}
+        : ChannelLayout(static_cast<uint32_t>(aChannelList.size()),
+                        aChannelList.begin()) {}
     bool operator==(const ChannelLayout& aOther) const {
       return mChannels == aOther.mChannels;
     }
@@ -68,7 +69,9 @@ class AudioConfig {
       MOZ_ASSERT(mChannels.Length() > aIndex);
       return mChannels[aIndex];
     }
-    uint32_t Count() const { return mChannels.Length(); }
+    uint32_t Count() const {
+      return static_cast<uint32_t>(mChannels.Length());
+    }
     ChannelMap Map() const;
 
     // Calculate the mapping table from the current layout to aOther such that

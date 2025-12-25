@@ -146,7 +146,7 @@ nsTArray_base<Alloc, RelocationStrategy>::EnsureCapacity(size_type aCapacity,
       return ActualAlloc::FailureResult();
     }
     header->mLength = 0;
-    header->mCapacity = aCapacity;
+    header->mCapacity = static_cast<uint32_t>(aCapacity);
     header->mIsAutoArray = 0;
     mHdr = header;
 
@@ -198,7 +198,7 @@ nsTArray_base<Alloc, RelocationStrategy>::EnsureCapacity(size_type aCapacity,
   // How many elements can we fit in bytesToAlloc?
   size_t newCapacity = (bytesToAlloc - sizeof(Header)) / aElemSize;
   MOZ_ASSERT(newCapacity >= aCapacity, "Didn't enlarge the array enough!");
-  header->mCapacity = newCapacity;
+  header->mCapacity = static_cast<uint32_t>(newCapacity);
 
   mHdr = header;
 
@@ -224,7 +224,7 @@ void nsTArray_base<Alloc, RelocationStrategy>::ShrinkCapacity(
     Header* header = GetAutoArrayBuffer(aElemAlign);
 
     // Move the data, but don't copy the header to avoid overwriting mCapacity.
-    header->mLength = length;
+    header->mLength = static_cast<uint32_t>(length);
     RelocationStrategy::RelocateNonOverlappingRegion(header + 1, mHdr + 1,
                                                      length, aElemSize);
 
@@ -246,7 +246,7 @@ void nsTArray_base<Alloc, RelocationStrategy>::ShrinkCapacity(
     return;
   }
   mHdr = static_cast<Header*>(ptr);
-  mHdr->mCapacity = length;
+  mHdr->mCapacity = static_cast<uint32_t>(length);
 }
 
 template <class Alloc, class RelocationStrategy>
@@ -500,10 +500,10 @@ nsTArray_base<Alloc, RelocationStrategy>::SwapArrayElements(
   // Avoid writing to EmptyHdr, since it can trigger false
   // positives with TSan.
   if (!HasEmptyHeader()) {
-    mHdr->mLength = aOther.Length();
+    mHdr->mLength = static_cast<uint32_t>(aOther.Length());
   }
   if (!aOther.HasEmptyHeader()) {
-    aOther.mHdr->mLength = tempLength;
+    aOther.mHdr->mLength = static_cast<uint32_t>(tempLength);
   }
 
   return ActualAlloc::SuccessResult();
@@ -564,7 +564,7 @@ void nsTArray_base<Alloc, RelocationStrategy>::MoveInit(
   // Avoid writing to EmptyHdr, since it can trigger false
   // positives with TSan.
   if (!HasEmptyHeader()) {
-    mHdr->mLength = aOther.Length();
+    mHdr->mLength = static_cast<uint32_t>(aOther.Length());
   }
   if (!aOther.HasEmptyHeader()) {
     aOther.mHdr->mLength = 0;
@@ -633,7 +633,7 @@ bool nsTArray_base<Alloc, RelocationStrategy>::EnsureNotUsingAutoArrayBuffer(
 
     RelocationStrategy::RelocateNonOverlappingRegionWithHeader(
         header, mHdr, Length(), aElemSize);
-    header->mCapacity = Length();
+    header->mCapacity = static_cast<uint32_t>(Length());
     mHdr = header;
   }
 

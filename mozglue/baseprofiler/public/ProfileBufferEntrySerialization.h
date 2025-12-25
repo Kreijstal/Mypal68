@@ -95,7 +95,7 @@ class ProfileBufferEntryReader {
   // Don't =default moving, as it doesn't bring any benefit in this class.
 
   [[nodiscard]] Length RemainingBytes() const {
-    return mCurrentSpan.LengthBytes() + mNextSpanOrEmpty.LengthBytes();
+    return static_cast<Length>(mCurrentSpan.LengthBytes() + mNextSpanOrEmpty.LengthBytes());
   }
 
   void SetRemainingBytes(Length aBytes) {
@@ -360,7 +360,7 @@ class ProfileBufferEntryWriter {
   }
 
   [[nodiscard]] Length RemainingBytes() const {
-    return mCurrentSpan.LengthBytes() + mNextSpanOrEmpty.LengthBytes();
+    return static_cast<Length>(mCurrentSpan.LengthBytes() + mNextSpanOrEmpty.LengthBytes());
   }
 
   [[nodiscard]] ProfileBufferBlockIndex CurrentBlockIndex() const {
@@ -697,14 +697,14 @@ template <>
 struct ProfileBufferEntryWriter::Serializer<ProfileBufferUnownedCString> {
   static Length Bytes(const ProfileBufferUnownedCString& aS) {
     const auto len = strlen(aS.mCString);
-    return ULEB128Size(len) + len;
+    return static_cast<Length>(ULEB128Size(len) + len);
   }
 
   static void Write(ProfileBufferEntryWriter& aEW,
                     const ProfileBufferUnownedCString& aS) {
     const auto len = strlen(aS.mCString);
     aEW.WriteULEB128(len);
-    aEW.WriteBytes(aS.mCString, len);
+    aEW.WriteBytes(aS.mCString, static_cast<Length>(len));
   }
 };
 

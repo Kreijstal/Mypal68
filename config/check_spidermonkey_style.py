@@ -369,12 +369,16 @@ def check_style(enable_fixup):
         ):
             included_h_inclnames = set()  # type: set(inclname)
 
-            with open(filename) as f:
+            # Files are stored as UTF-8 in the tree; be explicit so Windows'
+            # default codepage doesn't choke on non-ASCII bytes.
+            with open(filename, encoding="utf-8", errors="replace") as f:
                 code = read_file(f)
 
             if enable_fixup:
                 code = code.sorted(inclname)
-                with open(filename, "w") as f:
+                with open(
+                    filename, "w", encoding="utf-8", errors="replace"
+                ) as f:
                     f.write(code.to_source())
 
             check_file(

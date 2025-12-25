@@ -29,7 +29,7 @@ class TextTrackCueList final : public nsISupports, public nsWrapperCache {
 
   nsISupports* GetParentObject() const { return mParent; }
 
-  uint32_t Length() const { return mList.Length(); }
+  uint32_t Length() const { return static_cast<uint32_t>(mList.Length()); }
 
   bool IsEmpty() const { return mList.Length() == 0; }
 

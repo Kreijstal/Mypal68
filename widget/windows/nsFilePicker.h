@@ -7,6 +7,15 @@
 
 #include <windows.h>
 
+// We target older Windows versions, but the Vista+ file dialog interfaces and
+// related response enums are only visible when the SDK sees a newer
+// _WIN32_WINNT. Bump the version just for this header so shobjidl.h exposes the
+// full definitions.
+#undef _WIN32_WINNT
+#undef WINVER
+#define _WIN32_WINNT 0x0600
+#define WINVER _WIN32_WINNT
+
 #include "nsIFile.h"
 #include "nsITimer.h"
 #include "nsISimpleEnumerator.h"

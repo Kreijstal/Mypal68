@@ -173,7 +173,8 @@ bool WebGLContext::ValidateInvalidateFramebuffer(
   }
   DoBindFB(fb, target);
 
-  *out_glNumAttachments = attachments.Length();
+  *out_glNumAttachments =
+      static_cast<GLsizei>(attachments.Length());
   *out_glAttachments = attachments.Elements();
 
   if (fb) {
@@ -206,7 +207,8 @@ bool WebGLContext::ValidateInvalidateFramebuffer(
             MOZ_CRASH();
         }
       }
-      *out_glNumAttachments = scopedVector->size();
+      *out_glNumAttachments =
+          static_cast<GLsizei>(scopedVector->size());
       *out_glAttachments = scopedVector->data();
     }
   }

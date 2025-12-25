@@ -21,7 +21,7 @@ uint64_t IdentifierHashFunc(const char* name, size_t len) {
   // NB: we use the x86 function everywhere, even though it's suboptimal perf
   // on x64.  They return different results; not sure if that's a requirement.
   uint64_t hash[2];
-  MurmurHash3_x86_128(name, len, 0, hash);
+  MurmurHash3_x86_128(name, static_cast<int>(len), 0, hash);
   return hash[0];
 }
 

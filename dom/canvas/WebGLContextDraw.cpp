@@ -800,17 +800,25 @@ void WebGLContext::DrawElementsInstanced(GLenum mode, GLsizei indexCount,
         break;
     }
 
+    const auto checkedIndexCapacity = CheckedInt<uint32_t>(indexCapacity);
+    if (!checkedIndexCapacity.isValid()) {
+      ErrorInvalidOperation("Index buffer too large.");
+      return;
+    }
+    const uint32_t maxIndexCapacity = checkedIndexCapacity.value();
+
     uint32_t maxVertId = 0;
     const auto isFetchValid = [&]() {
       if (!indexCount || !instanceCount) return true;
 
       const auto globalMaxVertId =
-          indexBuffer->GetIndexedFetchMaxVert(type, 0, indexCapacity);
+          indexBuffer->GetIndexedFetchMaxVert(type, 0, maxIndexCapacity);
       if (!globalMaxVertId) return true;
       if (globalMaxVertId.value() < fetchLimits->maxVerts) return true;
 
       const auto exactMaxVertId =
-          indexBuffer->GetIndexedFetchMaxVert(type, byteOffset, indexCount);
+          indexBuffer->GetIndexedFetchMaxVert(
+              type, byteOffset, static_cast<uint32_t>(indexCount));
       maxVertId = exactMaxVertId.value();
       return maxVertId < fetchLimits->maxVerts;
     }();

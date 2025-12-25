@@ -481,7 +481,9 @@ class EventListenerManager final : public EventListenerManagerBase {
 
   size_t SizeOfIncludingThis(MallocSizeOf aMallocSizeOf) const;
 
-  uint32_t ListenerCount() const { return mListeners.Length(); }
+  uint32_t ListenerCount() const {
+    return static_cast<uint32_t>(mListeners.Length());
+  }
 
   void MarkForCC();
 

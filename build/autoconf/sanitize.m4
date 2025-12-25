@@ -130,6 +130,12 @@ dnl ========================================================
 dnl = Test for whether the compiler is compatible with the
 dnl = given sanitize options.
 dnl ========================================================
+_moz_have_sanitizers="$MOZ_ASAN$MOZ_MSAN$MOZ_TSAN$MOZ_UBSAN$MOZ_SIGNED_OVERFLOW_SANITIZE$MOZ_UNSIGNED_OVERFLOW_SANITIZE$LIBFUZZER"
+# Only probe the compiler when we actually enabled any sanitizer knobs; on some
+# Windows MinGW setups the default -mwindows flags make the empty AC_TRY_LINK
+# program fail to link even though no sanitizers are requested.
+if test -n "$_moz_have_sanitizers"; then
 AC_TRY_LINK(,,,AC_MSG_ERROR([compiler is incompatible with sanitize options]))
+fi
 
 ])

@@ -409,8 +409,8 @@ char16_t* CopyUnicodeTo(const nsAString& aSource, uint32_t aSrcOffset,
  * buffer only if there are unpaired surrogates.
  */
 [[nodiscard]] inline bool EnsureUTF16Validity(nsAString& aString) {
-  uint32_t upTo = mozilla::Utf16ValidUpTo(aString);
-  uint32_t len = aString.Length();
+  const size_t upTo = mozilla::Utf16ValidUpTo(aString);
+  const size_t len = aString.Length();
   if (upTo == len) {
     return true;
   }

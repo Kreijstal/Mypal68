@@ -595,7 +595,8 @@ static bool ZeroTextureData(const WebGLContext* webgl, GLuint tex,
 
     const auto error =
         DoCompressedTexSubImage(gl, target.get(), level, 0, 0, 0, width, height,
-                                depth, sizedFormat, byteCount, zeros.get());
+                                depth, sizedFormat,
+                                static_cast<GLsizei>(byteCount), zeros.get());
     return !error;
   }
 

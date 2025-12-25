@@ -335,7 +335,7 @@ class PLDHashTable {
                              uint32_t aEntrySize) {
       char* entries = Entries(aCapacity);
       char* entry = reinterpret_cast<char*>(aEntry);
-      uint32_t entryOffset = entry - entries;
+      uint32_t entryOffset = static_cast<uint32_t>(entry - entries);
       uint32_t slotIndex = entryOffset / aEntrySize;
       return SlotForIndex(slotIndex, aEntrySize, aCapacity);
     }

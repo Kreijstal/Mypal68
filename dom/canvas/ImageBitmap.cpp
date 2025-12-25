@@ -1358,7 +1358,7 @@ bool ImageBitmap::WriteStructuredClone(
   const uint32_t alphaType = BitwiseCast<uint32_t>(aImageBitmap->mAlphaType);
 
   // Indexing the cloned surfaces and send the index to the receiver.
-  uint32_t index = aClonedSurfaces.Length();
+  uint32_t index = static_cast<uint32_t>(aClonedSurfaces.Length());
 
   if (NS_WARN_IF(!JS_WriteUint32Pair(aWriter, SCTAG_DOM_IMAGEBITMAP, index)) ||
       NS_WARN_IF(!JS_WriteUint32Pair(aWriter, picRectX, picRectY)) ||

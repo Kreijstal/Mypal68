@@ -3114,4 +3114,6 @@ already_AddRefed<Promise> CreateRejectedPromiseFromThrownException(
 }  // namespace dom
 }  // namespace mozilla
 
+#include "mozilla/dom/BindingUtilsInlines.h"
+
 #endif /* mozilla_dom_BindingUtils_h__ */

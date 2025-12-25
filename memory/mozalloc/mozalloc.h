@@ -12,6 +12,7 @@
 #if defined(__cplusplus)
 extern "C++" {
 #  include <new>
+#  include <wchar.h>
 // Since libstdc++ 6, including the C headers (e.g. stdlib.h) instead of the
 // corresponding C++ header (e.g. cstdlib) can cause confusion in C++ code
 // using things defined there. Specifically, with stdlib.h, the use of abs()

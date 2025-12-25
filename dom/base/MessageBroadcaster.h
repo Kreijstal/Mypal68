@@ -30,7 +30,9 @@ class MessageBroadcaster : public MessageListenerManager {
     DispatchAsyncMessage(aCx, aMessageName, aObj, JS::UndefinedHandleValue,
                          aError);
   }
-  uint32_t ChildCount() { return mChildManagers.Length(); }
+  uint32_t ChildCount() {
+    return static_cast<uint32_t>(mChildManagers.Length());
+  }
   MessageListenerManager* GetChildAt(uint32_t aIndex) {
     return mChildManagers.SafeElementAt(aIndex);
   }

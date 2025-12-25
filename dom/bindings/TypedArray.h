@@ -136,7 +136,7 @@ struct TypedArray_base : public SpiderMonkeyInterfaceObjectStorage,
         ArrayT::fromObject(mImplObj).getLengthAndData(&length, &mShared, nogc);
     MOZ_RELEASE_ASSERT(length <= INT32_MAX,
                        "Bindings must have checked ArrayBuffer{View} length");
-    mLength = length;
+    mLength = static_cast<uint32_t>(length);
     mComputed = true;
   }
 

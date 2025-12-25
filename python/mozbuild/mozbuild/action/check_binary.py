@@ -10,7 +10,39 @@ import re
 import subprocess
 import sys
 
-from distutils.version import StrictVersion as Version
+try:
+    from distutils.version import StrictVersion as Version
+except ImportError:
+    # Python 3.12+ removed distutils; provide a tiny replacement that supports
+    # dotted numeric comparisons which is all we need here.
+    class Version(object):
+        def __init__(self, value):
+            parts = str(value).split('.')
+            self._parts = tuple(int(p) for p in parts)
+
+        def _key(self):
+            return self._parts
+
+        def __lt__(self, other):
+            return self._key() < Version(other)._key()
+
+        def __le__(self, other):
+            return self._key() <= Version(other)._key()
+
+        def __eq__(self, other):
+            return self._key() == Version(other)._key()
+
+        def __ne__(self, other):
+            return self._key() != Version(other)._key()
+
+        def __gt__(self, other):
+            return self._key() > Version(other)._key()
+
+        def __ge__(self, other):
+            return self._key() >= Version(other)._key()
+
+        def __repr__(self):
+            return "Version(%s)" % ('.'.join(map(str, self._parts)))
 
 import buildconfig
 from mozbuild.util import memoize

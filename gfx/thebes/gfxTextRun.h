@@ -654,7 +654,7 @@ class gfxTextRun : public gfxShapedText {
 
   const GlyphRun* GetGlyphRuns(uint32_t* aNumGlyphRuns) const {
     if (mHasGlyphRunArray) {
-      *aNumGlyphRuns = mGlyphRunArray.Length();
+      *aNumGlyphRuns = static_cast<uint32_t>(mGlyphRunArray.Length());
       return mGlyphRunArray.Elements();
     } else {
       *aNumGlyphRuns = mSingleGlyphRun.mFont ? 1 : 0;

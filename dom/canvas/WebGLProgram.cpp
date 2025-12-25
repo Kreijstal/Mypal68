@@ -1216,8 +1216,8 @@ void WebGLProgram::LinkProgram() {
     }
 
     mContext->gl->fTransformFeedbackVaryings(
-        mGLName, driverVaryings.size(), driverVaryings.data(),
-        mNextLink_TransformFeedbackBufferMode);
+        mGLName, static_cast<GLsizei>(driverVaryings.size()),
+        driverVaryings.data(), mNextLink_TransformFeedbackBufferMode);
   }
 
   LinkAndUpdate();

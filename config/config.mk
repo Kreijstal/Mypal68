@@ -318,10 +318,12 @@ else
 WIN32_EXE_LDFLAGS      += -STACK:1572864
 endif
 else
+# GNU ld/LLD with MinGW target expects the --stack option instead of the
+# MSVC-style -STACK: flag.
 ifneq ($(CPU_ARCH),x86)
-MOZ_PROGRAM_LDFLAGS += -Wl,-Xlink=-STACK:8388608
+MOZ_PROGRAM_LDFLAGS += -Wl,--stack,8388608
 else
-MOZ_PROGRAM_LDFLAGS += -Wl,-Xlink=-STACK:1572864
+MOZ_PROGRAM_LDFLAGS += -Wl,--stack,1572864
 endif
 endif
 endif

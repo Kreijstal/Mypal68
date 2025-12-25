@@ -1342,7 +1342,9 @@ class Layer {
   const LayerIntRegion& GetVisibleRegion() const { return mVisibleRegion; }
   const ScrollMetadata& GetScrollMetadata(uint32_t aIndex) const;
   const FrameMetrics& GetFrameMetrics(uint32_t aIndex) const;
-  uint32_t GetScrollMetadataCount() const { return mScrollMetadata.Length(); }
+  uint32_t GetScrollMetadataCount() const {
+    return static_cast<uint32_t>(mScrollMetadata.Length());
+  }
   const nsTArray<ScrollMetadata>& GetAllScrollMetadata() {
     return mScrollMetadata;
   }

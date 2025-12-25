@@ -92,8 +92,9 @@ class WebGLFBAttachPoint final {
     if (!HasAttachment() || !other.HasAttachment()) return false;
 
 #define _(X) (X == other.X)
-    return (_(mRenderbufferPtr) & _(mTexturePtr) & _(mTexImageTarget.get()) &
-            _(mTexImageLevel) & _(mTexImageLayer));
+    return (_(mRenderbufferPtr) && _(mTexturePtr) &&
+            _(mTexImageTarget.get()) && _(mTexImageLevel) &&
+            _(mTexImageLayer));
 #undef _
   }
 

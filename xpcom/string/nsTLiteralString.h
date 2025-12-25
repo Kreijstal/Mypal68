@@ -91,7 +91,7 @@ class nsTLiteralString : public mozilla::detail::nsTStringRepr<T> {
 #endif
   // Only for use by operator""
   constexpr nsTLiteralString(const char_type* aStr, size_t aLen)
-      : base_string_type(const_cast<char_type*>(aStr), aLen,
+      : base_string_type(const_cast<char_type*>(aStr), static_cast<size_type>(aLen),
                          DataFlags::TERMINATED | DataFlags::LITERAL,
                          ClassFlags::NULL_TERMINATED) {}
 

@@ -178,7 +178,7 @@ struct FloatOrInt final  // For TexParameter[fi] and friends.
   explicit FloatOrInt(GLfloat x) : isFloat(true), f(x), i(roundf(x)) {}
 
   FloatOrInt& operator=(const FloatOrInt& x) {
-    memcpy(this, &x, sizeof(x));
+    memcpy(static_cast<void*>(this), &x, sizeof(x));
     return *this;
   }
 };
@@ -1445,7 +1445,8 @@ class WebGLContext : public nsICanvasRenderingContextInternal,
   void VertexAttrib1fv(GLuint index, const Float32ListU& list) {
     const FuncScope funcScope(*this, "vertexAttrib1fv");
     const auto& arr = Float32Arr::From(list);
-    if (!ValidateAttribArraySetter(1, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(1, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     VertexAttrib4f(index, arr.elemBytes[0], 0, 0, 1);
   }
@@ -1453,7 +1454,8 @@ class WebGLContext : public nsICanvasRenderingContextInternal,
   void VertexAttrib2fv(GLuint index, const Float32ListU& list) {
     const FuncScope funcScope(*this, "vertexAttrib2fv");
     const auto& arr = Float32Arr::From(list);
-    if (!ValidateAttribArraySetter(2, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(2, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     VertexAttrib4f(index, arr.elemBytes[0], arr.elemBytes[1], 0, 1);
   }
@@ -1461,7 +1463,8 @@ class WebGLContext : public nsICanvasRenderingContextInternal,
   void VertexAttrib3fv(GLuint index, const Float32ListU& list) {
     const FuncScope funcScope(*this, "vertexAttrib3fv");
     const auto& arr = Float32Arr::From(list);
-    if (!ValidateAttribArraySetter(3, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(3, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     VertexAttrib4f(index, arr.elemBytes[0], arr.elemBytes[1], arr.elemBytes[2],
                    1);
@@ -1470,7 +1473,8 @@ class WebGLContext : public nsICanvasRenderingContextInternal,
   void VertexAttrib4fv(GLuint index, const Float32ListU& list) {
     const FuncScope funcScope(*this, "vertexAttrib4fv");
     const auto& arr = Float32Arr::From(list);
-    if (!ValidateAttribArraySetter(4, arr.elemCount)) return;
+    if (!ValidateAttribArraySetter(4, static_cast<uint32_t>(arr.elemCount)))
+      return;
 
     VertexAttrib4f(index, arr.elemBytes[0], arr.elemBytes[1], arr.elemBytes[2],
                    arr.elemBytes[3]);

@@ -368,7 +368,7 @@ inline nsAtom* StyleCustomIdent::AsAtom() const { return _0.AsAtom(); }
 inline nsDependentCSubstring StyleOwnedStr::AsString() const {
   Span<const uint8_t> s = _0.AsSpan();
   return nsDependentCSubstring(reinterpret_cast<const char*>(s.Elements()),
-                               s.Length());
+                               static_cast<uint32_t>(s.Length()));
 }
 
 template <typename T>

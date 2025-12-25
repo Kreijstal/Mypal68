@@ -94,12 +94,13 @@ LOCAL_INCLUDES += [
     "/xpcom/base",  # for nsVersionComparator.cpp
 ]
 
-DELAYLOAD_DLLS += [
-    "crypt32.dll",
-    "comctl32.dll",
-    "userenv.dll",
-    "wsock32.dll",
-]
+if CONFIG["CC_TYPE"] in ("msvc", "clang-cl"):
+    DELAYLOAD_DLLS += [
+        "crypt32.dll",
+        "comctl32.dll",
+        "userenv.dll",
+        "wsock32.dll",
+    ]
 
 if CONFIG["CC_TYPE"] == "clang-cl":
     WIN32_EXE_LDFLAGS += ["-ENTRY:wmainCRTStartup"]

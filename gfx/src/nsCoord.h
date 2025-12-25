@@ -106,7 +106,8 @@ inline nscoord NSCoordDivRem(nscoord aSpace, size_t aN, nscoord* aQuotient) {
   *aQuotient = aSpace / aN;
   return 0.0f;
 #else
-  div_t result = div(aSpace, aN);
+  // Explicitly cast to the narrow div() parameter type to avoid 64->32 warnings
+  div_t result = div(static_cast<int>(aSpace), static_cast<int>(aN));
   *aQuotient = nscoord(result.quot);
   return nscoord(result.rem);
 #endif
@@ -116,7 +117,8 @@ inline nscoord NSCoordMulDiv(nscoord aMult1, nscoord aMult2, nscoord aDiv) {
 #ifdef NS_COORD_IS_FLOAT
   return (aMult1 * aMult2 / aDiv);
 #else
-  return (int64_t(aMult1) * int64_t(aMult2) / int64_t(aDiv));
+  return static_cast<nscoord>(
+      (int64_t(aMult1) * int64_t(aMult2) / int64_t(aDiv)));
 #endif
 }
 

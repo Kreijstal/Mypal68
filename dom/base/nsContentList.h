@@ -42,7 +42,9 @@ class nsBaseContentList : public nsINodeList {
   virtual int32_t IndexOf(nsIContent* aContent) override;
   virtual nsIContent* Item(uint32_t aIndex) override;
 
-  uint32_t Length() override { return mElements.Length(); }
+  uint32_t Length() override {
+    return static_cast<uint32_t>(mElements.Length());
+  }
 
   NS_DECL_CYCLE_COLLECTION_SKIPPABLE_SCRIPT_HOLDER_CLASS(nsBaseContentList)
 

@@ -468,7 +468,8 @@ WebGLFramebuffer::WebGLFramebuffer(WebGLContext* webgl, GLuint fbo)
 
   size_t i = 0;
   for (auto& cur : mColorAttachments) {
-    new (&cur) WebGLFBAttachPoint(webgl, LOCAL_GL_COLOR_ATTACHMENT0 + i);
+    new (&cur) WebGLFBAttachPoint(
+        webgl, LOCAL_GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i));
     i++;
 
     mAttachments.push_back(&cur);
@@ -894,7 +895,8 @@ void WebGLFramebuffer::ResolveAttachmentData() const {
   if (!clearBits) return;
 
   if (gl->IsSupported(gl::GLFeature::draw_buffers)) {
-    gl->fDrawBuffers(drawBufferForClear.size(), drawBufferForClear.data());
+    gl->fDrawBuffers(static_cast<GLsizei>(drawBufferForClear.size()),
+                     drawBufferForClear.data());
   }
 
   gl->fClear(clearBits);
@@ -1008,7 +1010,8 @@ void WebGLFramebuffer::RefreshDrawBuffers() const {
     }
   }
 
-  gl->fDrawBuffers(driverBuffers.size(), driverBuffers.data());
+  gl->fDrawBuffers(static_cast<GLsizei>(driverBuffers.size()),
+                   driverBuffers.data());
 }
 
 void WebGLFramebuffer::RefreshReadBuffer() const {

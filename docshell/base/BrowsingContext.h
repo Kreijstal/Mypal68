@@ -262,7 +262,7 @@ class BrowsingContext : public nsWrapperCache, public BrowsingContextBase {
   void Focus(ErrorResult& aError);
   void Blur(ErrorResult& aError);
   BrowsingContext* GetFrames(ErrorResult& aError) { return Self(); }
-  int32_t Length() const { return mChildren.Length(); }
+  int32_t Length() const { return static_cast<int32_t>(mChildren.Length()); }
   Nullable<WindowProxyHolder> GetTop(ErrorResult& aError);
   void GetOpener(JSContext* aCx, JS::MutableHandle<JS::Value> aOpener,
                  ErrorResult& aError) const;

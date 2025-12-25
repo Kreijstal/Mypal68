@@ -41,7 +41,7 @@ class DataTransferItemList final : public nsISupports, public nsWrapperCache {
   virtual JSObject* WrapObject(JSContext* aCx,
                                JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t Length() const { return mItems.Length(); };
+  uint32_t Length() const { return static_cast<uint32_t>(mItems.Length()); };
 
   DataTransferItem* Add(const nsAString& aData, const nsAString& aType,
                         nsIPrincipal& aSubjectPrincipal, ErrorResult& rv);

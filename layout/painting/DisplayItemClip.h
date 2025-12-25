@@ -170,7 +170,9 @@ class DisplayItemClip {
 
   nsCString ToString() const;
 
-  uint32_t GetRoundedRectCount() const { return mRoundedClipRects.Length(); }
+  uint32_t GetRoundedRectCount() const {
+    return static_cast<uint32_t>(mRoundedClipRects.Length());
+  }
   void AppendRoundedRects(nsTArray<RoundedRect>* aArray) const;
 
 #ifdef MOZ_BUILD_WEBRENDER

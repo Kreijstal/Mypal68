@@ -31,7 +31,7 @@ class TextTrackList final : public DOMEventTargetHelper {
   JSObject* WrapObject(JSContext* aCx,
                        JS::Handle<JSObject*> aGivenProto) override;
 
-  uint32_t Length() const { return mTextTracks.Length(); }
+  uint32_t Length() const { return static_cast<uint32_t>(mTextTracks.Length()); }
 
   // Get all the current active cues.
   void GetShowingCues(nsTArray<RefPtr<TextTrackCue>>& aCues);

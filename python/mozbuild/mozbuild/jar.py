@@ -16,7 +16,7 @@ import errno
 import re
 import six
 import logging
-from time import localtime
+import time
 from MozZipFile import ZipFile
 from io import BytesIO
 
@@ -60,8 +60,7 @@ class ZipEntry(object):
 def getModTime(aPath):
     if not os.path.isfile(aPath):
         return 0
-    mtime = os.stat(aPath).st_mtime
-    return localtime(mtime)
+    return os.stat(aPath).st_mtime
 
 
 class JarManifestEntry(object):
@@ -503,7 +502,9 @@ class JarMaker(object):
         def getDestModTime(self, aPath):
             try:
                 info = self.jarfile.getinfo(aPath)
-                return info.date_time
+                # ZipInfo stores a (Y, M, D, H, M, S) tuple; normalize to a
+                # POSIX timestamp for sane comparisons under Python 3.
+                return time.mktime(info.date_time + (0, 0, -1))
             except Exception:
                 return 0
 

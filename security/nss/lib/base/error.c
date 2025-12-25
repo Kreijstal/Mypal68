@@ -88,7 +88,8 @@ error_once_function(void)
     if (nss3) {
         FARPROC freePtr = GetProcAddress(nss3, "PR_Free");
         if (freePtr) {
-            return PR_NewThreadPrivateIndex(&error_stack_index, freePtr);
+            return PR_NewThreadPrivateIndex(
+                &error_stack_index, (PRThreadPrivateDTOR)freePtr);
         }
     }
     return PR_NewThreadPrivateIndex(&error_stack_index, PR_Free);

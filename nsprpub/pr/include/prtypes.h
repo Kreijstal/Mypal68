@@ -94,6 +94,15 @@
 #define PR_IMPORT(__type) extern PR_VISIBILITY_DEFAULT __type
 #define PR_IMPORT_DATA(__type) extern PR_VISIBILITY_DEFAULT __type
 
+#ifdef __MINGW32__
+/* Using dllimport with mingw/clang leads to unresolved imports when
+ * linking folded libraries. Treat imports as normal externs instead. */
+#  undef PR_IMPORT
+#  undef PR_IMPORT_DATA
+#  define PR_IMPORT(__type) extern __type
+#  define PR_IMPORT_DATA(__type) extern __type
+#endif
+
 #define PR_EXTERN(__type) extern PR_VISIBILITY_DEFAULT __type
 #define PR_IMPLEMENT(__type) PR_VISIBILITY_DEFAULT __type
 #define PR_EXTERN_DATA(__type) extern PR_VISIBILITY_DEFAULT __type
@@ -104,7 +113,7 @@
 
 #endif
 
-#if defined(_NSPR_BUILD_)
+#if defined(_NSPR_BUILD_) || defined(__MINGW32__)
 #define NSPR_API(__type) PR_EXPORT(__type)
 #define NSPR_DATA_API(__type) PR_EXPORT_DATA(__type)
 #else
@@ -557,4 +566,3 @@ typedef unsigned long PRUword;
 PR_END_EXTERN_C
 
 #endif /* prtypes_h___ */
-

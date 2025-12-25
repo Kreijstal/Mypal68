@@ -86,8 +86,8 @@ class PuppetWidget : public nsBaseWidget,
 
   virtual void ConstrainPosition(bool /*ignored aAllowSlop*/, int32_t* aX,
                                  int32_t* aY) override {
-    *aX = kMaxDimension;
-    *aY = kMaxDimension;
+    *aX = static_cast<int32_t>(kMaxDimension);
+    *aY = static_cast<int32_t>(kMaxDimension);
   }
 
   // Widget position is controlled by the parent process via BrowserChild.

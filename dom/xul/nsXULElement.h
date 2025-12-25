@@ -175,7 +175,8 @@ class nsXULPrototypeElement : public nsXULPrototypeNode {
 
  public:
   virtual void ReleaseSubtree() override {
-    for (int32_t i = mChildren.Length() - 1; i >= 0; i--) {
+    for (int32_t i = static_cast<int32_t>(mChildren.Length()) - 1; i >= 0;
+         i--) {
       if (mChildren[i].get()) mChildren[i]->ReleaseSubtree();
     }
     mChildren.Clear();

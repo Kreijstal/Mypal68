@@ -957,7 +957,7 @@ class gfxFontFamily {
 
   // set whether this font family is in "bad" underline offset blacklist.
   void SetBadUnderlineFonts() {
-    uint32_t i, numFonts = mAvailableFonts.Length();
+    uint32_t i, numFonts = static_cast<uint32_t>(mAvailableFonts.Length());
     for (i = 0; i < numFonts; i++) {
       if (mAvailableFonts[i]) {
         mAvailableFonts[i]->mIsBadUnderlineFont = true;

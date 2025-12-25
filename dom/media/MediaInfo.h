@@ -202,10 +202,12 @@ class VideoInfo : public TrackInfo {
       return imageRect;
     }
 
-    imageRect.x = (imageRect.x * aWidth) / mImage.width;
-    imageRect.y = (imageRect.y * aHeight) / mImage.height;
-    imageRect.SetWidth(w);
-    imageRect.SetHeight(h);
+    imageRect.x = static_cast<int32_t>((int64_t(imageRect.x) * aWidth) /
+                                       mImage.width);
+    imageRect.y = static_cast<int32_t>((int64_t(imageRect.y) * aHeight) /
+                                       mImage.height);
+    imageRect.SetWidth(static_cast<int32_t>(w));
+    imageRect.SetHeight(static_cast<int32_t>(h));
     return imageRect;
   }
 
