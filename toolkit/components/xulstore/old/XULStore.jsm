@@ -57,17 +57,26 @@ XULStore.prototype = {
   load() {
     Services.obs.addObserver(this, "profile-before-change", true);
 
-    try {
-      this._storeFile = Services.dirsvc.get("ProfD", Ci.nsIFile);
-    } catch (ex) {
+    // Try to locate a writable directory. If the profile directory is not
+    // available (headless startup, broken profiles.ini, etc.) we fall back to
+    // the system temp directory so that initialization does not abort the UI.
+    const candidates = ["ProfD", "ProfDS", "TmpD"];
+    for (let key of candidates) {
       try {
-        this._storeFile = Services.dirsvc.get("ProfDS", Ci.nsIFile);
+        this._storeFile = Services.dirsvc.get(key, Ci.nsIFile);
+        break;
       } catch (ex) {
-        throw new Error("Can't find profile directory.");
+        // try next candidate
       }
     }
-    this._storeFile.append(STOREDB_FILENAME);
 
+    if (!this._storeFile) {
+      this._saveAllowed = false;
+      this.log("No profile directory available for XULStore; using in-memory store.");
+      return;
+    }
+
+    this._storeFile.append(STOREDB_FILENAME);
     this.readFile();
   },
 
@@ -89,6 +98,10 @@ XULStore.prototype = {
   },
 
   readFile() {
+    if (!this._storeFile) {
+      return;
+    }
+
     try {
       this._data = JSON.parse(Cu.readUTF8File(this._storeFile));
     } catch (e) {
@@ -99,7 +112,7 @@ XULStore.prototype = {
   },
 
   async writeFile() {
-    if (!this._needsSaving) {
+    if (!this._needsSaving || !this._storeFile || !this._saveAllowed) {
       return;
     }
 

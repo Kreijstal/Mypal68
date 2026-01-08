@@ -5,6 +5,10 @@
 /**
  * SidebarUI controls showing and hiding the browser sidebar.
  */
+const { PromiseUtils } = ChromeUtils.import(
+  "resource://gre/modules/PromiseUtils.jsm"
+);
+
 var SidebarUI = {
   get sidebars() {
     if (this._sidebars) {

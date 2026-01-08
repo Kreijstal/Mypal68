@@ -467,7 +467,7 @@ class JarMaker(object):
 
         if e.preprocess:
             outf = outHelper.getOutput(out)
-            inf = open(realsrc)
+            inf = open(realsrc, 'r', encoding='utf-8', errors='replace')
             pp = self.pp.clone()
             if src[-4:] == '.css':
                 pp.setMarker('%')

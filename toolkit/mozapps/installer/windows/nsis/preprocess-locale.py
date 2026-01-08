@@ -16,6 +16,13 @@ from os.path import join, isfile
 import sys
 from optparse import OptionParser
 
+
+def to_text(value):
+    """
+    Ensure we have a str instance, decoding UTF-8 bytes when needed.
+    """
+    return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+
 def open_utf16le_file(path):
     """
     Returns an opened file object with a a UTF-16LE byte order mark.
@@ -37,7 +44,7 @@ def get_locale_strings(path, prefix, middle, add_cr):
              linefeeds when there isn't one already
     """
     output = ""
-    fp = open(path, "r")
+    fp = open(path, "r", encoding="utf-8", errors="replace")
     for line in fp:
         line = line.strip()
         if line == "" or line[0] == "#":
@@ -84,7 +91,7 @@ def preprocess_locale_files(config_dir, l10ndirs):
                                         "LangString ^",
                                         " 0 ",
                                         False)
-    fp.write(unicode(locale_strings, "utf-8").encode("utf-16-le"))
+    fp.write(to_text(locale_strings).encode("utf-16-le"))
     fp.close()
 
     # Create the Modern User Interface language file
@@ -97,7 +104,7 @@ def preprocess_locale_files(config_dir, l10ndirs):
 """).encode("utf-16-le"))
     locale_strings = get_locale_strings(lookup("mui.properties", l10ndirs),
                                         "!define ", " ", True)
-    fp.write(unicode(locale_strings, "utf-8").encode("utf-16-le"))
+    fp.write(to_text(locale_strings).encode("utf-16-le"))
     fp.write(u"!insertmacro MOZ_MUI_LANGUAGEFILE_END\n".encode("utf-16-le"))
     fp.close()
 
@@ -108,7 +115,7 @@ def preprocess_locale_files(config_dir, l10ndirs):
                                         "LangString ",
                                         " 0 ",
                                         True)
-    fp.write(unicode(locale_strings, "utf-8").encode("utf-16-le"))
+    fp.write(to_text(locale_strings).encode("utf-16-le"))
     fp.close()
 
 def create_nlf_file(moz_dir, ab_cd, config_dir):
@@ -175,7 +182,7 @@ def preprocess_locale_file(config_dir,
                                         "LangString ",
                                         " 0 ",
                                         True)
-    fp.write(unicode(locale_strings, "utf-8").encode("utf-16-le"))
+    fp.write(to_text(locale_strings).encode("utf-16-le"))
     fp.close()
 
 
@@ -187,9 +194,9 @@ def convert_utf8_utf16le(in_file_path, out_file_path):
     in_file_path  - the path to the UTF-8 source file to convert
     out_file_path - the path to the UTF-16LE destination file to create
     """
-    in_fp = open(in_file_path, "r")
+    in_fp = open(in_file_path, "r", encoding="utf-8", errors="replace")
     out_fp = open_utf16le_file(out_file_path)
-    out_fp.write(unicode(in_fp.read(), "utf-8").encode("utf-16-le"))
+    out_fp.write(to_text(in_fp.read()).encode("utf-16-le"))
     in_fp.close()
     out_fp.close()
 

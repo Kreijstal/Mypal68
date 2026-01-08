@@ -9,5 +9,6 @@ from __future__ import unicode_literals, print_function
 def main(output, locale=None):
     assert(locale is not None)
     # update.locale is a trivial file but let's be unicode aware anyway.
-    locale = unicode(locale, 'utf_8')
+    if isinstance(locale, bytes):
+        locale = locale.decode('utf-8')
     print(locale, file=output)

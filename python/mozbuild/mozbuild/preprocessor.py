@@ -455,20 +455,32 @@ class Preprocessor:
         if not self.out:
             return
 
+        def _write_out(value):
+            out_value = value
+            if isinstance(out_value, str):
+                out_mode = getattr(self.out, 'mode', '')
+                if isinstance(out_mode, str) and 'b' in out_mode:
+                    out_value = out_value.encode('utf-8')
+            try:
+                self.out.write(out_value)
+            except TypeError:
+                # Streams without a mode attribute (e.g. BytesIO) still expect bytes.
+                self.out.write(out_value.encode('utf-8'))
+
         next_line, next_file = self.context['LINE'], self.context['FILE']
         if self.checkLineNumbers:
             expected_file, expected_line = self.line_info
             expected_line += 1
             if (expected_line != next_line or
                 expected_file and expected_file != next_file):
-                self.out.write('//@line {line} "{file}"\n'.format(line=next_line,
-                                                                  file=next_file))
+                _write_out('//@line {line} "{file}"\n'.format(line=next_line,
+                                                              file=next_file))
         self.noteLineInfo()
 
         filteredLine = self.applyFilters(aLine)
         if filteredLine != aLine:
             self.actionLevel = 2
-        self.out.write(filteredLine)
+        _write_out(filteredLine)
 
     def handleCommandLine(self, args, defaultToStdin=False):
         """

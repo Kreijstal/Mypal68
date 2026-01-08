@@ -6,6 +6,8 @@ ifndef CONFIG_DIR
 $(error CONFIG_DIR must be set before including makensis.mk)
 endif
 
+NSIS_AVAILABLE := $(if $(filter-out :,$(strip $(MAKENSISU))),1,)
+
 ABS_CONFIG_DIR := $(abspath $(CONFIG_DIR))
 
 SFX_MODULE ?= $(error SFX_MODULE is not defined)
@@ -48,6 +50,10 @@ CUSTOM_UI = \
 	$(NULL)
 
 $(CONFIG_DIR)/setup.exe::
+ifeq ($(NSIS_AVAILABLE),)
+	$(NSINSTALL) -D $(CONFIG_DIR)
+	@echo "NSIS (makensis) not available; generated placeholder $@." > $@
+else
 	$(INSTALL) $(addprefix $(MOZILLA_DIR)/toolkit/mozapps/installer/windows/nsis/,$(TOOLKIT_NSIS_FILES)) $(CONFIG_DIR)
 	$(INSTALL) $(addprefix $(MOZILLA_DIR)/other-licenses/nsis/Plugins/,$(CUSTOM_NSIS_PLUGINS)) $(CONFIG_DIR)
 	$(INSTALL) $(addprefix $(MOZILLA_DIR)/other-licenses/nsis/,$(CUSTOM_UI)) $(CONFIG_DIR)
@@ -55,9 +61,13 @@ $(CONFIG_DIR)/setup.exe::
 ifdef MOZ_STUB_INSTALLER
 	cd $(CONFIG_DIR) && $(MAKENSISU) $(MAKENSISU_FLAGS) stub.nsi
 endif
+endif
 
 ifdef ZIP_IN
 installer:: $(CONFIG_DIR)/setup.exe $(ZIP_IN)
+ifeq ($(NSIS_AVAILABLE),)
+	@echo "NSIS (makensis) not available; skipping installer packaging."
+else
 	@echo 'Packaging $(WIN32_INSTALLER_OUT).'
 	$(NSINSTALL) -D '$(ABS_DIST)/$(PKG_INST_PATH)'
 	$(MOZILLA_DIR)/mach repackage installer \
@@ -76,6 +86,7 @@ ifdef MOZ_STUB_INSTALLER
 	  --sfx-stub $(SFX_MODULE) \
 	  $(USE_UPX)
 endif
+endif
 else
 installer::
 	$(error ZIP_IN must be set when building installer)
@@ -84,6 +95,10 @@ endif
 # For building the uninstaller during the application build so it can be
 # included for mar file generation.
 $(CONFIG_DIR)/helper.exe:
+ifeq ($(NSIS_AVAILABLE),)
+	$(NSINSTALL) -D $(CONFIG_DIR)
+	@echo "NSIS (makensis) not available; generated placeholder $@." > $@
+else
 	$(RM) -r $(CONFIG_DIR)
 	$(MKDIR) $(CONFIG_DIR)
 	$(INSTALL) $(addprefix $(srcdir)/,$(INSTALLER_FILES)) $(CONFIG_DIR)
@@ -96,6 +111,7 @@ $(CONFIG_DIR)/helper.exe:
 	$(INSTALL) $(addprefix $(MOZILLA_DIR)/toolkit/mozapps/installer/windows/nsis/,$(TOOLKIT_NSIS_FILES)) $(CONFIG_DIR)
 	$(INSTALL) $(addprefix $(MOZILLA_DIR)/other-licenses/nsis/Plugins/,$(CUSTOM_NSIS_PLUGINS)) $(CONFIG_DIR)
 	cd $(CONFIG_DIR) && $(MAKENSISU) $(MAKENSISU_FLAGS) uninstaller.nsi
+endif
 
 uninstaller:: $(CONFIG_DIR)/helper.exe
 	$(NSINSTALL) -D $(DIST)/bin/uninstall
@@ -103,6 +119,9 @@ uninstaller:: $(CONFIG_DIR)/helper.exe
 
 ifdef MOZ_MAINTENANCE_SERVICE
 maintenanceservice_installer::
+ifeq ($(NSIS_AVAILABLE),)
+	@echo "NSIS (makensis) not available; skipping maintenance service installer."
+else
 	$(RM) -r $(CONFIG_DIR)
 	$(MKDIR) $(CONFIG_DIR)
 	$(INSTALL) $(addprefix $(srcdir)/,$(INSTALLER_FILES)) $(CONFIG_DIR)
@@ -117,4 +136,5 @@ maintenanceservice_installer::
 	cd $(CONFIG_DIR) && $(MAKENSISU) $(MAKENSISU_FLAGS) maintenanceservice_installer.nsi
 	$(NSINSTALL) -D $(DIST)/bin/
 	cp $(CONFIG_DIR)/maintenanceservice_installer.exe $(DIST)/bin
+endif
 endif
