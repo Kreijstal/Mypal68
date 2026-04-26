@@ -15,6 +15,11 @@
 
 class nsMediaQueryResultCacheKey;
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 namespace mozilla {
 class ErrorResult;
 class StyleSheet;
@@ -48,6 +53,7 @@ class MediaList final : public nsISupports, public nsWrapperCache {
   void SetRawAfterClone(RefPtr<RawServoMediaList> aRaw) {
     mRawList = std::move(aRaw);
   }
+  RawServoMediaList* RawList() const { return mRawList; }
 
   // WebIDL
   void GetMediaText(nsACString& aMediaText);
@@ -92,5 +98,10 @@ class MediaList final : public nsISupports, public nsWrapperCache {
 
 }  // namespace dom
 }  // namespace mozilla
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif  // mozilla_dom_MediaList_h

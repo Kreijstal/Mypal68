@@ -126,20 +126,15 @@ impl Drop for UrlExtraData {
 impl ToShmem for UrlExtraData {
     fn to_shmem(&self, _builder: &mut SharedMemoryBuilder) -> to_shmem::Result<Self> {
         if self.0 & 1 == 0 {
-            let shared_extra_datas = unsafe { &structs::URLExtraData_sShared };
             let self_ptr = self.as_ref() as *const _ as *mut _;
-            let sheet_id = shared_extra_datas
-                .iter()
-                .position(|r| r.mRawPtr == self_ptr);
-            let sheet_id = match sheet_id {
-                Some(id) => id,
-                None => {
-                    return Err(String::from(
-                        "ToShmem failed for UrlExtraData: expected sheet's URLExtraData to be in \
-                         URLExtraData::sShared",
-                    ));
-                },
-            };
+            let sheet_id =
+                unsafe { crate::gecko_bindings::bindings::Gecko_URLExtraData_SharedID(self_ptr) };
+            if sheet_id == usize::max_value() {
+                return Err(String::from(
+                    "ToShmem failed for UrlExtraData: expected sheet's URLExtraData to be in \
+                     URLExtraData::sShared",
+                ));
+            }
             Ok(ManuallyDrop::new(UrlExtraData((sheet_id << 1) | 1)))
         } else {
             Ok(ManuallyDrop::new(UrlExtraData(self.0)))
@@ -181,7 +176,7 @@ impl UrlExtraData {
         } else {
             unsafe {
                 let sheet_id = self.0 >> 1;
-                structs::URLExtraData_sShared[sheet_id].mRawPtr
+                crate::gecko_bindings::bindings::Gecko_URLExtraData_Shared(sheet_id)
             }
         }
     }

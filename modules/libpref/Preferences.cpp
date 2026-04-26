@@ -26,6 +26,7 @@
 #include "mozilla/MemoryReporting.h"
 #include "mozilla/Omnijar.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/RandomNum.h"
 #include "mozilla/ResultExtensions.h"
 #include "mozilla/ScopeExit.h"
 #include "mozilla/Services.h"
@@ -3429,7 +3430,7 @@ FileDescriptor Preferences::EnsureSnapshot(size_t* aSize, nsAutoCString& aName) 
     name.SetLength(sizeof("MSP_") + 16 * 2);
     name.AssignLiteral("MSP_");
     Maybe<uint64_t> randomNum = RandomUint64();
-    name.AppendPrintf("%016llx", *randomNum);
+    name.AppendPrintf("%016llx", static_cast<unsigned long long>(*randomNum));
 
     for (auto iter = HashTable()->iter(); !iter.done(); iter.next()) {
       iter.get()->AddToMap(builder);

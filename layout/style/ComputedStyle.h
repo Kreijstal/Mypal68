@@ -312,6 +312,20 @@ class ComputedStyle {
   const PseudoStyleType mPseudoType;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::ComputedStyle">
+ */
+struct ComputedStyle_Simple {
+  ServoComputedData mSource;
+  CachedInheritingStyles mCachedInheritingStyles;
+  const PseudoStyleType mPseudoType;
+};
+
+static_assert(sizeof(ComputedStyle) == sizeof(ComputedStyle_Simple),
+              "Size mismatch between ComputedStyle and ComputedStyle_Simple");
+static_assert(alignof(ComputedStyle) == alignof(ComputedStyle_Simple),
+              "Align mismatch between ComputedStyle and ComputedStyle_Simple");
+
 }  // namespace mozilla
 
 #endif

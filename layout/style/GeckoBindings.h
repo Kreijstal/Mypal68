@@ -72,6 +72,17 @@ bool Gecko_IsSignificantChild(const nsINode*, bool whitespace_is_significant);
 
 const nsINode* Gecko_GetLastChild(const nsINode*);
 const nsINode* Gecko_GetFlattenedTreeParentNode(const nsINode*);
+const nsINode* Gecko_Document_AsNode(const mozilla::dom::Document*);
+const nsINode* Gecko_ShadowRoot_AsNode(const mozilla::dom::ShadowRoot*);
+const nsINode* Gecko_Content_AsNode(const nsIContent*);
+const nsINode* Gecko_Node_GetParentNode(const nsINode*);
+const nsIContent* Gecko_Node_GetFirstChild(const nsINode*);
+const nsIContent* Gecko_Node_GetPreviousSibling(const nsINode*);
+const nsIContent* Gecko_Node_GetNextSibling(const nsINode*);
+const mozilla::dom::NodeInfo* Gecko_Node_NodeInfo(const nsINode*);
+const mozilla::dom::Document* Gecko_Node_OwnerDoc(const nsINode*);
+uint32_t Gecko_NodeFlags(const nsINode*);
+bool Gecko_Node_GetBoolFlag(const nsINode*, uint32_t);
 const mozilla::dom::Element* Gecko_GetBeforeOrAfterPseudo(
     const mozilla::dom::Element*, bool is_before);
 const mozilla::dom::Element* Gecko_GetMarkerPseudo(
@@ -83,6 +94,10 @@ void Gecko_DestroyAnonymousContentList(nsTArray<nsIContent*>* anon_content);
 
 const nsTArray<RefPtr<nsINode>>* Gecko_GetAssignedNodes(
     const mozilla::dom::Element*);
+const mozilla::dom::ShadowRoot* Gecko_Content_GetContainingShadow(
+    const nsIContent*);
+const mozilla::dom::HTMLSlotElement* Gecko_Content_GetAssignedSlot(
+    const nsIContent*);
 
 void Gecko_ComputedStyle_Init(mozilla::ComputedStyle* context,
                               const ServoComputedData* values,
@@ -104,6 +119,21 @@ const nsINode* Gecko_GetNextStyleChild(mozilla::dom::StyleChildrenIterator*);
 nsAtom* Gecko_Element_ImportedPart(const nsAttrValue*, nsAtom*);
 nsAtom** Gecko_Element_ExportedParts(const nsAttrValue*, nsAtom*,
                                      size_t* aOutLength);
+const nsAttrValue* Gecko_Element_GetParsedAttr(
+    const mozilla::dom::Element*, nsAtom*);
+uint32_t Gecko_Element_GetAttrCount(const mozilla::dom::Element*);
+nsAtom* Gecko_Element_GetAttrLocalNameAt(const mozilla::dom::Element*,
+                                         uint32_t);
+ServoNodeData* Gecko_Element_GetServoData(const mozilla::dom::Element*);
+void Gecko_Element_SetServoData(const mozilla::dom::Element*, ServoNodeData*);
+uint32_t Gecko_Element_AllServoDescendantBits();
+const mozilla::dom::ShadowRoot* Gecko_Element_GetShadowRoot(
+    const mozilla::dom::Element*);
+RawServoDeclarationBlock* Gecko_Element_GetSMILOverrideDeclarationBlock(
+    const mozilla::dom::Element*);
+bool Gecko_AttrValue_Contains(const nsAttrValue*, nsAtom*, bool ignore_case);
+uint32_t Gecko_AttrValue_AtomCount(const nsAttrValue*);
+nsAtom* Gecko_AttrValue_AtomAt(const nsAttrValue*, uint32_t);
 
 NS_DECL_THREADSAFE_FFI_REFCOUNTING(mozilla::css::SheetLoadDataHolder,
                                    SheetLoadDataHolder);
@@ -135,6 +165,20 @@ nsAtom* Gecko_GetXMLLangValue(const mozilla::dom::Element*);
 
 mozilla::dom::Document::DocumentTheme Gecko_GetDocumentLWTheme(
     const mozilla::dom::Document*);
+bool Gecko_Document_IsHTMLDocument(const mozilla::dom::Document*);
+bool Gecko_Document_IsBeingUsedAsImage(const mozilla::dom::Document*);
+bool Gecko_Document_IsSVGGlyphsDocument(const mozilla::dom::Document*);
+nsCompatibility Gecko_Document_QuirksMode(const mozilla::dom::Document*);
+nsIURI* Gecko_Document_GetDocumentURI(const mozilla::dom::Document*);
+const nsPresContext* Gecko_Document_GetPresContext(
+    const mozilla::dom::Document*);
+uint64_t Gecko_Document_DocumentState(const mozilla::dom::Document*);
+const mozilla::dom::Element* Gecko_ShadowRoot_Host(
+    const mozilla::dom::ShadowRoot*);
+const RawServoAuthorStyles* Gecko_ShadowRoot_GetServoStyles(
+    const mozilla::dom::ShadowRoot*);
+const nsTArray<const mozilla::dom::Element*>* Gecko_ShadowRoot_Parts(
+    const mozilla::dom::ShadowRoot*);
 
 const mozilla::PreferenceSheet::Prefs* Gecko_GetPrefSheetPrefs(
     const mozilla::dom::Document*);
@@ -198,6 +242,21 @@ Gecko_GetActiveLinkAttrDeclarationBlock(const mozilla::dom::Element* element);
 
 // Returns whether visited styles are enabled for a given document.
 bool Gecko_VisitedStylesEnabled(const mozilla::dom::Document*);
+const RawServoMediaList* Gecko_MediaList_GetRawList(
+    const mozilla::dom::MediaList*);
+RawServoDeclarationBlock* Gecko_DeclarationBlock_Raw(
+    const mozilla::DeclarationBlock*);
+mozilla::URLExtraData* Gecko_URLExtraData_Shared(size_t);
+size_t Gecko_URLExtraData_SharedID(const mozilla::URLExtraData*);
+nsAtom* Gecko_nsPresContext_Medium(const nsPresContext*);
+bool Gecko_nsPresContext_IsRootPaginatedDocument(const nsPresContext*);
+void Gecko_nsPresContext_PageSizeMinusDefaultMargin(const nsPresContext*,
+                                                    nsSize*);
+void Gecko_nsPresContext_VisibleArea(const nsPresContext*, nsRect*);
+void Gecko_nsPresContext_SizeForViewportUnits(const nsPresContext*, nsSize*);
+float Gecko_nsPresContext_OverrideDPPX(const nsPresContext*);
+int32_t Gecko_nsPresContext_AppUnitsPerDevPixel(const nsPresContext*);
+float Gecko_nsPresContext_EffectiveTextZoom(const nsPresContext*);
 
 // Animations
 bool Gecko_GetAnimationRule(

@@ -730,7 +730,12 @@ already_AddRefed<GLContext> CreateForWidget(Display* aXDisplay, Window aXWindow,
   GLXFBConfig config;
   int visid;
   if (!GLContextGLX::FindFBConfigForWindow(aXDisplay, xscreen, aXWindow, &cfgs,
-                                           &config, &visid, aWebRender)) {
+                                           &config, &visid
+#ifdef MOZ_BUILD_WEBRENDER
+                                           ,
+                                           aWebRender
+#endif
+                                           )) {
     return nullptr;
   }
 

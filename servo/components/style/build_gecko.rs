@@ -130,7 +130,7 @@ impl BuilderExt for Builder {
         // Disable rust unions, because we replace some types inside of
         // them.
         let mut builder = Builder::default()
-            .rust_target(RustTarget::Stable_1_25)
+            .rust_target(RustTarget::Stable_1_33)
             .size_t_is_usize(true)
             .disable_untagged_union();
 
@@ -153,7 +153,9 @@ impl BuilderExt for Builder {
             builder = builder.clang_arg("-I").clang_arg(dir.to_str().unwrap());
         }
 
-        builder = builder.include(add_include("mozilla-config.h"));
+        builder = builder
+            .include(add_include("mozilla-config.h"))
+            .clang_arg("-DRUST_BINDGEN=1");
 
         if env::var("CARGO_FEATURE_GECKO_DEBUG").is_ok() {
             builder = builder.clang_arg("-DDEBUG=1").clang_arg("-DJS_DEBUG=1");
@@ -301,8 +303,12 @@ fn generate_structs() {
     let builder = BuilderWithConfig::new(builder, CONFIG["structs"].as_table().unwrap())
         .handle_common(&mut fixups)
         .handle_str_items("whitelist-functions", |b, item| b.allowlist_function(item))
-        .handle_str_items("bitfield-enums", |b, item| b.bitfield_enum(item))
-        .handle_str_items("rusty-enums", |b, item| b.rustified_enum(item))
+        .handle_str_items("bitfield-enums", |b, item| {
+            b.bitfield_enum(item).allowlist_type(item)
+        })
+        .handle_str_items("rusty-enums", |b, item| {
+            b.rustified_enum(item).allowlist_type(item)
+        })
         .handle_str_items("whitelist-vars", |b, item| b.allowlist_var(item))
         .handle_str_items("whitelist-types", |b, item| b.allowlist_type(item))
         .handle_str_items("opaque-types", |b, item| b.opaque_type(item))

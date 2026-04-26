@@ -227,7 +227,7 @@ class WarningsDatabase(object):
         """
 
         # Need to calculate up front since we are mutating original object.
-        filenames = self._files.keys()
+        filenames = list(self._files.keys())
         for filename in filenames:
             if not os.path.exists(filename):
                 del self._files[filename]

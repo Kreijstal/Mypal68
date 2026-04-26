@@ -241,6 +241,7 @@ LOCAL_INCLUDES += [
     "/dom/canvas",
     "/dom/html/input",
     "/dom/media",
+    "/dom/media/mp4",
     "/dom/security",
     "/dom/xul",
     "/layout/forms",

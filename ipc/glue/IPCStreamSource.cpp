@@ -5,6 +5,7 @@
 #include "IPCStreamSource.h"
 #include "BackgroundParent.h"  // for AssertIsOnBackgroundThread
 #include "mozilla/ipc/ByteBufUtils.h"
+#include "mozilla/dom/WorkerCommon.h"
 #include "nsIAsyncInputStream.h"
 #include "nsICancelableRunnable.h"
 #include "nsIRunnable.h"

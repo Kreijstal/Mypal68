@@ -115,11 +115,11 @@ void AnnotateSystemError() {
   }
 }
 
-#if defined(XP_MACOSX)
+#if defined(OS_POSIX)
 void AnnotateCrashReportWithErrno(CrashReporter::Annotation tag, int error) {
   CrashReporter::AnnotateCrashReport(tag, error);
 }
-#endif  // defined(XP_MACOSX)
+#endif  // defined(OS_POSIX)
 
 #if defined(DEBUG) || defined(FUZZING)
 // This overload is for testability; application code should use the single-

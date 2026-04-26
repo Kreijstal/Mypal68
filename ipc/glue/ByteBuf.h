@@ -63,6 +63,20 @@ class ByteBuf final {
   size_t mCapacity;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::ipc::ByteBuf">
+ */
+struct ByteBuf_Simple {
+  uint8_t* mData;
+  size_t mLen;
+  size_t mCapacity;
+};
+
+static_assert(sizeof(ByteBuf) == sizeof(ByteBuf_Simple),
+              "Size mismatch between ByteBuf and ByteBuf_Simple");
+static_assert(alignof(ByteBuf) == alignof(ByteBuf_Simple),
+              "Align mismatch between ByteBuf and ByteBuf_Simple");
+
 }  // namespace ipc
 }  // namespace mozilla
 

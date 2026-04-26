@@ -134,6 +134,25 @@ class AnonymousCounterStyle final : public CounterStyle {
   nsTArray<nsString> mSymbols;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::AnonymousCounterStyle">
+ */
+struct AnonymousCounterStyle_Simple : public CounterStyle {
+  ThreadSafeAutoRefCnt mRefCnt;
+  bool mSingleString;
+  StyleSymbolsType mSymbolsType;
+  nsTArray<nsString> mSymbols;
+};
+
+static_assert(sizeof(AnonymousCounterStyle) ==
+                  sizeof(AnonymousCounterStyle_Simple),
+              "Size mismatch between AnonymousCounterStyle and "
+              "AnonymousCounterStyle_Simple");
+static_assert(alignof(AnonymousCounterStyle) ==
+                  alignof(AnonymousCounterStyle_Simple),
+              "Align mismatch between AnonymousCounterStyle and "
+              "AnonymousCounterStyle_Simple");
+
 // A smart pointer to CounterStyle. It either owns a reference to an
 // anonymous counter style, or weakly refers to a named counter style
 // managed by counter style manager.

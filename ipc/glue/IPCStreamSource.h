@@ -7,6 +7,7 @@
 
 #include "mozilla/AlreadyAddRefed.h"
 #include "mozilla/dom/WorkerRef.h"
+#include "nsCOMPtr.h"
 
 class nsIAsyncInputStream;
 

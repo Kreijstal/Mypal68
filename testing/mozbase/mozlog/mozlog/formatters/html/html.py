@@ -6,8 +6,8 @@
 from __future__ import absolute_import
 
 import base64
-import cgi
 from datetime import datetime
+from html import escape as html_escape
 import os
 
 from .. import base
@@ -183,9 +183,9 @@ class HTMLFormatter(base.BaseFormatter):
                     log.append(line[:80])
                 else:
                     if line.lower().find("error") != -1 or line.lower().find("exception") != -1:
-                        log.append(html.span(raw(cgi.escape(line)), class_='error'))
+                        log.append(html.span(raw(html_escape(line)), class_='error'))
                     else:
-                        log.append(raw(cgi.escape(line)))
+                        log.append(raw(html_escape(line)))
                 log.append(html.br())
             additional_html.append(log)
 

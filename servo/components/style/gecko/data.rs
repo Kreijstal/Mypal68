@@ -103,7 +103,7 @@ impl StylesheetInDocument for GeckoStyleSheet {
             if dom_media_list.is_null() {
                 return None;
             }
-            let raw_list = &*(*dom_media_list).mRawList.mRawPtr;
+            let raw_list = &*bindings::Gecko_MediaList_GetRawList(dom_media_list);
             let list = Locked::<MediaList>::as_arc(mem::transmute(&raw_list));
             Some(list.read_with(guard))
         }
@@ -142,7 +142,7 @@ impl PerDocumentStyleData {
     /// Create a `PerDocumentStyleData`.
     pub fn new(document: *const structs::Document) -> Self {
         let device = Device::new(document);
-        let quirks_mode = device.document().mCompatMode;
+        let quirks_mode = unsafe { bindings::Gecko_Document_QuirksMode(device.document()) };
 
         PerDocumentStyleData(AtomicRefCell::new(PerDocumentStyleDataImpl {
             stylist: Stylist::new(device, quirks_mode.into()),

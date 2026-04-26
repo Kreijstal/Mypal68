@@ -4136,7 +4136,7 @@ pub unsafe extern "C" fn Servo_StyleSet_Drop(data: *mut RawServoStyleSet) {
 #[no_mangle]
 pub unsafe extern "C" fn Servo_StyleSet_CompatModeChanged(raw_data: &RawServoStyleSet) {
     let mut data = PerDocumentStyleData::from_ffi(raw_data).borrow_mut();
-    let quirks_mode = data.stylist.device().document().mCompatMode;
+    let quirks_mode = bindings::Gecko_Document_QuirksMode(data.stylist.device().document());
     data.stylist.set_quirks_mode(quirks_mode.into());
 }
 

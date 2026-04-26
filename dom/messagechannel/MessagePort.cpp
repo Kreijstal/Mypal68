@@ -43,12 +43,47 @@
 namespace mozilla {
 namespace dom {
 
+UniqueMessagePortId::UniqueMessagePortId()
+    : mIdentifier(new MessagePortIdentifier()) {
+  mIdentifier->neutered() = true;
+}
+
+UniqueMessagePortId::UniqueMessagePortId(
+    const MessagePortIdentifier& aIdentifier)
+    : mIdentifier(new MessagePortIdentifier(aIdentifier)) {}
+
+UniqueMessagePortId::UniqueMessagePortId(UniqueMessagePortId&& aOther) noexcept
+    : mIdentifier(std::move(aOther.mIdentifier)) {
+  aOther.mIdentifier = new MessagePortIdentifier();
+  aOther.mIdentifier->neutered() = true;
+}
+
+UniqueMessagePortId::~UniqueMessagePortId() { ForceClose(); }
+
 void UniqueMessagePortId::ForceClose() {
-  if (!mIdentifier.neutered()) {
-    MessagePort::ForceClose(mIdentifier);
-    mIdentifier.neutered() = true;
+  if (mIdentifier && !mIdentifier->neutered()) {
+    MessagePort::ForceClose(*mIdentifier);
+    mIdentifier->neutered() = true;
   }
 }
+
+MessagePortIdentifier UniqueMessagePortId::release() {
+  MessagePortIdentifier id = *mIdentifier;
+  mIdentifier->neutered() = true;
+  return id;
+}
+
+nsID& UniqueMessagePortId::uuid() { return mIdentifier->uuid(); }
+
+nsID& UniqueMessagePortId::destinationUuid() {
+  return mIdentifier->destinationUuid();
+}
+
+uint32_t& UniqueMessagePortId::sequenceId() {
+  return mIdentifier->sequenceId();
+}
+
+bool& UniqueMessagePortId::neutered() { return mIdentifier->neutered(); }
 
 class PostMessageRunnable final : public CancelableRunnable {
   friend class MessagePort;

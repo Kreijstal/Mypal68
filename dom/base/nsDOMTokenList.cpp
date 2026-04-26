@@ -15,6 +15,7 @@
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/DOMTokenListBinding.h"
 #include "mozilla/BloomFilter.h"
+#include "mozilla/dom/Document.h"
 #include "mozilla/ErrorResult.h"
 
 using namespace mozilla;

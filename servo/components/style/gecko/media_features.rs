@@ -371,7 +371,7 @@ fn eval_any_hover(context: &Context, query_value: Option<Hover>) -> bool {
 }
 
 fn eval_moz_is_glyph(context: &Context) -> bool {
-    context.device().document().mIsSVGGlyphsDocument()
+    unsafe { bindings::Gecko_Document_IsSVGGlyphsDocument(context.device().document()) }
 }
 
 fn eval_moz_is_resource_document(context: &Context) -> bool {

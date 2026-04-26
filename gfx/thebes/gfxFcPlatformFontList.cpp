@@ -1612,8 +1612,7 @@ void gfxFcPlatformFontList::InitSharedFontListForPlatform() {
 
       auto faceList = faces.Get(keyName);
       if (!faceList) {
-        faceList = new nsTArray<fontlist::Face::InitData>;
-        faces.Put(keyName, faceList);
+        faceList = faces.GetOrInsertNew(keyName);
 
         /* TODO:
         // Add pointers to other localized family names. Most fonts

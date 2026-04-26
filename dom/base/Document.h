@@ -119,6 +119,11 @@ class ElementCreationOptionsOrString;
 }  // namespace mozilla
 #endif  // MOZILLA_INTERNAL_API
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 class InfallibleAllocPolicy;
 class JSObject;
 class JSTracer;
@@ -4282,6 +4287,9 @@ class Document : public nsINode,
 
   nsString mLastModified;
 
+#ifdef RUST_BINDGEN
+ public:
+#endif
   nsCOMPtr<nsIURI> mDocumentURI;
   nsCOMPtr<nsIURI> mOriginalURI;
   nsCOMPtr<nsIURI> mChromeXHRDocURI;
@@ -4390,6 +4398,9 @@ class Document : public nsINode,
   TimeStamp mLastFocusTime;
 
   EventStates mDocumentState;
+#ifdef RUST_BINDGEN
+ protected:
+#endif
 
   RefPtr<Promise> mReadyForIdle;
 
@@ -4692,6 +4703,9 @@ class Document : public nsINode,
   uint32_t mContentEditableCount;
   EditingState mEditingState;
 
+#ifdef RUST_BINDGEN
+ public:
+#endif
   // Compatibility mode
   nsCompatibility mCompatMode;
 
@@ -4713,6 +4727,9 @@ class Document : public nsINode,
   };
 
   Type mType;
+#ifdef RUST_BINDGEN
+ protected:
+#endif
 
   uint8_t mDefaultElementType;
 
@@ -4771,7 +4788,13 @@ class Document : public nsINode,
   // won't be collected
   uint32_t mMarkedCCGeneration;
 
+#ifdef RUST_BINDGEN
+ public:
+#endif
   PresShell* mPresShell;
+#ifdef RUST_BINDGEN
+ protected:
+#endif
 
   nsCOMArray<nsINode> mSubtreeModifiedTargets;
   uint32_t mSubtreeModifiedDepth;
@@ -5256,5 +5279,10 @@ inline const mozilla::dom::Document* nsINode::AsDocument() const {
 inline nsISupports* ToSupports(mozilla::dom::Document* aDoc) {
   return static_cast<nsINode*>(aDoc);
 }
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif /* mozilla_dom_Document_h___ */

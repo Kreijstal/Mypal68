@@ -14,6 +14,8 @@
 #include "nsString.h"
 #include "nsIGIOService.h"
 #include "nsIGSettingsService.h"
+#include "nsIPrefBranch.h"
+#include "nsIPrefService.h"
 #include "nsIStringBundle.h"
 #include "nsIProcess.h"
 #include "nsServiceManagerUtils.h"
@@ -38,6 +40,11 @@
 #include <stdlib.h>
 
 using namespace mozilla;
+
+NS_IMETHODIMP
+nsGNOMEShellService::CancelPortableMode() {
+  return NS_OK;
+}
 
 struct ProtocolAssociation {
   const char* name;

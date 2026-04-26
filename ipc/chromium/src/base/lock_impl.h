@@ -44,7 +44,7 @@ class LockImpl {
   // Return the native underlying lock.
   // TODO(awalker): refactor lock and condition variables so that this is
   // unnecessary.
-  //NativeHandle* native_handle() { return &native_handle_; }
+  NativeHandle* native_handle() { return &native_handle_; }
 
 #if defined(OS_POSIX)
   // Whether this lock will attempt to use priority inheritance.
@@ -52,7 +52,7 @@ class LockImpl {
 #endif
 
  private:
-  //NativeHandle native_handle_;
+  NativeHandle native_handle_;
 #if defined(_M_IX86) || defined(__i386)
   char os_lock_[24];
 #else

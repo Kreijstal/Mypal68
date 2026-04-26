@@ -67,6 +67,7 @@
 #if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
 #  include <gdk/gdk.h>
 #  include <gdk/gdkx.h>
+#  include "X11UndefineNone.h"
 #endif
 
 #include "Layers.h"
@@ -359,7 +360,7 @@ nsDOMWindowUtils::Redraw(uint32_t aCount, uint32_t* aDurationOut) {
 
 #if defined(MOZ_X11) && defined(MOZ_WIDGET_GTK)
       if (!gfxPlatform::IsHeadless()) {
-        XSync(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()), False);
+        XSync(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()), X11False);
       }
 #endif
 

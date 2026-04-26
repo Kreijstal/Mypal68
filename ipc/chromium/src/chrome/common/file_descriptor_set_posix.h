@@ -42,7 +42,7 @@ class FileDescriptorSet {
   // Interfaces for accessing during message deserialisation...
 
   // Return the number of descriptors
-  unsigned size() const { return descriptors_.size(); }
+  unsigned size() const { return static_cast<unsigned>(descriptors_.size()); }
   // Return true if no unconsumed descriptors remain
   bool empty() const { return descriptors_.empty(); }
   // Fetch the nth descriptor from the beginning of the set. Code using this

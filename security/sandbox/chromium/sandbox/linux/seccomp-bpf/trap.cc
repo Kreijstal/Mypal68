@@ -152,7 +152,7 @@ void Trap::SigSys(int nr, LinuxSigInfo* info, ucontext_t* ctx) {
   // Various sanity checks to make sure we actually received a signal
   // triggered by a BPF filter. If something else triggered SIGSYS
   // (e.g. kill()), there is really nothing we can do with this signal.
-  if (nr != LINUX_SIGSYS || info->si_code != SYS_SECCOMP || !ctx ||
+  if (nr != LINUX_SIGSYS || info->si_code != SANDBOX_SYS_SECCOMP || !ctx ||
       info->si_errno <= 0 ||
       static_cast<size_t>(info->si_errno) > trap_array_size_) {
     // ATI drivers seem to send SIGSYS, so this cannot be FATAL.

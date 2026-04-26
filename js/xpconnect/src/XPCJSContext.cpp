@@ -84,8 +84,10 @@ using namespace JS;
 #if !defined(PTHREAD_STACK_MIN)
 #  define PTHREAD_STACK_MIN 0
 #endif
-static constexpr size_t kWatchdogStackSize =
-    PTHREAD_STACK_MIN < 32 * 1024 ? 32 * 1024 : PTHREAD_STACK_MIN;
+static size_t WatchdogStackSize() {
+  const size_t minStackSize = PTHREAD_STACK_MIN;
+  return minStackSize < 32 * 1024 ? 32 * 1024 : minStackSize;
+}
 
 static void WatchdogMain(void* arg);
 class Watchdog;
@@ -155,9 +157,9 @@ class Watchdog {
       // Gecko uses thread private for accounting and has to clean up at thread
       // exit. Therefore, even though we don't have a return value from the
       // watchdog, we need to join it on shutdown.
-      mThread = PR_CreateThread(PR_USER_THREAD, WatchdogMain, this,
-                                PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
-                                PR_JOINABLE_THREAD, kWatchdogStackSize);
+  mThread = PR_CreateThread(PR_USER_THREAD, WatchdogMain, this,
+                            PR_PRIORITY_NORMAL, PR_GLOBAL_THREAD,
+                            PR_JOINABLE_THREAD, WatchdogStackSize());
       if (!mThread) {
         MOZ_CRASH("PR_CreateThread failed!");
       }

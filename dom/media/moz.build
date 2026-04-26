@@ -58,7 +58,7 @@ DIRS += [
 if CONFIG['MOZ_ANDROID_HLS_SUPPORT']:
     DIRS += ['hls']
 
-if CONFIG['MOZ_FMP4']:
+if CONFIG['MOZ_FMP4'] or CONFIG['MOZ_FFMPEG'] or CONFIG['MOZ_FFVPX']:
     DIRS += ['mp4']
 
 if CONFIG['MOZ_WEBRTC']:

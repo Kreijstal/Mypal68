@@ -5,6 +5,7 @@
 #ifndef GFX_FONT_FEATURES_H
 #define GFX_FONT_FEATURES_H
 
+#include <cstddef>  // offsetof()
 #include "nsTHashtable.h"
 #include "nsTArray.h"
 #include "nsString.h"
@@ -24,6 +25,35 @@ inline bool operator<(const gfxFontFeature& a, const gfxFontFeature& b) {
 inline bool operator==(const gfxFontFeature& a, const gfxFontFeature& b) {
   return (a.mTag == b.mTag) && (a.mValue == b.mValue);
 }
+
+#define GFX_FONT_STATIC_ASSERT_TYPE_LAYOUTS_MATCH(T1, T2)  \
+  static_assert(sizeof(T1) == sizeof(T2),                  \
+                "Size mismatch between " #T1 " and " #T2); \
+  static_assert(alignof(T1) == alignof(T2),                \
+                "Align mismatch between " #T1 " and " #T2);
+
+#define GFX_FONT_STATIC_ASSERT_FIELD_OFFSET_MATCHES(T1, T2, field) \
+  static_assert(offsetof(T1, field) == offsetof(T2, field),        \
+                "Field offset mismatch of " #field " between " #T1 \
+                " and " #T2);
+
+/**
+ * <div rustbindgen="true" replaces="gfxFontFeature">
+ */
+struct gfxFontFeature_Simple {
+  uint32_t mTag;
+  uint32_t mValue;
+};
+
+GFX_FONT_STATIC_ASSERT_TYPE_LAYOUTS_MATCH(gfxFontFeature,
+                                          gfxFontFeature_Simple);
+GFX_FONT_STATIC_ASSERT_FIELD_OFFSET_MATCHES(gfxFontFeature,
+                                            gfxFontFeature_Simple, mTag);
+GFX_FONT_STATIC_ASSERT_FIELD_OFFSET_MATCHES(gfxFontFeature,
+                                            gfxFontFeature_Simple, mValue);
+
+#undef GFX_FONT_STATIC_ASSERT_TYPE_LAYOUTS_MATCH
+#undef GFX_FONT_STATIC_ASSERT_FIELD_OFFSET_MATCHES
 
 class nsAtom;
 

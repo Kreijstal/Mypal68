@@ -476,6 +476,11 @@ class TemplateFunction(object):
             node.s = text_type(node.s)
             return node
 
+        def visit_Constant(self, node):
+            if isinstance(node.value, str):
+                node.value = text_type(node.value)
+            return node
+
         def visit_Name(self, node):
             # Modify uppercase variable references and names known to the
             # sandbox as if they were retrieved from a dict instead.
@@ -487,7 +492,7 @@ class TemplateFunction(object):
 
             return c(ast.Subscript(
                 value=c(ast.Name(id=self._global_name, ctx=ast.Load())),
-                slice=c(ast.Index(value=c(ast.Str(s=node.id)))),
+                slice=c(ast.Constant(value=node.id)),
                 ctx=node.ctx
             ))
 

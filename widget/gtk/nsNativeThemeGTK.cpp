@@ -38,7 +38,9 @@
 #include "mozilla/gfx/PathHelpers.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/PresShell.h"
-#include "mozilla/layers/StackingContextHelper.h"
+#ifdef MOZ_BUILD_WEBRENDER
+#  include "mozilla/layers/StackingContextHelper.h"
+#endif
 #include "mozilla/StaticPrefs_layout.h"
 #include "mozilla/StaticPrefs_widget.h"
 #include "nsWindow.h"
@@ -1208,6 +1210,7 @@ bool nsNativeThemeGTK::CreateWebRenderCommandsForWidget(
     const mozilla::layers::StackingContextHelper& aSc,
     mozilla::layers::RenderRootStateManager* aManager, nsIFrame* aFrame,
     StyleAppearance aAppearance, const nsRect& aRect) {
+#ifdef MOZ_BUILD_WEBRENDER
   nsPresContext* presContext = aFrame->PresContext();
   wr::LayoutRect bounds = wr::ToLayoutRect(LayoutDeviceRect::FromAppUnits(
       aRect, presContext->AppUnitsPerDevPixel()));
@@ -1224,6 +1227,9 @@ bool nsNativeThemeGTK::CreateWebRenderCommandsForWidget(
     default:
       return false;
   }
+#else
+  return false;
+#endif
 }
 
 WidgetNodeType nsNativeThemeGTK::NativeThemeToGtkTheme(

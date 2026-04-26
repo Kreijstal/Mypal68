@@ -13,6 +13,8 @@
 #include "mozilla/dom/TransformStream.h"
 #include "mozilla/dom/UnionTypes.h"
 
+#include <limits>
+
 namespace mozilla::dom {
 
 NS_IMPL_CYCLE_COLLECTION_WRAPPERCACHE(TextDecoderStream, mGlobal, mStream)
@@ -102,14 +104,10 @@ class TextDecoderStreamAlgorithms : public TransformerAlgorithmsWrapper {
   MOZ_CAN_RUN_SCRIPT void DecodeSpanAndEnqueue(
       JSContext* aCx, Span<const uint8_t> aInput, bool aFlush,
       TransformStreamDefaultController& aController, ErrorResult& aRv) {
-  //PIZDEC KAKOYITO SHO EMY NE TO NA x64 NU EGO NAH!!!
-#if defined(_M_X64)
-    CheckedInt<unsigned long long> needed =
-#else
-    CheckedInt<nsAString::size_type> needed =
-#endif
+    CheckedInt<size_t> needed =
         mDecoderStream->Decoder()->MaxUTF16BufferLength(aInput.Length());
-    if (!needed.isValid()) {
+    if (!needed.isValid() ||
+        needed.value() > std::numeric_limits<nsAString::size_type>::max()) {
       aRv.Throw(NS_ERROR_OUT_OF_MEMORY);
       return;
     }

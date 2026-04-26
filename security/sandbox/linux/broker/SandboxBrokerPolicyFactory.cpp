@@ -15,6 +15,7 @@
 #include "mozilla/UniquePtrExtensions.h"
 #include "mozilla/SandboxLaunch.h"
 #include "mozilla/dom/ContentChild.h"
+#include "nsComponentManagerUtils.h"
 #include "nsPrintfCString.h"
 #include "nsString.h"
 #include "nsThreadUtils.h"

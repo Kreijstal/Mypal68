@@ -21,12 +21,16 @@ RWLock::RWLock(const char* aName)
 #ifdef DEBUG
       mOwningThread(nullptr),
 #endif
+#ifdef XP_WIN
       hModule(NULL),
       RtlDelete(NULL),
       RtlRelease(NULL),
       RtlAcquireExclusive(NULL),
       RtlAcquireShared(NULL),
       rtlRWLock()
+#else
+      mRWLock()
+#endif
 {
 #ifdef XP_WIN
   hModule = LoadLibraryW(L"NTDLL.DLL");

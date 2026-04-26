@@ -326,12 +326,12 @@ class gfxSparseBitSet {
   }
 
   uint32_t GetChecksum() const {
-    uint32_t check = adler32(
+    uint32_t check = static_cast<uint32_t>(adler32(
         0, reinterpret_cast<const uint8_t*>(mBlockIndex.Elements()),
-        static_cast<uInt>(mBlockIndex.Length() * sizeof(uint16_t)));
-    check = adler32(
+        static_cast<uInt>(mBlockIndex.Length() * sizeof(uint16_t))));
+    check = static_cast<uint32_t>(adler32(
         check, reinterpret_cast<const uint8_t*>(mBlocks.Elements()),
-        static_cast<uInt>(mBlocks.Length() * sizeof(Block)));
+        static_cast<uInt>(mBlocks.Length() * sizeof(Block))));
     return check;
   }
 

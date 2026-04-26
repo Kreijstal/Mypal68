@@ -87,6 +87,11 @@ class Element;
 }  // namespace dom
 }  // namespace mozilla
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 // supported values for cached integer pref types
 enum nsPresContext_CachedIntPrefType {
   kPresContext_ScrollbarSide = 1,
@@ -1425,5 +1430,10 @@ class nsRootPresContext final : public nsPresContext {
 #else
 #  define DO_GLOBAL_REFLOW_COUNT(_name)
 #endif  // MOZ_REFLOW_PERF
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif /* nsPresContext_h___ */

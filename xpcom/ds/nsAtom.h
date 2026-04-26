@@ -115,6 +115,21 @@ class nsAtom {
   const uint32_t mHash;
 };
 
+/**
+ * <div rustbindgen="true" replaces="nsAtom">
+ */
+struct nsAtom_Simple {
+  const uint32_t mLength : 30;
+  const uint32_t mIsStatic : 1;
+  const uint32_t mIsAsciiLowercase : 1;
+  const uint32_t mHash;
+};
+
+static_assert(sizeof(nsAtom) == sizeof(nsAtom_Simple),
+              "Size mismatch between nsAtom and nsAtom_Simple");
+static_assert(alignof(nsAtom) == alignof(nsAtom_Simple),
+              "Align mismatch between nsAtom and nsAtom_Simple");
+
 // This class would be |final| if it wasn't for nsCSSAnonBoxPseudoStaticAtom
 // and nsCSSPseudoElementStaticAtom, which are trivial subclasses used to
 // ensure only certain static atoms are passed to certain functions.
@@ -148,6 +163,18 @@ class nsStaticAtom : public nsAtom {
   // memory.
   uint32_t mStringOffset;
 };
+
+/**
+ * <div rustbindgen="true" replaces="nsStaticAtom">
+ */
+struct nsStaticAtom_Simple : public nsAtom_Simple {
+  uint32_t mStringOffset;
+};
+
+static_assert(sizeof(nsStaticAtom) == sizeof(nsStaticAtom_Simple),
+              "Size mismatch between nsStaticAtom and nsStaticAtom_Simple");
+static_assert(alignof(nsStaticAtom) == alignof(nsStaticAtom_Simple),
+              "Align mismatch between nsStaticAtom and nsStaticAtom_Simple");
 
 class nsDynamicAtom : public nsAtom {
  public:

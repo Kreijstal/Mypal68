@@ -583,7 +583,8 @@ class nsContentUtils {
           aParent2,
           aOffset2 < 0 ? UINT32_MAX : static_cast<uint32_t>(aOffset2));
     }
-    return ComparePoints(aParent1, aOffset1, aParent2, aOffset2);
+    return ComparePoints(aParent1, static_cast<uint32_t>(aOffset1), aParent2,
+                         static_cast<uint32_t>(aOffset2));
   }
 
   /**

@@ -29,6 +29,11 @@ class nsDOMCSSAttributeDeclaration;
 class nsDOMStringMap;
 class nsIURI;
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 namespace mozilla {
 class DeclarationBlock;
 namespace dom {
@@ -296,6 +301,11 @@ class FragmentOrElement : public nsIContent {
 
 }  // namespace dom
 }  // namespace mozilla
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #define NS_ELEMENT_INTERFACE_TABLE_TO_MAP_SEGUE               \
   if (NS_SUCCEEDED(rv)) return rv;                            \

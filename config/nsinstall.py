@@ -18,6 +18,11 @@ import os.path
 import sys
 import shutil
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 
 def _nsinstall_internal(argv):
     usage = "usage: %prog [options] arg1 [arg2 ...] target-directory"
@@ -154,7 +159,10 @@ def _nsinstall_internal(argv):
 
 
 def nsinstall(argv):
-    return _nsinstall_internal([unicode(arg, "utf-8") for arg in argv])
+    return _nsinstall_internal([
+        arg.decode("utf-8") if isinstance(arg, bytes) else unicode(arg)
+        for arg in argv
+    ])
 
 
 if __name__ == '__main__':
@@ -182,7 +190,11 @@ if __name__ == '__main__':
     else:
         # For consistency, do it on Unix as well
         if sys.stdin.encoding is not None:
-            argv = [unicode(arg, sys.stdin.encoding) for arg in sys.argv]
+            argv = [
+                arg.decode(sys.stdin.encoding)
+                if isinstance(arg, bytes) else unicode(arg)
+                for arg in sys.argv
+            ]
         else:
             argv = [unicode(arg) for arg in sys.argv]
 

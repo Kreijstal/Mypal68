@@ -28,6 +28,7 @@
 
 #include <gtk/gtk.h>
 #include <gtk/gtkx.h>
+#include <tuple>
 
 #include "mozilla/Encoding.h"
 
@@ -629,7 +630,7 @@ void ConvertHTMLtoUCS2(const char* data, int32_t dataLength,
       size_t read;
       size_t written;
       bool hadErrors;
-      Tie(result, read, written, hadErrors) = decoder->DecodeToUTF16(
+      std::tie(result, read, written, hadErrors) = decoder->DecodeToUTF16(
           AsBytes(dataSpan), Span(*unicodeData, needed.value()), true);
       MOZ_ASSERT(result == kInputEmpty);
       MOZ_ASSERT(read == size_t(dataSpan.Length()));

@@ -504,7 +504,7 @@ class GtkVsyncSource final : public VsyncSource {
     // Required as GLContexts may only be used by the creating thread.
     // Returns true if setup was a success.
     bool Setup() {
-      MonitorAutoLock lock(mSetupLock);
+      Monitor2AutoLock lock(mSetupLock);
       MOZ_ASSERT(NS_IsMainThread());
       if (!mVsyncThread.Start()) return false;
 
@@ -519,7 +519,7 @@ class GtkVsyncSource final : public VsyncSource {
 
     // Called on the Vsync thread to setup the GL context.
     void SetupGLContext() {
-      MonitorAutoLock lock(mSetupLock);
+      Monitor2AutoLock lock(mSetupLock);
       MOZ_ASSERT(!NS_IsMainThread());
       MOZ_ASSERT(!mGLContext, "GLContext already setup!");
 
@@ -527,7 +527,7 @@ class GtkVsyncSource final : public VsyncSource {
       // main thread X display.
       mXDisplay = XOpenDisplay(nullptr);
       if (!mXDisplay) {
-        lock.NotifyAll();
+        lock.Broadcast();
         return;
       }
 
@@ -538,10 +538,9 @@ class GtkVsyncSource final : public VsyncSource {
       ScopedXFree<GLXFBConfig> cfgs;
       GLXFBConfig config;
       int visid;
-      bool forWebRender = false;
       if (!gl::GLContextGLX::FindFBConfigForWindow(
-              mXDisplay, screen, root, &cfgs, &config, &visid, forWebRender)) {
-        lock.NotifyAll();
+              mXDisplay, screen, root, &cfgs, &config, &visid)) {
+        lock.Broadcast();
         return;
       }
 
@@ -550,7 +549,7 @@ class GtkVsyncSource final : public VsyncSource {
           mXDisplay, root, config, false, nullptr);
 
       if (!mGLContext) {
-        lock.NotifyAll();
+        lock.Broadcast();
         return;
       }
 
@@ -562,14 +561,14 @@ class GtkVsyncSource final : public VsyncSource {
         mGLContext = nullptr;
       }
 
-      lock.NotifyAll();
+      lock.Broadcast();
     }
 
     virtual void EnableVsync() override {
       MOZ_ASSERT(NS_IsMainThread());
       MOZ_ASSERT(mGLContext, "GLContext not setup!");
 
-      MonitorAutoLock lock(mVsyncEnabledLock);
+      Monitor2AutoLock lock(mVsyncEnabledLock);
       if (mVsyncEnabled) {
         return;
       }
@@ -586,12 +585,12 @@ class GtkVsyncSource final : public VsyncSource {
     }
 
     virtual void DisableVsync() override {
-      MonitorAutoLock lock(mVsyncEnabledLock);
+      Monitor2AutoLock lock(mVsyncEnabledLock);
       mVsyncEnabled = false;
     }
 
     virtual bool IsVsyncEnabled() override {
-      MonitorAutoLock lock(mVsyncEnabledLock);
+      Monitor2AutoLock lock(mVsyncEnabledLock);
       return mVsyncEnabled;
     }
 
@@ -620,7 +619,7 @@ class GtkVsyncSource final : public VsyncSource {
       gl::sGLXLibrary.fGetVideoSync(&syncCounter);
       for (;;) {
         {
-          MonitorAutoLock lock(mVsyncEnabledLock);
+          Monitor2AutoLock lock(mVsyncEnabledLock);
           if (!mVsyncEnabled) {
             mVsyncTask = nullptr;
             return;
@@ -669,7 +668,7 @@ class GtkVsyncSource final : public VsyncSource {
     // Owned by the vsync thread.
     RefPtr<gl::GLContextGLX> mGLContext;
     _XDisplay* mXDisplay;
-    Monitor mSetupLock;
+    Monitor2 mSetupLock;
     base::Thread mVsyncThread;
     RefPtr<Runnable> mVsyncTask;
     Monitor2 mVsyncEnabledLock;

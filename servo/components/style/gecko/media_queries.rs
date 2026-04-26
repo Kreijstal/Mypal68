@@ -21,8 +21,9 @@ use cssparser::RGBA;
 use euclid::default::Size2D;
 use euclid::Scale;
 use servo_arc::Arc;
+use std::mem;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
-use std::{cmp, fmt};
+use std::fmt;
 use style_traits::viewport::ViewportConstraints;
 use style_traits::{CSSPixel, DevicePixel};
 
@@ -69,7 +70,7 @@ impl fmt::Debug for Device {
         let mut doc_uri = nsCString::new();
         unsafe {
             bindings::Gecko_nsIURI_Debug(
-                (*self.document()).mDocumentURI.raw::<structs::nsIURI>(),
+                bindings::Gecko_Document_GetDocumentURI(self.document()),
                 &mut doc_uri,
             )
         };
@@ -151,7 +152,7 @@ impl Device {
 
     /// The quirks mode of the document.
     pub fn quirks_mode(&self) -> QuirksMode {
-        self.document().mCompatMode.into()
+        unsafe { bindings::Gecko_Document_QuirksMode(self.document()).into() }
     }
 
     /// Sets the body text color for the "inherit color from body" quirk.
@@ -176,14 +177,7 @@ impl Device {
     /// Gets the pres context associated with this document.
     #[inline]
     pub fn pres_context(&self) -> Option<&structs::nsPresContext> {
-        unsafe {
-            self.document()
-                .mPresShell
-                .as_ref()?
-                .mPresContext
-                .mRawPtr
-                .as_ref()
-        }
+        unsafe { bindings::Gecko_Document_GetPresContext(self.document()).as_ref() }
     }
 
     /// Gets the preference stylesheet prefs for our document.
@@ -226,12 +220,7 @@ impl Device {
             None => return MediaType::screen(),
         };
 
-        // Gecko allows emulating random media with mMediaEmulated.
-        let medium_to_use = if !pc.mMediaEmulated.mRawPtr.is_null() {
-            pc.mMediaEmulated.mRawPtr
-        } else {
-            pc.mMedium as *const bindings::nsAtom as *mut _
-        };
+        let medium_to_use = unsafe { bindings::Gecko_nsPresContext_Medium(pc) };
 
         MediaType(CustomIdent(unsafe { Atom::from_raw(medium_to_use) }))
     }
@@ -240,12 +229,10 @@ impl Device {
     // it's not clear how that'd work, see:
     // https://github.com/w3c/csswg-drafts/issues/5437
     fn page_size_minus_default_margin(&self, pc: &structs::nsPresContext) -> Size2D<Au> {
-        debug_assert!(pc.mIsRootPaginatedDocument() != 0);
-        let area = &pc.mPageSize;
-        let margin = &pc.mDefaultPageMargin;
-        let width = area.width - margin.left - margin.right;
-        let height = area.height - margin.top - margin.bottom;
-        Size2D::new(Au(cmp::max(width, 0)), Au(cmp::max(height, 0)))
+        debug_assert!(unsafe { bindings::Gecko_nsPresContext_IsRootPaginatedDocument(pc) });
+        let mut size: structs::nsSize = unsafe { mem::zeroed() };
+        unsafe { bindings::Gecko_nsPresContext_PageSizeMinusDefaultMargin(pc, &mut size) };
+        Size2D::new(Au(size.width), Au(size.height))
     }
 
     /// Returns the current viewport size in app units.
@@ -255,11 +242,12 @@ impl Device {
             None => return Size2D::new(Au(0), Au(0)),
         };
 
-        if pc.mIsRootPaginatedDocument() != 0 {
+        if unsafe { bindings::Gecko_nsPresContext_IsRootPaginatedDocument(pc) } {
             return self.page_size_minus_default_margin(pc);
         }
 
-        let area = &pc.mVisibleArea;
+        let mut area: structs::nsRect = unsafe { mem::zeroed() };
+        unsafe { bindings::Gecko_nsPresContext_VisibleArea(pc, &mut area) };
         Size2D::new(Au(area.width), Au(area.height))
     }
 
@@ -275,28 +263,22 @@ impl Device {
             None => return Size2D::new(Au(0), Au(0)),
         };
 
-        if pc.mIsRootPaginatedDocument() != 0 {
+        if unsafe { bindings::Gecko_nsPresContext_IsRootPaginatedDocument(pc) } {
             return self.page_size_minus_default_margin(pc);
         }
 
         match variant {
             ViewportVariant::UADefault => {
-                let size = &pc.mSizeForViewportUnits;
+                let mut size: structs::nsSize = unsafe { mem::zeroed() };
+                unsafe { bindings::Gecko_nsPresContext_SizeForViewportUnits(pc, &mut size) };
                 Size2D::new(Au(size.width), Au(size.height))
             },
-            ViewportVariant::Small => {
-                let size = &pc.mVisibleArea;
-                Size2D::new(Au(size.width), Au(size.height))
-            },
-            ViewportVariant::Large => {
-                let size = &pc.mVisibleArea;
-                Size2D::new(Au(size.width), Au(size.height))
-            },
+            ViewportVariant::Small => self.au_viewport_size(),
+            ViewportVariant::Large => self.au_viewport_size(),
             ViewportVariant::Dynamic => {
                 self.used_dynamic_viewport_size
                     .store(true, Ordering::Relaxed);
-                let size = &pc.mVisibleArea;
-                Size2D::new(Au(size.width), Au(size.height))
+                self.au_viewport_size()
             },
         }
     }
@@ -318,12 +300,12 @@ impl Device {
             None => return Scale::new(1.),
         };
 
-        let override_dppx = pc.mOverrideDPPX;
+        let override_dppx = unsafe { bindings::Gecko_nsPresContext_OverrideDPPX(pc) };
         if override_dppx > 0.0 {
             return Scale::new(override_dppx);
         }
 
-        let au_per_dpx = pc.mCurAppUnitsPerDevPixel as f32;
+        let au_per_dpx = unsafe { bindings::Gecko_nsPresContext_AppUnitsPerDevPixel(pc) } as f32;
         let au_per_px = AU_PER_PX as f32;
         Scale::new(au_per_px / au_per_dpx)
     }
@@ -332,7 +314,7 @@ impl Device {
     #[inline]
     pub fn use_document_colors(&self) -> bool {
         let doc = self.document();
-        if doc.mIsBeingUsedAsImage() {
+        if unsafe { bindings::Gecko_Document_IsBeingUsedAsImage(doc) } {
             return true;
         }
         self.pref_sheet_prefs().mUseDocumentColors
@@ -355,7 +337,7 @@ impl Device {
             Some(pc) => pc,
             None => return 1.,
         };
-        pc.mEffectiveTextZoom
+        unsafe { bindings::Gecko_nsPresContext_EffectiveTextZoom(pc) }
     }
 
     /// Applies text zoom to a font-size or line-height value (see nsStyleFont::ZoomText).

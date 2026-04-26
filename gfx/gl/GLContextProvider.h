@@ -9,6 +9,7 @@
 #include "SurfaceTypes.h"
 
 #include "nsSize.h"  // for gfx::IntSize (needed by GLContextProviderImpl.h below)
+#include "nsStringFwd.h"
 
 class nsIWidget;
 

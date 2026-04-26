@@ -34,6 +34,11 @@ struct IMEState;
 }  // namespace widget
 }  // namespace mozilla
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 enum nsLinkState {
   eLinkState_Unvisited = 1,
   eLinkState_Visited = 2,
@@ -646,7 +651,11 @@ class nsIContent : public nsINode {
     return rc == 0;
   }
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   /**
    * Lazily allocated extended slots to avoid
    * that may only be instantiated when a content object is accessed
@@ -721,7 +730,11 @@ class nsIContent : public nsINode {
           mExtendedSlots & ~sNonOwningExtendedSlotsFlag);
     }
 
+#ifdef RUST_BINDGEN
+   public:
+#else
    private:
+#endif
     static const uintptr_t sNonOwningExtendedSlotsFlag = 1u;
 
     uintptr_t mExtendedSlots;
@@ -809,5 +822,10 @@ class nsIContent : public nsINode {
 };
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsIContent, NS_ICONTENT_IID)
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif /* nsIContent_h___ */

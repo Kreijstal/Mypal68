@@ -4,8 +4,8 @@
 
 #include "nsDeviceContextSpecG.h"
 
-#include "mozilla/gfx/PrintTargetPDF.h"
-#include "mozilla/gfx/PrintTargetPS.h"
+#include "PrintTargetPDF.h"
+#include "PrintTargetPS.h"
 #include "mozilla/Logging.h"
 #include "mozilla/Services.h"
 

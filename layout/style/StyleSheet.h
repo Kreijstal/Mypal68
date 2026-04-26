@@ -599,6 +599,34 @@ class StyleSheet final : public nsICSSLoaderObserver, public nsWrapperCache {
   friend struct StyleSheetInfo;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::StyleSheet">
+ */
+struct StyleSheet_Simple : public nsICSSLoaderObserver, public nsWrapperCache {
+  nsCycleCollectingAutoRefCnt mRefCnt;
+  StyleSheet* mParentSheet;
+  nsCOMPtr<nsIGlobalObject> mRelevantGlobal;
+  RefPtr<dom::Document> mConstructorDocument;
+  RefPtr<dom::Promise> mReplacePromise;
+  nsString mTitle;
+  dom::DocumentOrShadowRoot* mDocumentOrShadowRoot;
+  nsINode* mOwningNode;
+  nsTArray<dom::CSSImportRule*> mReferencingRules;
+  RefPtr<dom::MediaList> mMedia;
+  css::SheetParsingMode mParsingMode;
+  StyleSheetState mState;
+  StyleSheetInfo* mInner;
+  nsTArray<ServoStyleSet*> mStyleSets;
+  RefPtr<ServoCSSRuleList> mRuleList;
+  MozPromiseHolder<StyleSheetParsePromise> mParsePromise;
+  nsTArray<dom::DocumentOrShadowRoot*> mAdopters;
+};
+
+static_assert(sizeof(StyleSheet) == sizeof(StyleSheet_Simple),
+              "Size mismatch between StyleSheet and StyleSheet_Simple");
+static_assert(alignof(StyleSheet) == alignof(StyleSheet_Simple),
+              "Align mismatch between StyleSheet and StyleSheet_Simple");
+
 }  // namespace mozilla
 
 #endif  // mozilla_StyleSheet_h

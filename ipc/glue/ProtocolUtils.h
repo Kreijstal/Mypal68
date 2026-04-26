@@ -26,6 +26,7 @@
 #include "mozilla/ipc/Shmem.h"
 #include "nsTHashMap.h"
 #include "nsDebug.h"
+#include "nsExceptionHandler.h"
 #include "nsISupports.h"
 #include "nsTArrayForwardDeclare.h"
 #include "nsTHashSet.h"
@@ -638,6 +639,8 @@ bool DuplicateHandle(HANDLE aSourceHandle, DWORD aTargetProcessId,
  * call. Returns the system error.
  */
 void AnnotateSystemError();
+
+void AnnotateCrashReportWithErrno(CrashReporter::Annotation tag, int error);
 
 // The ActorLifecycleProxy is a helper type used internally by IPC to maintain a
 // maybe-owning reference to an IProtocol object. For well-behaved actors

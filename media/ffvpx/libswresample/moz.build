@@ -18,5 +18,6 @@ SOURCES += [
 ]
 
 FINAL_LIBRARY = 'mozavcodec'
+NoVisibilityFlags()
 
 include('/media/ffvpx/ffvpxcommon.mozbuild')

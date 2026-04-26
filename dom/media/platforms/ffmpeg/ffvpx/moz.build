@@ -19,6 +19,7 @@ SOURCES += [
 LOCAL_INCLUDES += [
     '..',
     '../ffmpeg58/include',
+    '/dom/media/mp4',
 ]
 
 if CONFIG['OS_ARCH'] == 'WINNT':

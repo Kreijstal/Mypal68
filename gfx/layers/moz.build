@@ -613,6 +613,7 @@ if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'windows':
 
 LOCAL_INCLUDES += [
     '/docshell/base',  # for nsDocShell.h
+    '/gfx/thebes',     # for gfxXlibSurface.h on X11
     '/layout/base',    # for TouchManager.h
     '/layout/generic', # for nsTextFrame.h
     '/media/libyuv/libyuv/include', # for libyuv.h

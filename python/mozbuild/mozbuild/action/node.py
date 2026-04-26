@@ -5,7 +5,7 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 import buildconfig
-import pipes
+import shlex
 import subprocess
 import sys
 
@@ -48,7 +48,7 @@ def execute_node_cmd(node_cmd_list):
     """
 
     try:
-        printable_cmd = ' '.join(pipes.quote(arg) for arg in node_cmd_list)
+        printable_cmd = ' '.join(shlex.quote(arg) for arg in node_cmd_list)
         print('Executing "{}"'.format(printable_cmd), file=sys.stderr)
         sys.stderr.flush()
 

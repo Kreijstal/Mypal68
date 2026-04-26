@@ -15,4 +15,8 @@ UNIFIED_SOURCES += [
 # GMPVideoEncodedFrameImpl.h needs IPC
 include('/ipc/chromium/chromium-config.mozbuild')
 
+LOCAL_INCLUDES += [
+    '/dom/media/mp4',
+]
+
 FINAL_LIBRARY = 'xul'

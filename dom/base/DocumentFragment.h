@@ -86,7 +86,11 @@ class DocumentFragment : public FragmentOrElement {
                            bool aDumpAll) const override;
 #endif
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   virtual ~DocumentFragment() = default;
 
   nsresult Clone(dom::NodeInfo* aNodeInfo, nsINode** aResult) const override;

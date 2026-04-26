@@ -578,11 +578,11 @@ const gfxFT2FontBase::GlyphMetrics& gfxFT2FontBase::GetCachedGlyphMetrics(
             128);
   }
 
-  if (const GlyphMetrics* metrics = mGlyphMetrics->GetValue(aGID)) {
-    return *metrics;
+  if (auto metrics = mGlyphMetrics->Lookup(aGID)) {
+    return metrics.Data();
   }
 
-  GlyphMetrics& metrics = mGlyphMetrics->GetOrInsert(aGID);
+  GlyphMetrics& metrics = mGlyphMetrics->LookupOrInsert(aGID);
   IntRect bounds;
   if (GetFTGlyphExtents(aGID, &metrics.mAdvance, &bounds)) {
     metrics.SetBounds(bounds);

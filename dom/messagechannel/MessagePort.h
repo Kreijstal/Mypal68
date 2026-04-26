@@ -7,7 +7,7 @@
 
 #include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
-#include "mozilla/dom/DOMTypes.h"
+#include "nsID.h"
 #include "nsAutoPtr.h"
 #include "nsTArray.h"
 
@@ -21,6 +21,7 @@ namespace mozilla {
 namespace dom {
 
 class MessageData;
+class MessagePortIdentifier;
 class MessagePortChild;
 class PostMessageRunnable;
 class RefMessageBodyService;
@@ -39,33 +40,25 @@ struct StructuredSerializeOptions;
 // ownership.
 class UniqueMessagePortId final {
  public:
-  UniqueMessagePortId() { mIdentifier.neutered() = true; }
-  explicit UniqueMessagePortId(const MessagePortIdentifier& aIdentifier)
-      : mIdentifier(aIdentifier) {}
-  UniqueMessagePortId(UniqueMessagePortId&& aOther) noexcept
-      : mIdentifier(aOther.mIdentifier) {
-    aOther.mIdentifier.neutered() = true;
-  }
-  ~UniqueMessagePortId() { ForceClose(); };
+  UniqueMessagePortId();
+  explicit UniqueMessagePortId(const MessagePortIdentifier& aIdentifier);
+  UniqueMessagePortId(UniqueMessagePortId&& aOther) noexcept;
+  ~UniqueMessagePortId();
   void ForceClose();
 
-  [[nodiscard]] MessagePortIdentifier release() {
-    MessagePortIdentifier id = mIdentifier;
-    mIdentifier.neutered() = true;
-    return id;
-  }
+  [[nodiscard]] MessagePortIdentifier release();
   // const member accessors are not required because a const
   // UniqueMessagePortId is not useful.
-  nsID& uuid() { return mIdentifier.uuid(); }
-  nsID& destinationUuid() { return mIdentifier.destinationUuid(); }
-  uint32_t& sequenceId() { return mIdentifier.sequenceId(); }
-  bool& neutered() { return mIdentifier.neutered(); }
+  nsID& uuid();
+  nsID& destinationUuid();
+  uint32_t& sequenceId();
+  bool& neutered();
 
   UniqueMessagePortId(const UniqueMessagePortId& aOther) = delete;
   void operator=(const UniqueMessagePortId& aOther) = delete;
 
  private:
-  MessagePortIdentifier mIdentifier;
+  nsAutoPtr<MessagePortIdentifier> mIdentifier;
 };
 
 class MessagePort final : public DOMEventTargetHelper {

@@ -76,6 +76,40 @@ struct Keyframe {
   nsTArray<PropertyValuePair> mPropertyValues;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::PropertyValuePair">
+ */
+struct PropertyValuePair_Simple {
+  nsCSSPropertyID mProperty;
+  RefPtr<RawServoDeclarationBlock> mServoDeclarationBlock;
+#ifdef DEBUG
+  bool mSimulateComputeValuesFailure;
+#endif
+};
+
+static_assert(sizeof(PropertyValuePair) == sizeof(PropertyValuePair_Simple),
+              "Size mismatch between PropertyValuePair and "
+              "PropertyValuePair_Simple");
+static_assert(alignof(PropertyValuePair) == alignof(PropertyValuePair_Simple),
+              "Align mismatch between PropertyValuePair and "
+              "PropertyValuePair_Simple");
+
+/**
+ * <div rustbindgen="true" replaces="mozilla::Keyframe">
+ */
+struct Keyframe_Simple {
+  Maybe<double> mOffset;
+  double mComputedOffset;
+  Maybe<ComputedTimingFunction> mTimingFunction;
+  dom::CompositeOperationOrAuto mComposite;
+  nsTArray<PropertyValuePair> mPropertyValues;
+};
+
+static_assert(sizeof(Keyframe) == sizeof(Keyframe_Simple),
+              "Size mismatch between Keyframe and Keyframe_Simple");
+static_assert(alignof(Keyframe) == alignof(Keyframe_Simple),
+              "Align mismatch between Keyframe and Keyframe_Simple");
+
 }  // namespace mozilla
 
 #endif  // mozilla_dom_Keyframe_h

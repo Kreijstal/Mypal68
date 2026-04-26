@@ -66,6 +66,28 @@ struct ComputedTiming {
       ComputedTimingFunction::BeforeFlag::Unset;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::ComputedTiming">
+ */
+struct ComputedTiming_Simple {
+  StickyTimeDuration mActiveDuration;
+  StickyTimeDuration mActiveTime;
+  StickyTimeDuration mEndTime;
+  dom::Nullable<double> mProgress;
+  uint64_t mCurrentIteration;
+  double mIterations;
+  double mIterationStart;
+  StickyTimeDuration mDuration;
+  dom::FillMode mFill;
+  int mPhase;
+  ComputedTimingFunction::BeforeFlag mBeforeFlag;
+};
+
+static_assert(sizeof(ComputedTiming) == sizeof(ComputedTiming_Simple),
+              "Size mismatch between ComputedTiming and ComputedTiming_Simple");
+static_assert(alignof(ComputedTiming) == alignof(ComputedTiming_Simple),
+              "Align mismatch between ComputedTiming and ComputedTiming_Simple");
+
 }  // namespace mozilla
 
 #endif  // mozilla_ComputedTiming_h

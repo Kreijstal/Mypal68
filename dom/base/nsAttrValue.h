@@ -562,4 +562,16 @@ inline void* nsAttrValue::GetPtr() const {
 
 inline bool nsAttrValue::IsEmptyString() const { return !mBits; }
 
+/**
+ * <div rustbindgen="true" replaces="nsAttrValue">
+ */
+struct nsAttrValue_Simple {
+  uintptr_t mBits;
+};
+
+static_assert(sizeof(nsAttrValue) == sizeof(nsAttrValue_Simple),
+              "Size mismatch between nsAttrValue and nsAttrValue_Simple");
+static_assert(alignof(nsAttrValue) == alignof(nsAttrValue_Simple),
+              "Align mismatch between nsAttrValue and nsAttrValue_Simple");
+
 #endif

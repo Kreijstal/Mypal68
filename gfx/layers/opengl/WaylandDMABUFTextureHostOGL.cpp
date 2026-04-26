@@ -103,9 +103,11 @@ gfx::ColorRange WaylandDMABUFTextureHostOGL::GetColorRange() const {
                                  : gfx::ColorRange::LIMITED;
 }
 
+#ifdef MOZ_BUILD_WEBRENDER
 uint32_t WaylandDMABUFTextureHostOGL::NumSubTextures() {
   return mSurface->GetTextureCount();
 }
+#endif
 
 gfx::IntSize WaylandDMABUFTextureHostOGL::GetSize() const {
   if (!mSurface) {
@@ -118,14 +120,13 @@ gl::GLContext* WaylandDMABUFTextureHostOGL::gl() const {
   return mProvider ? mProvider->GetGLContext() : nullptr;
 }
 
+#ifdef MOZ_BUILD_WEBRENDER
 void WaylandDMABUFTextureHostOGL::CreateRenderTexture(
     const wr::ExternalImageId& aExternalImageId) {
-#ifdef MOZ_BUILD_WEBRENDER
   RefPtr<wr::RenderTextureHost> texture =
       new wr::RenderWaylandDMABUFTextureHostOGL(mSurface);
   wr::RenderThread::Get()->RegisterExternalImage(wr::AsUint64(aExternalImageId),
                                                  texture.forget());
-#endif
 }
 
 void WaylandDMABUFTextureHostOGL::PushResourceUpdates(
@@ -200,5 +201,6 @@ void WaylandDMABUFTextureHostOGL::PushDisplayItems(
     }
   }
 }
+#endif
 
 }  // namespace mozilla::layers

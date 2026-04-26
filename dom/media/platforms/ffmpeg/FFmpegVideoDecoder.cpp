@@ -23,6 +23,9 @@
 #  define AV_PIX_FMT_YUV444P10LE PIX_FMT_YUV444P10LE
 #  define AV_PIX_FMT_NONE PIX_FMT_NONE
 #endif
+#ifndef AV_CODEC_FLAG2_FAST
+#  define AV_CODEC_FLAG2_FAST CODEC_FLAG2_FAST
+#endif
 #include "mozilla/PodOperations.h"
 #include "mozilla/TaskQueue.h"
 #include "nsThreadUtils.h"

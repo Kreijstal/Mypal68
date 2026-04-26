@@ -174,4 +174,16 @@ class nsAttrName {
   uintptr_t mBits;
 };
 
+/**
+ * <div rustbindgen="true" replaces="nsAttrName">
+ */
+struct nsAttrName_Simple {
+  uintptr_t mBits;
+};
+
+static_assert(sizeof(nsAttrName) == sizeof(nsAttrName_Simple),
+              "Size mismatch between nsAttrName and nsAttrName_Simple");
+static_assert(alignof(nsAttrName) == alignof(nsAttrName_Simple),
+              "Align mismatch between nsAttrName and nsAttrName_Simple");
+
 #endif

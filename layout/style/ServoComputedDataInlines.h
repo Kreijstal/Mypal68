@@ -8,20 +8,13 @@
 #include "mozilla/ServoComputedData.h"
 #include "nsStyleStruct.h"
 
-namespace mozilla {
-#define STYLE_STRUCT(name_)                  \
-  struct Gecko##name_ {                      \
-    ServoManuallyDrop<nsStyle##name_> gecko; \
-  };
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
-}  // namespace mozilla
-
-#define STYLE_STRUCT(name_)                                          \
+#ifndef RUST_BINDGEN
+#  define STYLE_STRUCT(name_)                                        \
   const nsStyle##name_* ServoComputedData::GetStyle##name_() const { \
     return &name_.mPtr->gecko.mInner;                                \
   }
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
+#  include "nsStyleStructList.h"
+#  undef STYLE_STRUCT
+#endif
 
 #endif  // mozilla_ServoComputedDataInlines_h

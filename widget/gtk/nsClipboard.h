@@ -5,6 +5,7 @@
 #ifndef __nsClipboard_h_
 #define __nsClipboard_h_
 
+#include "nsAutoPtr.h"
 #include "nsIClipboard.h"
 #include "nsIObserver.h"
 #include <gtk/gtk.h>

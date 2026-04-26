@@ -32,6 +32,11 @@
 #  endif
 #endif
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 class AttrArray;
 class nsAttrChildContentList;
 template <typename T>
@@ -1812,6 +1817,10 @@ class nsINode : public mozilla::dom::EventTarget {
   }
 
  public:
+  bool GetBoolFlagForServo(uint32_t aFlag) const {
+    return GetBoolFlag(static_cast<BooleanFlag>(aFlag));
+  }
+
   bool HasRenderingObservers() const {
     return GetBoolFlag(NodeHasRenderingObservers);
   }
@@ -2248,7 +2257,11 @@ class nsINode : public mozilla::dom::EventTarget {
 #undef TOUCH_EVENT
 #undef EVENT
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   static bool Traverse(nsINode* tmp, nsCycleCollectionTraversalCallback& cb);
   static void Unlink(nsINode* tmp);
 
@@ -2259,7 +2272,11 @@ class nsINode : public mozilla::dom::EventTarget {
   // MOZ_OWNING_REF.
   nsINode* MOZ_OWNING_REF mParent;
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  private:
+#endif
 #ifndef BOOL_FLAGS_ON_WRAPPER_CACHE
   // Boolean flags.
   uint32_t mBoolFlags;
@@ -2269,7 +2286,11 @@ class nsINode : public mozilla::dom::EventTarget {
 
   uint32_t mChildCount;
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   // mNextSibling and mFirstChild are strong references while
   // mPreviousOrLastSibling is a weak ref. |mFirstChild->mPreviousOrLastSibling|
   // points to the last child node.
@@ -2394,5 +2415,10 @@ inline nsISupports* ToSupports(nsINode* aPointer) { return aPointer; }
 
 #define NS_IMPL_FROMNODE_HTML_WITH_TAG(_class, _tag) \
   NS_IMPL_FROMNODE_WITH_TAG(_class, kNameSpaceID_XHTML, _tag)
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif /* nsINode_h___ */

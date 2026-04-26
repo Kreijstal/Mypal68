@@ -80,6 +80,22 @@ struct URLExtraData {
   static StaticRefPtr<URLExtraData> sDummyChrome;
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::URLExtraData">
+ */
+struct URLExtraData_Simple {
+  ThreadSafeAutoRefCnt mRefCnt;
+  nsCOMPtr<nsIURI> mBaseURI;
+  nsCOMPtr<nsIReferrerInfo> mReferrerInfo;
+  nsCOMPtr<nsIPrincipal> mPrincipal;
+  bool mChromeRulesEnabled;
+};
+
+static_assert(sizeof(URLExtraData) == sizeof(URLExtraData_Simple),
+              "Size mismatch between URLExtraData and URLExtraData_Simple");
+static_assert(alignof(URLExtraData) == alignof(URLExtraData_Simple),
+              "Align mismatch between URLExtraData and URLExtraData_Simple");
+
 }  // namespace mozilla
 
 #endif  // mozilla_URLExtraData_h

@@ -1223,7 +1223,7 @@ bool LayerManagerComposite::Render(const nsIntRegion& aInvalidRegion,
     } else {
 #endif
       RenderOnce(clipRect);
-#ifndef XP_WIN
+#ifdef XP_MACOSX
     }
 #endif
 

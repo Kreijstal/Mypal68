@@ -12,6 +12,7 @@
 
 #ifdef HAVE_JPEG
 #include <assert.h>
+#include <stdio.h>
 
 #if !defined(__pnacl__) && !defined(__CLR_VER) && \
     !defined(COVERAGE_ENABLED) && !defined(TARGET_IPHONE_SIMULATOR)

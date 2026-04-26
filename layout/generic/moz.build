@@ -261,6 +261,7 @@ LOCAL_INCLUDES += [
     "/dom/base",
     "/dom/html",
     "/dom/xul",
+    "/gfx/thebes",
 ]
 
 JAR_MANIFESTS += ["jar.mn"]

@@ -48,6 +48,26 @@ struct AnimationPropertySegment {
   }
 };
 
+/**
+ * <div rustbindgen="true" replaces="mozilla::AnimationPropertySegment">
+ */
+struct AnimationPropertySegment_Simple {
+  float mFromKey, mToKey;
+  AnimationValue mFromValue, mToValue;
+  Maybe<ComputedTimingFunction> mTimingFunction;
+  dom::CompositeOperation mFromComposite;
+  dom::CompositeOperation mToComposite;
+};
+
+static_assert(sizeof(AnimationPropertySegment) ==
+                  sizeof(AnimationPropertySegment_Simple),
+              "Size mismatch between AnimationPropertySegment and "
+              "AnimationPropertySegment_Simple");
+static_assert(alignof(AnimationPropertySegment) ==
+                  alignof(AnimationPropertySegment_Simple),
+              "Align mismatch between AnimationPropertySegment and "
+              "AnimationPropertySegment_Simple");
+
 }  // namespace mozilla
 
 #endif  // mozilla_dom_AnimationPropertySegment_h

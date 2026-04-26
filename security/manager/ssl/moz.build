@@ -144,7 +144,7 @@ else:
         'OSReauthenticator.cpp',
     ]
 
-if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':
+if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'gtk3'):
     UNIFIED_SOURCES += [
         'LibSecret.cpp',
     ]

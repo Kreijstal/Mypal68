@@ -115,6 +115,35 @@ struct PropertyStyleAnimationValuePair {
   nsCSSPropertyID mProperty;
   AnimationValue mValue;
 };
+
+/**
+ * <div rustbindgen="true" replaces="mozilla::AnimationValue">
+ */
+struct AnimationValue_Simple {
+  RefPtr<RawServoAnimationValue> mServo;
+};
+
+static_assert(sizeof(AnimationValue) == sizeof(AnimationValue_Simple),
+              "Size mismatch between AnimationValue and AnimationValue_Simple");
+static_assert(alignof(AnimationValue) == alignof(AnimationValue_Simple),
+              "Align mismatch between AnimationValue and AnimationValue_Simple");
+
+/**
+ * <div rustbindgen="true" replaces="mozilla::PropertyStyleAnimationValuePair">
+ */
+struct PropertyStyleAnimationValuePair_Simple {
+  nsCSSPropertyID mProperty;
+  AnimationValue mValue;
+};
+
+static_assert(sizeof(PropertyStyleAnimationValuePair) ==
+                  sizeof(PropertyStyleAnimationValuePair_Simple),
+              "Size mismatch between PropertyStyleAnimationValuePair and "
+              "PropertyStyleAnimationValuePair_Simple");
+static_assert(alignof(PropertyStyleAnimationValuePair) ==
+                  alignof(PropertyStyleAnimationValuePair_Simple),
+              "Align mismatch between PropertyStyleAnimationValuePair and "
+              "PropertyStyleAnimationValuePair_Simple");
 }  // namespace mozilla
 
 #endif

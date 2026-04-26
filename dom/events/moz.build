@@ -177,6 +177,7 @@ LOCAL_INCLUDES += [
     '/dom/storage',
     '/dom/xml',
     '/dom/xul',
+    '/gfx/thebes',
     '/js/xpconnect/wrappers',
     '/layout/forms',
     '/layout/generic',

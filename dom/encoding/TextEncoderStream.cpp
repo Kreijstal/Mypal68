@@ -59,13 +59,7 @@ static void EncodeNative(JSContext* aCx, mozilla::Decoder* aDecoder,
   }
   size_t lengthU8 = aInput.Length() * 2;
 
-  //KAKOGO BLYAT XYA x64 obsiraetsa tut tip TODO mozet 1741665 tam doxuya
-#if defined(_M_X64)
-  CheckedInt<unsigned long long> needed =
-#else
-  CheckedInt<nsAString::size_type> needed =
-#endif
-      aDecoder->MaxUTF8BufferLength(lengthU8);
+  CheckedInt<size_t> needed = aDecoder->MaxUTF8BufferLength(lengthU8);
   if (!needed.isValid()) {
     aRv.Throw(NS_ERROR_OUT_OF_MEMORY);
     return;

@@ -4,10 +4,13 @@
 
 #include "gfxGdkNativeRenderer.h"
 #include "gfxContext.h"
+#include "X11UndefineNone.h"
 #include "gfxPlatformGtk.h"
+#include "X11UndefineNone.h"
 
 #ifdef MOZ_X11
 #  include <gdk/gdkx.h>
+#  include "X11UndefineNone.h"
 #  include "cairo-xlib.h"
 #  include "gfxXlibSurface.h"
 

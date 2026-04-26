@@ -21,6 +21,11 @@ class nsAtom;
 class nsIContent;
 class nsXBLPrototypeBinding;
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 namespace mozilla {
 
 class EventChainPreVisitor;
@@ -260,7 +265,11 @@ class ShadowRoot final : public DocumentFragment,
     return DocumentOrShadowRoot::SetValueMissingState(aName, aValue);
   }
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   // FIXME(emilio): This will need to become more fine-grained.
   void ApplicableRulesChanged();
 
@@ -294,5 +303,10 @@ class ShadowRoot final : public DocumentFragment,
 
 }  // namespace dom
 }  // namespace mozilla
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif  // mozilla_dom_shadowroot_h__

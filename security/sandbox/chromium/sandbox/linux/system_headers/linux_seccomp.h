@@ -100,8 +100,8 @@
 #define SECCOMP_RET_INVALID 0x00010000U  // Illegal return value
 #endif
 
-#ifndef SYS_SECCOMP
-#define SYS_SECCOMP                   1
+#ifndef SANDBOX_SYS_SECCOMP
+#define SANDBOX_SYS_SECCOMP           1
 #endif
 
 #endif  // SANDBOX_LINUX_SYSTEM_HEADERS_LINUX_SECCOMP_H_

@@ -58,6 +58,11 @@
 #include "nsTLiteralString.h"
 #include "nscore.h"
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 class JSObject;
 class mozAutoDocUpdate;
 class nsAttrName;
@@ -536,6 +541,11 @@ class Element : public FragmentOrElement {
   }
 
   bool HasServoData() const { return !!mServoData.Get(); }
+  ServoNodeData* GetServoData() const { return mServoData.Get(); }
+  void SetServoData(ServoNodeData* aData) const { mServoData.Set(aData); }
+  const nsExtendedDOMSlots* GetExistingExtendedDOMSlotsForServo() const {
+    return GetExistingExtendedDOMSlots();
+  }
 
   void ClearServoData() { ClearServoData(GetComposedDoc()); }
   void ClearServoData(Document* aDocument);
@@ -1883,7 +1893,11 @@ class Element : public FragmentOrElement {
    */
   static nsAtom* GetEventNameForAttr(nsAtom* aAttr);
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  private:
+#endif
 #ifdef MOZ_DIAGNOSTIC_ASSERT_ENABLED
   void AssertInvariantsOnNodeInfoChange();
 #endif
@@ -1920,7 +1934,11 @@ class Element : public FragmentOrElement {
   // descendants of display: none elements.
   mozilla::RustCell<ServoNodeData*> mServoData;
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  protected:
+#endif
   // Array containing all attributes for this element
   AttrArray mAttrs;
 };
@@ -2055,5 +2073,10 @@ inline mozilla::dom::Element* nsINode::GetNextElementSibling() const {
   NS_IMPL_ELEMENT_CLONE_WITH_INIT_HELPER(_elementName, ())
 #define NS_IMPL_ELEMENT_CLONE_WITH_INIT_AND_PARSER(_elementName) \
   NS_IMPL_ELEMENT_CLONE_WITH_INIT_HELPER(_elementName, (, NOT_FROM_PARSER))
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif  // mozilla_dom_Element_h__

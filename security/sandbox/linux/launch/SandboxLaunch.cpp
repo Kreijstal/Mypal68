@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <utility>
+#include <vector>
 
 #include "LinuxCapabilities.h"
 #include "LinuxSched.h"
@@ -408,11 +409,11 @@ static int CloneCallee(void* aPtr) {
 // we don't currently support sandboxing under valgrind.
 MOZ_NEVER_INLINE MOZ_ASAN_BLACKLIST static pid_t DoClone(int aFlags,
                                                          jmp_buf* aCtx) {
-  uint8_t miniStack[PTHREAD_STACK_MIN];
+  std::vector<uint8_t> miniStack(PTHREAD_STACK_MIN);
 #ifdef __hppa__
-  void* stackPtr = miniStack;
+  void* stackPtr = miniStack.data();
 #else
-  void* stackPtr = ArrayEnd(miniStack);
+  void* stackPtr = miniStack.data() + miniStack.size();
 #endif
   return clone(CloneCallee, stackPtr, aFlags, aCtx);
 }

@@ -187,7 +187,8 @@ bool SharedMemory::AppendPosixShmPrefix(std::string* str, pid_t pid) {
 #endif    // !ANDROID
 }
 
-bool SharedMemory::CreateInternal(size_t size, bool freezeable) {
+bool SharedMemory::CreateInternal(size_t size, bool freezeable,
+                                  const char* name) {
   read_only_ = false;
 
   DCHECK(size > 0);

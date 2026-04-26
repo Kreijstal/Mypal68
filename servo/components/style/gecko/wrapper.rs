@@ -44,15 +44,20 @@ use crate::gecko_bindings::bindings::{Gecko_ElementState, Gecko_GetDocumentLWThe
 use crate::gecko_bindings::bindings::{Gecko_SetNodeFlags, Gecko_UnsetNodeFlags};
 use crate::gecko_bindings::structs;
 use crate::gecko_bindings::structs::nsChangeHint;
-use crate::gecko_bindings::structs::Document_DocumentTheme as DocumentTheme;
-use crate::gecko_bindings::structs::EffectCompositor_CascadeLevel as CascadeLevel;
+use crate::gecko_bindings::structs::DocumentTheme;
+use crate::gecko_bindings::structs::CascadeLevel;
+use crate::gecko_bindings::structs::CascadeLevel_Animations;
+use crate::gecko_bindings::structs::CascadeLevel_Transitions;
+use crate::gecko_bindings::structs::DocumentTheme_Doc_Theme_Bright;
+use crate::gecko_bindings::structs::DocumentTheme_Doc_Theme_Dark;
+use crate::gecko_bindings::structs::DocumentTheme_Doc_Theme_None;
 use crate::gecko_bindings::structs::ELEMENT_HANDLED_SNAPSHOT;
 use crate::gecko_bindings::structs::ELEMENT_HAS_ANIMATION_ONLY_DIRTY_DESCENDANTS_FOR_SERVO;
 use crate::gecko_bindings::structs::ELEMENT_HAS_DIRTY_DESCENDANTS_FOR_SERVO;
 use crate::gecko_bindings::structs::ELEMENT_HAS_SNAPSHOT;
 use crate::gecko_bindings::structs::NODE_DESCENDANTS_NEED_FRAMES;
 use crate::gecko_bindings::structs::NODE_NEEDS_FRAME;
-use crate::gecko_bindings::structs::{nsAtom, nsIContent, nsINode_BooleanFlag};
+use crate::gecko_bindings::structs::{nsAtom, nsIContent};
 use crate::gecko_bindings::structs::{nsINode as RawGeckoNode, Element as RawGeckoElement};
 use crate::gecko_bindings::sugar::ownership::{HasArcFFI, HasSimpleFFI};
 use crate::global_style_data::GLOBAL_STYLE_DATA;
@@ -87,6 +92,43 @@ use std::hash::{Hash, Hasher};
 use std::mem;
 use std::ptr;
 
+#[repr(u32)]
+#[allow(dead_code)]
+enum nsINode_BooleanFlag {
+    NodeHasRenderingObservers = 0,
+    IsInDocument = 1,
+    IsConnected = 2,
+    ParentIsContent = 3,
+    NodeIsElement = 4,
+    ElementHasID = 5,
+    ElementMayHaveClass = 6,
+    ElementMayHaveStyle = 7,
+    ElementHasName = 8,
+    ElementHasPart = 9,
+    ElementMayHaveContentEditableAttr = 10,
+    NodeIsClosestCommonInclusiveAncestorForRangeInSelection = 11,
+    NodeIsDescendantOfClosestCommonInclusiveAncestorForRangeInSelection = 12,
+    NodeIsCCMarkedRoot = 13,
+    NodeIsCCBlackTree = 14,
+    NodeIsPurpleRoot = 15,
+    ElementHasLockedStyleStates = 16,
+    ElementHasPointerLock = 17,
+    NodeMayHaveDOMMutationObserver = 18,
+    NodeIsContent = 19,
+    ElementHasAnimations = 20,
+    NodeHasValidDirAttribute = 21,
+    NodeHasDirAutoSet = 22,
+    NodeHasTextNodeDirectionalityMap = 23,
+    NodeAncestorHasDirAuto = 24,
+    NodeHandlingClick = 25,
+    ElementHasWeirdParserInsertionMode = 26,
+    ParserHasNotified = 27,
+    MayBeApzAware = 28,
+    ElementMayHaveAnonymousChildren = 29,
+    ElementHasCustomElementData = 30,
+    ElementCreatedFromPrototypeAndHasUnmodifiedL10n = 31,
+}
+
 #[inline]
 fn elements_with_id<'a, 'le>(
     array: *const structs::nsTArray<*mut RawGeckoElement>,
@@ -118,17 +160,17 @@ impl<'ld> TDocument for GeckoDocument<'ld> {
 
     #[inline]
     fn as_node(&self) -> Self::ConcreteNode {
-        GeckoNode(&self.0._base)
+        GeckoNode(unsafe { &*bindings::Gecko_Document_AsNode(self.0) })
     }
 
     #[inline]
     fn is_html_document(&self) -> bool {
-        self.0.mType == structs::Document_Type::eHTML
+        unsafe { bindings::Gecko_Document_IsHTMLDocument(self.0) }
     }
 
     #[inline]
     fn quirks_mode(&self) -> QuirksMode {
-        self.0.mCompatMode.into()
+        unsafe { bindings::Gecko_Document_QuirksMode(self.0).into() }
     }
 
     #[inline]
@@ -169,12 +211,12 @@ impl<'lr> TShadowRoot for GeckoShadowRoot<'lr> {
 
     #[inline]
     fn as_node(&self) -> Self::ConcreteNode {
-        GeckoNode(&self.0._base._base._base._base)
+        GeckoNode(unsafe { &*bindings::Gecko_ShadowRoot_AsNode(self.0) })
     }
 
     #[inline]
     fn host(&self) -> GeckoElement<'lr> {
-        GeckoElement(unsafe { &*self.0._base.mHost.mRawPtr })
+        GeckoElement(unsafe { &*bindings::Gecko_ShadowRoot_Host(self.0) })
     }
 
     #[inline]
@@ -182,7 +224,7 @@ impl<'lr> TShadowRoot for GeckoShadowRoot<'lr> {
     where
         Self: 'a,
     {
-        let author_styles = unsafe { self.0.mServoStyles.mPtr.as_ref()? };
+        let author_styles = unsafe { bindings::Gecko_ShadowRoot_GetServoStyles(self.0).as_ref()? };
         let author_styles = AuthorStyles::<GeckoStyleSheet>::from_ffi(author_styles);
         Some(&author_styles.data)
     }
@@ -202,7 +244,8 @@ impl<'lr> TShadowRoot for GeckoShadowRoot<'lr> {
     where
         Self: 'a,
     {
-        let slice: &[*const RawGeckoElement] = &*self.0.mParts;
+        let slice: &[*const RawGeckoElement] =
+            unsafe { &**bindings::Gecko_ShadowRoot_Parts(self.0) };
 
         #[allow(dead_code)]
         unsafe fn static_assert() {
@@ -268,36 +311,35 @@ impl<'ln> GeckoNode<'ln> {
 
     #[inline]
     fn from_content(content: &'ln nsIContent) -> Self {
-        GeckoNode(&content._base)
+        GeckoNode(unsafe { &*bindings::Gecko_Content_AsNode(content) })
     }
 
     #[inline]
     fn flags(&self) -> u32 {
-        (self.0)._base._base_1.mFlags
+        unsafe { bindings::Gecko_NodeFlags(self.0) }
     }
 
     #[inline]
     fn node_info(&self) -> &structs::NodeInfo {
-        debug_assert!(!self.0.mNodeInfo.mRawPtr.is_null());
-        unsafe { &*self.0.mNodeInfo.mRawPtr }
+        unsafe { &*bindings::Gecko_Node_NodeInfo(self.0) }
     }
 
     // These live in different locations depending on processor architecture.
     #[cfg(target_pointer_width = "64")]
     #[inline]
     fn bool_flags(&self) -> u32 {
-        (self.0)._base._base_1.mBoolFlags
+        0
     }
 
     #[cfg(target_pointer_width = "32")]
     #[inline]
     fn bool_flags(&self) -> u32 {
-        (self.0).mBoolFlags
+        0
     }
 
     #[inline]
     fn get_bool_flag(&self, flag: nsINode_BooleanFlag) -> bool {
-        self.bool_flags() & (1u32 << flag as u32) != 0
+        unsafe { bindings::Gecko_Node_GetBoolFlag(self.0, flag as u32) }
     }
 
     /// This logic is duplicate in Gecko's nsINode::IsInShadowTree().
@@ -320,7 +362,11 @@ impl<'ln> GeckoNode<'ln> {
             return false;
         }
 
-        let parent = unsafe { self.0.mParent.as_ref() }.map(GeckoNode);
+        let parent = unsafe {
+            bindings::Gecko_Node_GetParentNode(self.0)
+                .as_ref()
+                .map(GeckoNode)
+        };
         let parent_el = parent.and_then(|p| p.as_element());
         if flags & (NODE_IS_NATIVE_ANONYMOUS_ROOT as u32) != 0 &&
             parent_el.map_or(false, |el| el.is_root())
@@ -392,15 +438,17 @@ impl<'ln> TNode for GeckoNode<'ln> {
 
     #[inline]
     fn parent_node(&self) -> Option<Self> {
-        unsafe { self.0.mParent.as_ref().map(GeckoNode) }
+        unsafe {
+            bindings::Gecko_Node_GetParentNode(self.0)
+                .as_ref()
+                .map(GeckoNode)
+        }
     }
 
     #[inline]
     fn first_child(&self) -> Option<Self> {
         unsafe {
-            self.0
-                .mFirstChild
-                .raw::<nsIContent>()
+            bindings::Gecko_Node_GetFirstChild(self.0)
                 .as_ref()
                 .map(GeckoNode::from_content)
         }
@@ -414,20 +462,16 @@ impl<'ln> TNode for GeckoNode<'ln> {
     #[inline]
     fn prev_sibling(&self) -> Option<Self> {
         unsafe {
-            let prev_or_last = GeckoNode::from_content(self.0.mPreviousOrLastSibling.as_ref()?);
-            if prev_or_last.0.mNextSibling.raw::<nsIContent>().is_null() {
-                return None;
-            }
-            Some(prev_or_last)
+            bindings::Gecko_Node_GetPreviousSibling(self.0)
+                .as_ref()
+                .map(GeckoNode::from_content)
         }
     }
 
     #[inline]
     fn next_sibling(&self) -> Option<Self> {
         unsafe {
-            self.0
-                .mNextSibling
-                .raw::<nsIContent>()
+            bindings::Gecko_Node_GetNextSibling(self.0)
                 .as_ref()
                 .map(GeckoNode::from_content)
         }
@@ -435,8 +479,7 @@ impl<'ln> TNode for GeckoNode<'ln> {
 
     #[inline]
     fn owner_doc(&self) -> Self::ConcreteDocument {
-        debug_assert!(!self.node_info().mDocument.is_null());
-        GeckoDocument(unsafe { &*self.node_info().mDocument })
+        GeckoDocument(unsafe { &*bindings::Gecko_Node_OwnerDoc(self.0) })
     }
 
     #[inline]
@@ -567,7 +610,7 @@ impl<'le> GeckoElement<'le> {
     /// Gets the raw `ElementData` refcell for the element.
     #[inline(always)]
     pub fn get_data(&self) -> Option<&AtomicRefCell<ElementData>> {
-        unsafe { self.0.mServoData.get().as_ref() }
+        unsafe { bindings::Gecko_Element_GetServoData(self.0).as_ref() }
     }
 
     /// Returns whether any animation applies to this element.
@@ -577,32 +620,13 @@ impl<'le> GeckoElement<'le> {
     }
 
     #[inline(always)]
-    fn non_mapped_attrs(&self) -> &[structs::AttrArray_InternalAttr] {
-        unsafe {
-            let attrs = match self.0.mAttrs.mImpl.mPtr.as_ref() {
-                Some(attrs) => attrs,
-                None => return &[],
-            };
-
-            attrs.mBuffer.as_slice(attrs.mAttrCount as usize)
-        }
+    fn non_mapped_attrs(&self) -> &[structs::InternalAttr] {
+        &[]
     }
 
     #[inline(always)]
-    fn mapped_attrs(&self) -> &[structs::AttrArray_InternalAttr] {
-        unsafe {
-            let attrs = match self.0.mAttrs.mImpl.mPtr.as_ref() {
-                Some(attrs) => attrs,
-                None => return &[],
-            };
-
-            let attrs = match attrs.mMappedAttrs.as_ref() {
-                Some(attrs) => attrs,
-                None => return &[],
-            };
-
-            attrs.mBuffer.as_slice(attrs.mAttrCount as usize)
-        }
+    fn mapped_attrs(&self) -> &[structs::InternalAttr] {
+        &[]
     }
 
     #[inline(always)]
@@ -610,7 +634,7 @@ impl<'le> GeckoElement<'le> {
         if !self.has_part_attr() {
             return None;
         }
-        snapshot_helpers::find_attr(self.non_mapped_attrs(), &atom!("part"))
+        unsafe { bindings::Gecko_Element_GetParsedAttr(self.0, atom!("part").as_ptr()).as_ref() }
     }
 
     #[inline(always)]
@@ -626,7 +650,7 @@ impl<'le> GeckoElement<'le> {
             }
         }
 
-        snapshot_helpers::find_attr(self.non_mapped_attrs(), &atom!("class"))
+        unsafe { bindings::Gecko_Element_GetParsedAttr(self.0, atom!("class").as_ptr()).as_ref() }
     }
 
     #[inline]
@@ -683,19 +707,13 @@ impl<'le> GeckoElement<'le> {
     /// Returns a reference to the DOM slots for this Element, if they exist.
     #[inline]
     fn dom_slots(&self) -> Option<&structs::FragmentOrElement_nsDOMSlots> {
-        let slots = self.as_node().0.mSlots as *const structs::FragmentOrElement_nsDOMSlots;
-        unsafe { slots.as_ref() }
+        None
     }
 
     /// Returns a reference to the extended DOM slots for this Element.
     #[inline]
     fn extended_slots(&self) -> Option<&structs::FragmentOrElement_nsExtendedDOMSlots> {
-        self.dom_slots().and_then(|s| unsafe {
-            // For the bit usage, see nsContentSlots::GetExtendedSlots.
-            let e_slots = s._base.mExtendedSlots &
-                !structs::nsIContent_nsContentSlots_sNonOwningExtendedSlotsFlag;
-            (e_slots as *const structs::FragmentOrElement_nsExtendedDOMSlots).as_ref()
-        })
+        None
     }
 
     #[inline]
@@ -711,18 +729,15 @@ impl<'le> GeckoElement<'le> {
 
     #[inline]
     fn state_internal(&self) -> u64 {
-        if !self
-            .as_node()
-            .get_bool_flag(nsINode_BooleanFlag::ElementHasLockedStyleStates)
-        {
-            return self.0.mState.mStates;
-        }
         unsafe { Gecko_ElementState(self.0) }
     }
 
     #[inline]
     fn document_state(&self) -> DocumentState {
-        DocumentState::from_bits_truncate(self.as_node().owner_doc().0.mDocumentState.mStates)
+        let doc = self.as_node().owner_doc();
+        DocumentState::from_bits_truncate(unsafe {
+            bindings::Gecko_Document_DocumentState(doc.0)
+        })
     }
 
     #[inline]
@@ -1159,29 +1174,8 @@ impl<'le> TElement for GeckoElement<'le> {
             return &[];
         }
 
-        let slot: &structs::HTMLSlotElement = unsafe { mem::transmute(self.0) };
-
-        if cfg!(debug_assertions) {
-            let base: &RawGeckoElement = &slot._base._base._base._base;
-            assert_eq!(base as *const _, self.0 as *const _, "Bad cast");
-        }
-
-        // FIXME(emilio): Workaround a bindgen bug on Android that causes
-        // mAssignedNodes to be at the wrong offset. See bug 1466406.
-        //
-        // Bug 1466580 tracks running the Android layout tests on automation.
-        //
-        // The actual bindgen bug still needs reduction.
-        let assigned_nodes: &[structs::RefPtr<structs::nsINode>] = if !cfg!(target_os = "android") {
-            debug_assert_eq!(
-                unsafe { bindings::Gecko_GetAssignedNodes(self.0) },
-                &slot.mAssignedNodes as *const _,
-            );
-
-            &*slot.mAssignedNodes
-        } else {
-            unsafe { &**bindings::Gecko_GetAssignedNodes(self.0) }
-        };
+        let assigned_nodes: &[structs::RefPtr<structs::nsINode>] =
+            unsafe { &**bindings::Gecko_GetAssignedNodes(self.0) };
 
         debug_assert_eq!(
             mem::size_of::<structs::RefPtr<structs::nsINode>>(),
@@ -1194,18 +1188,17 @@ impl<'le> TElement for GeckoElement<'le> {
 
     #[inline]
     fn shadow_root(&self) -> Option<GeckoShadowRoot<'le>> {
-        let slots = self.extended_slots()?;
-        unsafe { slots.mShadowRoot.mRawPtr.as_ref().map(GeckoShadowRoot) }
+        unsafe {
+            bindings::Gecko_Element_GetShadowRoot(self.0)
+                .as_ref()
+                .map(GeckoShadowRoot)
+        }
     }
 
     #[inline]
     fn containing_shadow(&self) -> Option<GeckoShadowRoot<'le>> {
-        let slots = self.extended_slots()?;
         unsafe {
-            slots
-                ._base
-                .mContainingShadow
-                .mRawPtr
+            bindings::Gecko_Content_GetContainingShadow(self.0 as *const _ as *const nsIContent)
                 .as_ref()
                 .map(GeckoShadowRoot)
         }
@@ -1269,12 +1262,8 @@ impl<'le> TElement for GeckoElement<'le> {
 
     fn smil_override(&self) -> Option<ArcBorrow<Locked<PropertyDeclarationBlock>>> {
         unsafe {
-            let slots = self.extended_slots()?;
-
-            let declaration: &structs::DeclarationBlock =
-                slots.mSMILOverrideStyleDeclaration.mRawPtr.as_ref()?;
-
-            let raw: &structs::RawServoDeclarationBlock = declaration.mRaw.mRawPtr.as_ref()?;
+            let raw: &structs::RawServoDeclarationBlock =
+                bindings::Gecko_Element_GetSMILOverrideDeclarationBlock(self.0).as_ref()?;
 
             Some(
                 Locked::<PropertyDeclarationBlock>::as_arc(
@@ -1289,14 +1278,14 @@ impl<'le> TElement for GeckoElement<'le> {
         &self,
         _: &SharedStyleContext,
     ) -> Option<Arc<Locked<PropertyDeclarationBlock>>> {
-        get_animation_rule(self, CascadeLevel::Animations)
+        get_animation_rule(self, CascadeLevel_Animations)
     }
 
     fn transition_rule(
         &self,
         _: &SharedStyleContext,
     ) -> Option<Arc<Locked<PropertyDeclarationBlock>>> {
-        get_animation_rule(self, CascadeLevel::Transitions)
+        get_animation_rule(self, CascadeLevel_Transitions)
     }
 
     #[inline]
@@ -1317,7 +1306,10 @@ impl<'le> TElement for GeckoElement<'le> {
 
     #[inline]
     fn exports_any_part(&self) -> bool {
-        snapshot_helpers::find_attr(self.non_mapped_attrs(), &atom!("exportparts")).is_some()
+        unsafe {
+            bindings::Gecko_Element_GetParsedAttr(self.0, atom!("exportparts").as_ptr()).is_null()
+                == false
+        }
     }
 
     // FIXME(emilio): we should probably just return a reference to the Atom.
@@ -1327,24 +1319,21 @@ impl<'le> TElement for GeckoElement<'le> {
             return None;
         }
 
-        snapshot_helpers::get_id(self.non_mapped_attrs())
+        unsafe { bindings::Gecko_Element_GetParsedAttr(self.0, atom!("id").as_ptr()).as_ref() }
+            .map(|attr| unsafe { &*WeakAtom::new(bindings::Gecko_AttrValue_AtomAt(attr, 0)) })
     }
 
     fn each_attr_name<F>(&self, mut callback: F)
     where
         F: FnMut(&AtomIdent),
     {
-        for attr in self.non_mapped_attrs().iter().chain(self.mapped_attrs().iter()) {
-            let is_nodeinfo = attr.mName.mBits & 1 != 0;
-            unsafe {
-                let atom = if is_nodeinfo {
-                    let node_info = &*((attr.mName.mBits & !1) as *const structs::NodeInfo);
-                    node_info.mInner.mName
-                } else {
-                    attr.mName.mBits as *const nsAtom
-                };
-                AtomIdent::with(atom, |a| callback(a))
+        let count = unsafe { bindings::Gecko_Element_GetAttrCount(self.0) };
+        for i in 0..count {
+            let atom = unsafe { bindings::Gecko_Element_GetAttrLocalNameAt(self.0, i) };
+            if atom.is_null() {
+                continue;
             }
+            unsafe { AtomIdent::with(atom, |a| callback(a)) }
         }
     }
 
@@ -1365,7 +1354,13 @@ impl<'le> TElement for GeckoElement<'le> {
     where
         F: FnMut(&AtomIdent),
     {
-        snapshot_helpers::each_exported_part(self.non_mapped_attrs(), name, callback)
+        let attr = match unsafe {
+            bindings::Gecko_Element_GetParsedAttr(self.0, atom!("exportparts").as_ptr()).as_ref()
+        } {
+            Some(attr) => attr,
+            None => return,
+        };
+        snapshot_helpers::each_exported_part_from_attr(attr, name, callback)
     }
 
     fn each_part<F>(&self, callback: F)
@@ -1474,23 +1469,23 @@ impl<'le> TElement for GeckoElement<'le> {
         if !self.has_data() {
             debug!("Creating ElementData for {:?}", self);
             let ptr = Box::into_raw(Box::new(AtomicRefCell::new(ElementData::default())));
-            self.0.mServoData.set(ptr);
+            bindings::Gecko_Element_SetServoData(self.0, ptr);
         }
         self.mutate_data().unwrap()
     }
 
     unsafe fn clear_data(&self) {
-        let ptr = self.0.mServoData.get();
+        let ptr = bindings::Gecko_Element_GetServoData(self.0);
         self.unset_flags(
             ELEMENT_HAS_SNAPSHOT as u32 |
                 ELEMENT_HANDLED_SNAPSHOT as u32 |
-                structs::Element_kAllServoDescendantBits |
+                bindings::Gecko_Element_AllServoDescendantBits() |
                 NODE_NEEDS_FRAME as u32,
         );
         if !ptr.is_null() {
             debug!("Dropping ElementData for {:?}", self);
-            let data = Box::from_raw(self.0.mServoData.get());
-            self.0.mServoData.set(ptr::null_mut());
+            let data = Box::from_raw(ptr);
+            bindings::Gecko_Element_SetServoData(self.0, ptr::null_mut());
 
             // Perform a mutable borrow of the data in debug builds. This
             // serves as an assertion that there are no outstanding borrows
@@ -1938,9 +1933,13 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
 
     #[inline]
     fn assigned_slot(&self) -> Option<Self> {
-        let slot = self.extended_slots()?._base.mAssignedSlot.mRawPtr;
-
-        unsafe { Some(GeckoElement(&slot.as_ref()?._base._base._base._base)) }
+        let slot = unsafe {
+            bindings::Gecko_Content_GetAssignedSlot(self.0 as *const _ as *const nsIContent)
+                .as_ref()?
+        };
+        Some(GeckoElement(unsafe {
+            &*(slot as *const _ as *const RawGeckoElement)
+        }))
     }
 
     #[inline]
@@ -2191,12 +2190,12 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
                 bindings::Gecko_IsSelectListBox(self.0)
             },
             NonTSPseudoClass::MozIsHTML => self.is_html_element_in_html_document(),
-            NonTSPseudoClass::MozLWTheme => self.document_theme() != DocumentTheme::Doc_Theme_None,
+            NonTSPseudoClass::MozLWTheme => self.document_theme() != DocumentTheme_Doc_Theme_None,
             NonTSPseudoClass::MozLWThemeBrightText => {
-                self.document_theme() == DocumentTheme::Doc_Theme_Bright
+                self.document_theme() == DocumentTheme_Doc_Theme_Bright
             },
             NonTSPseudoClass::MozLWThemeDarkText => {
-                self.document_theme() == DocumentTheme::Doc_Theme_Dark
+                self.document_theme() == DocumentTheme_Doc_Theme_Dark
             },
             NonTSPseudoClass::MozWindowInactive => {
                 let state_bit = DocumentState::NS_DOCUMENT_STATE_WINDOW_INACTIVE;
@@ -2254,7 +2253,7 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
             return false;
         }
 
-        let element_id = match snapshot_helpers::get_id(self.non_mapped_attrs()) {
+        let element_id = match self.id() {
             Some(id) => id,
             None => return false,
         };
@@ -2274,7 +2273,14 @@ impl<'le> ::selectors::Element for GeckoElement<'le> {
 
     #[inline]
     fn imported_part(&self, name: &AtomIdent) -> Option<AtomIdent> {
-        snapshot_helpers::imported_part(self.non_mapped_attrs(), name)
+        let attr = unsafe {
+            bindings::Gecko_Element_GetParsedAttr(self.0, atom!("exportparts").as_ptr()).as_ref()?
+        };
+        let atom = unsafe { bindings::Gecko_Element_ImportedPart(attr, name.as_ptr()) };
+        if atom.is_null() {
+            return None;
+        }
+        Some(AtomIdent(unsafe { Atom::from_raw(atom) }))
     }
 
     #[inline(always)]

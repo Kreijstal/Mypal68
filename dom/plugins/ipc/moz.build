@@ -122,6 +122,7 @@ include('/ipc/chromium/chromium-config.mozbuild')
 FINAL_LIBRARY = 'xul'
 LOCAL_INCLUDES += [
     '../base',
+    '/gfx/thebes',
     '/xpcom/base/',
     '/xpcom/threads/',
 ]

@@ -30,6 +30,11 @@
 #include <cstddef>  // offsetof()
 #include "X11UndefineNone.h"
 
+#ifdef RUST_BINDGEN
+#  define private public
+#  define protected public
+#endif
+
 class nsIFrame;
 class nsIURI;
 class nsTextFrame;
@@ -2053,6 +2058,192 @@ STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsSize, nsSize_Simple, width);
 STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsSize, nsSize_Simple, height);
 
 /**
+ * <div rustbindgen="true" replaces="nsTimingFunction">
+ */
+struct nsTimingFunction_Simple {
+  mozilla::StyleComputedTimingFunction mTiming;
+};
+
+STATIC_ASSERT_TYPE_LAYOUTS_MATCH(nsTimingFunction, nsTimingFunction_Simple);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsTimingFunction, nsTimingFunction_Simple,
+                                   mTiming);
+
+/**
+ * <div rustbindgen="true" replaces="mozilla::StyleTransition">
+ */
+struct StyleTransition_Simple {
+  nsTimingFunction mTimingFunction;
+  float mDuration;
+  float mDelay;
+  nsCSSPropertyID mProperty;
+  RefPtr<nsAtom> mUnknownProperty;
+};
+
+STATIC_ASSERT_TYPE_LAYOUTS_MATCH(mozilla::StyleTransition,
+                                 StyleTransition_Simple);
+#ifdef RUST_BINDGEN
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleTransition,
+                                   StyleTransition_Simple, mTimingFunction);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleTransition,
+                                   StyleTransition_Simple, mDuration);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleTransition,
+                                   StyleTransition_Simple, mDelay);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleTransition,
+                                   StyleTransition_Simple, mProperty);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleTransition,
+                                   StyleTransition_Simple, mUnknownProperty);
+#endif
+
+/**
+ * <div rustbindgen="true" replaces="mozilla::StyleAnimation">
+ */
+struct StyleAnimation_Simple {
+  nsTimingFunction mTimingFunction;
+  float mDuration;
+  float mDelay;
+  RefPtr<nsAtom> mName;
+  mozilla::dom::PlaybackDirection mDirection;
+  mozilla::dom::FillMode mFillMode;
+  mozilla::StyleAnimationPlayState mPlayState;
+  float mIterationCount;
+};
+
+STATIC_ASSERT_TYPE_LAYOUTS_MATCH(mozilla::StyleAnimation,
+                                 StyleAnimation_Simple);
+#ifdef RUST_BINDGEN
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mTimingFunction);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mDuration);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mDelay);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mName);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mDirection);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mFillMode);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mPlayState);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(mozilla::StyleAnimation,
+                                   StyleAnimation_Simple, mIterationCount);
+#endif
+
+/**
+ * <div rustbindgen="true" replaces="nsStyleVisibility">
+ */
+struct nsStyleVisibility_Simple {
+  mozilla::StyleImageOrientation mImageOrientation;
+  mozilla::StyleDirection mDirection;
+  mozilla::StyleVisibility mVisible;
+  mozilla::StyleImageRendering mImageRendering;
+  mozilla::StyleWritingModeProperty mWritingMode;
+  mozilla::StyleTextOrientation mTextOrientation;
+  mozilla::StyleColorAdjust mColorAdjust;
+};
+
+STATIC_ASSERT_TYPE_LAYOUTS_MATCH(nsStyleVisibility, nsStyleVisibility_Simple);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mImageOrientation);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mDirection);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mVisible);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mImageRendering);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mWritingMode);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mTextOrientation);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleVisibility, nsStyleVisibility_Simple,
+                                   mColorAdjust);
+
+/**
+ * <div rustbindgen="true" replaces="nsStyleDisplay">
+ */
+struct nsStyleDisplay_Simple {
+  nsStyleAutoArray<mozilla::StyleTransition> mTransitions;
+  uint32_t mTransitionTimingFunctionCount;
+  uint32_t mTransitionDurationCount;
+  uint32_t mTransitionDelayCount;
+  uint32_t mTransitionPropertyCount;
+  nsStyleAutoArray<mozilla::StyleAnimation> mAnimations;
+  uint32_t mAnimationTimingFunctionCount;
+  uint32_t mAnimationDurationCount;
+  uint32_t mAnimationDelayCount;
+  uint32_t mAnimationNameCount;
+  uint32_t mAnimationDirectionCount;
+  uint32_t mAnimationFillModeCount;
+  uint32_t mAnimationPlayStateCount;
+  uint32_t mAnimationIterationCountCount;
+  mozilla::StyleDisplay mDisplay;
+  mozilla::StyleDisplay mOriginalDisplay;
+  mozilla::StyleContain mContain;
+  mozilla::StyleContentVisibility mContentVisibility;
+  mozilla::StyleContainerType mContainerType;
+  mozilla::StyleAppearance mAppearance;
+  mozilla::StyleAppearance mDefaultAppearance;
+  mozilla::StylePositionProperty mPosition;
+  mozilla::StyleFloat mFloat;
+  mozilla::StyleClear mBreakType;
+  mozilla::StyleBreakWithin mBreakInside;
+  mozilla::StyleBreakBetween mBreakBefore;
+  mozilla::StyleBreakBetween mBreakAfter;
+  mozilla::StyleOverflow mOverflowX;
+  mozilla::StyleOverflow mOverflowY;
+  mozilla::StyleOverflowClipBox mOverflowClipBoxBlock;
+  mozilla::StyleOverflowClipBox mOverflowClipBoxInline;
+  mozilla::StyleResize mResize;
+  mozilla::StyleOrient mOrient;
+  mozilla::StyleIsolation mIsolation;
+  mozilla::StyleTopLayer mTopLayer;
+  mozilla::StyleTouchAction mTouchAction;
+  mozilla::StyleScrollBehavior mScrollBehavior;
+  mozilla::StyleOverscrollBehavior mOverscrollBehaviorX;
+  mozilla::StyleOverscrollBehavior mOverscrollBehaviorY;
+  mozilla::StyleOverflowAnchor mOverflowAnchor;
+  mozilla::StyleScrollSnapAlign mScrollSnapAlign;
+  mozilla::StyleScrollSnapType mScrollSnapType;
+  mozilla::StyleBackfaceVisibility mBackfaceVisibility;
+  mozilla::StyleTransformStyle mTransformStyle;
+  mozilla::StyleGeometryBox mTransformBox;
+  mozilla::StyleTransform mTransform;
+  mozilla::StyleRotate mRotate;
+  mozilla::StyleTranslate mTranslate;
+  mozilla::StyleScale mScale;
+  mozilla::StyleContainerName mContainerName;
+  mozilla::StyleWillChange mWillChange;
+  mozilla::StyleOffsetPath mOffsetPath;
+  mozilla::LengthPercentage mOffsetDistance;
+  mozilla::StyleOffsetRotate mOffsetRotate;
+  mozilla::StylePositionOrAuto mOffsetAnchor;
+  mozilla::StyleTransformOrigin mTransformOrigin;
+  mozilla::StylePerspective mChildPerspective;
+  mozilla::Position mPerspectiveOrigin;
+  mozilla::StyleVerticalAlign mVerticalAlign;
+  uint32_t mLineClamp;
+  float mShapeImageThreshold;
+  mozilla::NonNegativeLengthPercentage mShapeMargin;
+  mozilla::StyleShapeOutside mShapeOutside;
+};
+
+STATIC_ASSERT_TYPE_LAYOUTS_MATCH(nsStyleDisplay, nsStyleDisplay_Simple);
+#ifdef RUST_BINDGEN
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mTransitions);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mAnimations);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mDisplay);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mAppearance);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mTransform);
+STATIC_ASSERT_FIELD_OFFSET_MATCHES(nsStyleDisplay, nsStyleDisplay_Simple,
+                                   mShapeOutside);
+#endif
+
+/**
  * <div rustbindgen="true" replaces="mozilla::UniquePtr">
  *
  * TODO(Emilio): This is a workaround and we should be able to get rid of this
@@ -2087,5 +2278,10 @@ STATIC_ASSERT_TYPE_LAYOUTS_MATCH(nsTArray<mozilla::StyleTransition>,
                                  nsTArray_Simple<mozilla::StyleTransition>);
 STATIC_ASSERT_TYPE_LAYOUTS_MATCH(nsTArray<mozilla::StyleAnimation>,
                                  nsTArray_Simple<mozilla::StyleAnimation>);
+
+#ifdef RUST_BINDGEN
+#  undef private
+#  undef protected
+#endif
 
 #endif /* nsStyleStruct_h___ */

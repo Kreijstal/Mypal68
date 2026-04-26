@@ -120,6 +120,7 @@ def bindgen_clang_compiler(clang_path, c_compiler, cxx_compiler,
 @imports(_from='os', _import='pathsep')
 @imports(_from='os.path', _import='split', _as='pathsplit')
 @imports('re')
+@imports(_from='six', _import='binary_type')
 def bindgen_libclang_path(libclang_path, clang, library_name_info, host):
     if not clang:
         if libclang_path:
@@ -145,6 +146,8 @@ def bindgen_libclang_path(libclang_path, clang, library_name_info, host):
     if not libclang_path:
         # Try to find libclang_path based on clang search dirs.
         clang_search_dirs = check_cmd_output(clang.path, '-print-search-dirs')
+        if isinstance(clang_search_dirs, binary_type):
+            clang_search_dirs = clang_search_dirs.decode('utf-8', 'replace')
         for line in clang_search_dirs.splitlines():
             name, _, value = line.partition(': =')
             if host.os == 'WINNT' and name == 'programs':

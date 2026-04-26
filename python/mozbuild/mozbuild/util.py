@@ -264,7 +264,9 @@ class FileAvoidWrite(BytesIO):
         else:
             # Use strings in Python 3 unless the caller explicitly asked for binary
             # data.
-            buf = self.getvalue().decode('utf-8')
+            buf = self.getvalue()
+            if not isinstance(buf, six.text_type):
+                buf = buf.decode('utf-8')
 
         BytesIO.close(self)
         existed = False
@@ -293,7 +295,7 @@ class FileAvoidWrite(BytesIO):
             if self._binary_mode:
                 writemode += 'b'
             data = buf
-            if 'b' not in writemode:
+            if 'b' not in writemode and not isinstance(buf, six.text_type):
                 data = buf.decode('utf-8')
             with open(self.name, writemode) as file:
                 file.write(data)

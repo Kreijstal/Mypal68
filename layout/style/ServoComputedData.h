@@ -8,14 +8,11 @@
 class nsWindowSizes;
 
 #include "mozilla/ServoStyleConsts.h"
+#include "nsStyleStruct.h"
 
 /*
  * ServoComputedData and its related types.
  */
-
-#define STYLE_STRUCT(name_) struct nsStyle##name_;
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
 
 namespace mozilla {
 
@@ -56,7 +53,10 @@ struct ServoVisitedStyle {
   ComputedStyle* mPtr;
 };
 
-#define STYLE_STRUCT(name_) struct Gecko##name_;
+#define STYLE_STRUCT(name_)                  \
+  struct Gecko##name_ {                      \
+    ServoManuallyDrop<nsStyle##name_> gecko; \
+  };
 #include "nsStyleStructList.h"
 #undef STYLE_STRUCT
 
@@ -77,6 +77,23 @@ struct ServoComputedDataForgotten {
  * so we define this type on the C++ side and use the bindgenned version
  * on the Rust side.
  */
+#ifdef RUST_BINDGEN
+struct ServoComputedData {
+#  define STYLE_STRUCT(name_)                                \
+    mozilla::ServoRawOffsetArc<mozilla::Gecko##name_> name_; \
+    inline const nsStyle##name_* GetStyle##name_() const;
+#  include "nsStyleStructList.h"
+#  undef STYLE_STRUCT
+
+  mozilla::ServoWritingMode WritingMode() const { return writing_mode; }
+
+  mozilla::ServoCustomPropertiesMap custom_properties;
+  mozilla::ServoWritingMode writing_mode;
+  mozilla::StyleComputedValueFlags flags;
+  mozilla::ServoRuleNode rules;
+  mozilla::ServoVisitedStyle visited_style;
+};
+#else
 class ServoComputedData {
   friend class mozilla::ComputedStyle;
 
@@ -94,7 +111,11 @@ class ServoComputedData {
 
   mozilla::ServoWritingMode WritingMode() const { return writing_mode; }
 
+#ifdef RUST_BINDGEN
+ public:
+#else
  private:
+#endif
   mozilla::ServoCustomPropertiesMap custom_properties;
   mozilla::ServoWritingMode writing_mode;
   mozilla::StyleComputedValueFlags flags;
@@ -119,5 +140,29 @@ class ServoComputedData {
   ServoComputedData&& operator=(const ServoComputedData&&) = delete;
   ServoComputedData(const ServoComputedData&&) = delete;
 };
+#endif
+
+/**
+ * <div rustbindgen="true" replaces="ServoComputedData">
+ */
+struct ServoComputedData_Simple {
+#define STYLE_STRUCT(name_) \
+  mozilla::ServoRawOffsetArc<mozilla::Gecko##name_> name_;
+#include "nsStyleStructList.h"
+#undef STYLE_STRUCT
+
+  mozilla::ServoCustomPropertiesMap custom_properties;
+  mozilla::ServoWritingMode writing_mode;
+  mozilla::StyleComputedValueFlags flags;
+  mozilla::ServoRuleNode rules;
+  mozilla::ServoVisitedStyle visited_style;
+};
+
+static_assert(sizeof(ServoComputedData) == sizeof(ServoComputedData_Simple),
+              "Size mismatch between ServoComputedData and "
+              "ServoComputedData_Simple");
+static_assert(alignof(ServoComputedData) == alignof(ServoComputedData_Simple),
+              "Align mismatch between ServoComputedData and "
+              "ServoComputedData_Simple");
 
 #endif  // mozilla_ServoComputedData_h

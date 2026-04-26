@@ -236,7 +236,8 @@ bool WebGLContext::ValidateBufferForNonTf(const WebGLBuffer& nonTfBuffer,
     if (&nonTfBuffer == tfBuffer) {
       dupe = true;
       GenErrorIllegalUse(nonTfTarget, nonTfId,
-                         LOCAL_GL_TRANSFORM_FEEDBACK_BUFFER, tfId);
+                         LOCAL_GL_TRANSFORM_FEEDBACK_BUFFER,
+                         static_cast<uint32_t>(tfId));
     }
   }
   MOZ_ASSERT(dupe);
@@ -302,7 +303,8 @@ bool WebGLContext::ValidateBuffersForTf(
 
   for (const auto i : IntegerRange(mIndexedUniformBufferBindings.size())) {
     const auto& cur = mIndexedUniformBufferBindings[i];
-    fnCheck(cur.mBufferBinding.get(), LOCAL_GL_UNIFORM_BUFFER, i);
+    fnCheck(cur.mBufferBinding.get(), LOCAL_GL_UNIFORM_BUFFER,
+            static_cast<uint32_t>(i));
   }
 
   fnCheck(mBoundVertexArray->mElementArrayBuffer.get(),
@@ -310,7 +312,7 @@ bool WebGLContext::ValidateBuffersForTf(
   const auto& vertAttribs = mBoundVertexArray->mAttribs;
   for (const auto i : IntegerRange(vertAttribs.size())) {
     const auto& cur = vertAttribs[i];
-    fnCheck(cur.mBuf.get(), LOCAL_GL_ARRAY_BUFFER, i);
+    fnCheck(cur.mBuf.get(), LOCAL_GL_ARRAY_BUFFER, static_cast<uint32_t>(i));
   }
 
   return !dupe;
@@ -385,7 +387,8 @@ const webgl::CachedDrawFetchLimits* ValidateDraw(WebGLContext* const webgl,
     }
 
     if (!webgl->ValidateBufferForNonTf(binding->mBufferBinding,
-                                       LOCAL_GL_UNIFORM_BUFFER, i))
+                                       LOCAL_GL_UNIFORM_BUFFER,
+                                       static_cast<uint32_t>(i)))
       return nullptr;
   }
 

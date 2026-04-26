@@ -12,6 +12,9 @@ LOCAL_INCLUDES += [
     '..',
     'include',
 ]
+LOCAL_INCLUDES += [
+    '/dom/media/mp4',
+]
 
 FINAL_LIBRARY = 'xul'
 

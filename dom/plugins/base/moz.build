@@ -71,6 +71,7 @@ XPCOM_MANIFESTS += [
 LOCAL_INCLUDES += [
     '/dom/base',
     '/dom/plugins/ipc',
+    '/gfx/thebes',
     '/layout/generic',
     '/layout/xul',
     '/netwerk/base',

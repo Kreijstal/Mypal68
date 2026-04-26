@@ -12,7 +12,6 @@
 #if defined(MOZ_WIDGET_ANDROID)
 #  include "GLTypes.h"  // for EGLSurface and EGLConfig
 #endif                  // defined(MOZ_WIDGET_ANDROID)
-
 class GL_CONTEXT_PROVIDER_NAME {
  public:
   /**

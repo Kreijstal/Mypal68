@@ -60,11 +60,16 @@ def get_cmd_output(*args, **kwargs):
 # does not.
 @imports(_from='mozbuild.configure.util', _import='LineIO')
 @imports(_from='mozbuild.shellutil', _import='quote')
+@imports(_from='six', _import='binary_type')
 def check_cmd_output(*args, **kwargs):
     onerror = kwargs.pop('onerror', None)
 
     with log.queue_debug():
         retcode, stdout, stderr = get_cmd_output(*args, **kwargs)
+        if isinstance(stdout, binary_type):
+            stdout = stdout.decode('utf-8', 'replace')
+        if isinstance(stderr, binary_type):
+            stderr = stderr.decode('utf-8', 'replace')
         if retcode == 0:
             return stdout
 

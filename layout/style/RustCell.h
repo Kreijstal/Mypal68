@@ -25,9 +25,10 @@ class RustCell {
   RustCell() : mValue() {}
 
   T Get() const { return mValue; }
+  void Set(T aValue) const { mValue = aValue; }
 
  private:
-  T mValue;
+  mutable T mValue;
 };
 
 }  // namespace mozilla

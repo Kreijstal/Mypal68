@@ -85,6 +85,13 @@ nsNotifyAddrListener::GetLinkType(uint32_t* aLinkType) {
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsNotifyAddrListener::GetVpnDetected(bool* aVpnDetected) {
+  NS_ENSURE_ARG_POINTER(aVpnDetected);
+  *aVpnDetected = false;
+  return NS_OK;
+}
+
 //
 // Figure out the current "network identification" string.
 //
@@ -295,8 +302,7 @@ void nsNotifyAddrListener::OnNetlinkMessage(int aNetlinkSocket) {
       struct ifaddrmsg* ifam;
       nsCString addrStr;
       addrStr.Assign(addr);
-      if (auto entry = mAddressInfo.LookupForAdd(addrStr)) {
-        ifam = entry.Data();
+      if (mAddressInfo.Get(addrStr, &ifam)) {
         LOG(
             ("nsNotifyAddrListener::OnNetlinkMessage: the address "
              "already known."));
@@ -311,7 +317,8 @@ void nsNotifyAddrListener::OnNetlinkMessage(int aNetlinkSocket) {
         networkChange = true;
         ifam = (struct ifaddrmsg*)malloc(sizeof(struct ifaddrmsg));
         memcpy(ifam, newifam, sizeof(struct ifaddrmsg));
-        entry.OrInsert([ifam]() { return ifam; });
+        mAddressInfo.InsertOrUpdate(
+            addrStr, mozilla::UniquePtr<struct ifaddrmsg>(ifam));
       }
     } else {
       LOG(

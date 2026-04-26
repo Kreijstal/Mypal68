@@ -7,6 +7,7 @@
 #include "base/condition_variable.h"
 #include "base/lock.h"
 #include "base/message_loop.h"
+#include "mozilla/TimeStamp.h"
 
 // -----------------------------------------------------------------------------
 // A WaitableEvent on POSIX is implemented as a wait-list. Currently we don't
@@ -139,7 +140,7 @@ bool WaitableEvent::TimedWait(const TimeDelta& max_time) {
 
   Lock lock;
   lock.Acquire();
-  ConditionVariable cv(&lock);
+  ConditionVariable cv(lock);
   SyncWaiter sw(&cv, &lock);
 
   Enqueue(&sw);
@@ -171,7 +172,8 @@ bool WaitableEvent::TimedWait(const TimeDelta& max_time) {
 
     if (finite_time) {
       const TimeDelta max_wait(end_time - current_time);
-      cv.TimedWait(max_wait);
+      cv.TimedWait(mozilla::TimeDuration::FromMicroseconds(
+          max_wait.InMicroseconds()));
     } else {
       cv.Wait();
     }
@@ -215,7 +217,7 @@ size_t WaitableEvent::WaitMany(WaitableEvent** raw_waitables, size_t count) {
   }
 
   Lock lock;
-  ConditionVariable cv(&lock);
+  ConditionVariable cv(lock);
   SyncWaiter sw(&cv, &lock);
 
   const size_t r = EnqueueMany(&waitables[0], count, &sw);
