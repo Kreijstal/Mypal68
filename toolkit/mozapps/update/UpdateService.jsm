@@ -2121,15 +2121,19 @@ UpdateService.prototype = {
       case "sessionstore-windows-restored":
       case "mail-startup-done":
         if (Services.appinfo.ID in APPID_TO_TOPIC) {
-          Services.obs.removeObserver(
-            this,
-            APPID_TO_TOPIC[Services.appinfo.ID]
-          );
+          try {
+            Services.obs.removeObserver(
+              this,
+              APPID_TO_TOPIC[Services.appinfo.ID]
+            );
+          } catch (ex) {}
         }
       // intentional fallthrough
       case "test-post-update-processing":
         // Clean up any extant updates
-        this._postUpdateProcessing();
+        try {
+          this._postUpdateProcessing();
+        } catch (ex) {}
         break;
       case "network:offline-status-changed":
         this._offlineStatusChanged(data);

@@ -1494,14 +1494,22 @@ BrowserGlue.prototype = {
       this._showUpdateNotification();
     }
 
-    ExtensionsUI.init();
+    try {
+      ExtensionsUI.init();
+    } catch (ex) {}
 
     if (AppConstants.MOZ_CRASHREPORTER) {
-      UnsubmittedCrashHandler.init();
+      try {
+        UnsubmittedCrashHandler.init();
+      } catch (ex) {}
     }
 
-    Sanitizer.onStartup();
-    this._scheduleStartupIdleTasks();
+    try {
+      Sanitizer.onStartup();
+    } catch (ex) {}
+    try {
+      this._scheduleStartupIdleTasks();
+    } catch (ex) {}
     this._lateTasksIdleObserver = (idleService, topic, data) => {
       if (topic == "idle") {
         idleService.removeIdleObserver(
@@ -1512,17 +1520,21 @@ BrowserGlue.prototype = {
         this._scheduleArbitrarilyLateIdleTasks();
       }
     };
-    this._idleService.addIdleObserver(
-      this._lateTasksIdleObserver,
-      LATE_TASKS_IDLE_TIME_SEC
-    );
+    try {
+      this._idleService.addIdleObserver(
+        this._lateTasksIdleObserver,
+        LATE_TASKS_IDLE_TIME_SEC
+      );
+    } catch (ex) {}
 
-    let pService = Cc["@mozilla.org/toolkit/profile-service;1"].getService(
-      Ci.nsIToolkitProfileService
-    );
-    if (pService.createdAlternateProfile) {
-      this._showNewInstallModal();
-    }
+    try {
+      let pService = Cc["@mozilla.org/toolkit/profile-service;1"].getService(
+        Ci.nsIToolkitProfileService
+      );
+      if (pService.createdAlternateProfile) {
+        this._showNewInstallModal();
+      }
+    } catch (ex) {}
   },
 
   /**

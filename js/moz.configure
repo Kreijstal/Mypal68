@@ -509,7 +509,13 @@ def ctypes_default(js_standalone):
 
 option("--enable-ctypes", default=ctypes_default, help="{Enable|Disable} js-ctypes")
 
-build_ctypes = depends_if("--enable-ctypes")(lambda _: True)
+
+@depends("--enable-ctypes", js_standalone)
+def build_ctypes(ctypes, js_standalone):
+    if not js_standalone:
+        return True
+    if ctypes:
+        return True
 
 set_config("BUILD_CTYPES", build_ctypes)
 set_define("BUILD_CTYPES", build_ctypes)
@@ -518,7 +524,7 @@ set_config("JS_HAS_CTYPES", build_ctypes)
 set_define("JS_HAS_CTYPES", build_ctypes)
 
 
-@depends("--enable-ctypes", compile_environment)
+@depends(build_ctypes, compile_environment)
 def ctypes_and_compile_environment(ctypes, compile_environment):
     return ctypes and compile_environment
 

@@ -1000,13 +1000,23 @@
           ? "Private"
           : "Default";
       if (title) {
-        return docElement.dataset["contentTitle" + dataSuffix].replace(
+        let contentTitle = docElement.dataset["contentTitle" + dataSuffix];
+        if (!contentTitle) {
+          contentTitle =
+            dataSuffix == "Private"
+              ? "CONTENTTITLE - Mypal (Private Browsing)"
+              : "CONTENTTITLE - Mypal";
+        }
+        return contentTitle.replace(
           "CONTENTTITLE",
           () => title
         );
       }
 
-      return docElement.dataset["title" + dataSuffix];
+      return (
+        docElement.dataset["title" + dataSuffix] ||
+        (dataSuffix == "Private" ? "Mypal (Private Browsing)" : "Mypal")
+      );
     },
 
     updateTitlebar() {

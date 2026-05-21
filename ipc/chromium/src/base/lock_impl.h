@@ -41,18 +41,20 @@ class LockImpl {
   // a successful call to Try, or a call to Lock.
   void Unlock();
 
+#if defined(OS_POSIX)
   // Return the native underlying lock.
   // TODO(awalker): refactor lock and condition variables so that this is
   // unnecessary.
   NativeHandle* native_handle() { return &native_handle_; }
 
-#if defined(OS_POSIX)
   // Whether this lock will attempt to use priority inheritance.
   static bool PriorityInheritanceAvailable();
 #endif
 
  private:
+#if defined(OS_POSIX)
   NativeHandle native_handle_;
+#endif
 #if defined(_M_IX86) || defined(__i386)
   char os_lock_[24];
 #else

@@ -559,32 +559,34 @@ var TelemetryReportingPolicyImpl = {
       return;
     }
 
-    this._isFirstRun = Services.prefs.getBoolPref(
-      TelemetryUtils.Preferences.FirstRun,
-      true
-    );
-    if (this._isFirstRun) {
-      // We're performing the first run, flip firstRun preference for subsequent runs.
-      Services.prefs.setBoolPref(TelemetryUtils.Preferences.FirstRun, false);
+    try {
+      this._isFirstRun = Services.prefs.getBoolPref(
+        TelemetryUtils.Preferences.FirstRun,
+        true
+      );
+      if (this._isFirstRun) {
+        // We're performing the first run, flip firstRun preference for subsequent runs.
+        Services.prefs.setBoolPref(TelemetryUtils.Preferences.FirstRun, false);
 
-      try {
-        if (this._openFirstRunPage()) {
-          return;
+        try {
+          if (this._openFirstRunPage()) {
+            return;
+          }
+        } catch (e) {
+          this._log.error("Failed to open privacy policy tab: " + e);
         }
-      } catch (e) {
-        this._log.error("Failed to open privacy policy tab: " + e);
       }
-    }
 
-    // Show the info bar.
-    const delay = this._isFirstRun
-      ? NOTIFICATION_DELAY_FIRST_RUN_MSEC
-      : NOTIFICATION_DELAY_NEXT_RUNS_MSEC;
+      // Show the info bar.
+      const delay = this._isFirstRun
+        ? NOTIFICATION_DELAY_FIRST_RUN_MSEC
+        : NOTIFICATION_DELAY_NEXT_RUNS_MSEC;
 
-    this._startupNotificationTimerId = Policy.setShowInfobarTimeout(
-      // Calling |canUpload| eventually shows the infobar, if needed.
-      () => this._showInfobar(),
-      delay
-    );
+      this._startupNotificationTimerId = Policy.setShowInfobarTimeout(
+        // Calling |canUpload| eventually shows the infobar, if needed.
+        () => this._showInfobar(),
+        delay
+      );
+    } catch (ex) {}
   },
 };

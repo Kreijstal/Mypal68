@@ -141,7 +141,8 @@ static DWORD ExceptionHandler(PEXCEPTION_RECORD exceptionRecord,
   return sJitExceptionHandler(exceptionRecord, context);
 }
 
-PRUNTIME_FUNCTION RuntimeFunctionCallback(DWORD64 ControlPc, PVOID Context);
+static PRUNTIME_FUNCTION RuntimeFunctionCallback(DWORD64 ControlPc,
+                                                 PVOID Context);
 
 // For an explanation of the problem being solved here, see
 // SetJitExceptionFilter in jsfriendapi.h.

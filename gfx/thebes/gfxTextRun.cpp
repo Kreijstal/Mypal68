@@ -1564,8 +1564,14 @@ bool gfxTextRun::SetSpaceGlyphIfSimple(gfxFont* aFont, uint32_t aCharIndex,
       (aOrientation & gfx::ShapedTextFlags::TEXT_ORIENT_VERTICAL_UPRIGHT)
           ? nsFontMetrics::eVertical
           : nsFontMetrics::eHorizontal;
-  uint32_t spaceWidthAppUnits = NS_lroundf(
-      aFont->GetMetrics(fontOrientation).spaceWidth * mAppUnitsPerDevUnit);
+  const gfxFont::Metrics& metrics = aFont->GetMetrics(fontOrientation);
+  gfxFloat spaceWidth =
+      std::max(metrics.spaceWidth, metrics.aveCharWidth * 0.5);
+  if (spaceWidth <= 0.0) {
+    spaceWidth = aFont->GetAdjustedSize() / 4.0;
+  }
+  uint32_t spaceWidthAppUnits =
+      NS_lroundf(spaceWidth * mAppUnitsPerDevUnit);
   if (!CompressedGlyph::IsSimpleAdvance(spaceWidthAppUnits)) {
     return false;
   }

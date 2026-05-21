@@ -1160,12 +1160,14 @@ var Impl = {
         break;
       case "sessionstore-windows-restored":
         this.removeObserver("sessionstore-windows-restored");
-        // Check whether debugger was attached during startup
-        let debugService = Cc["@mozilla.org/xpcom/debug;1"].getService(
-          Ci.nsIDebug2
-        );
-        gWasDebuggerAttached = debugService.isDebuggerAttached;
-        this.gatherStartup();
+        try {
+          // Check whether debugger was attached during startup
+          let debugService = Cc["@mozilla.org/xpcom/debug;1"].getService(
+            Ci.nsIDebug2
+          );
+          gWasDebuggerAttached = debugService.isDebuggerAttached;
+          this.gatherStartup();
+        } catch (ex) {}
         break;
       case "idle-daily":
         // Enqueue to main-thread, otherwise components may be inited by the

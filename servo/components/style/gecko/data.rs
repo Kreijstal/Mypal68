@@ -66,8 +66,12 @@ impl GeckoStyleSheet {
     pub fn hack_is_null(&self) -> bool {
         debug_assert!(!self.0.is_null());
         debug_assert!(!self.raw().mInner.is_null());
-        debug_assert!(!self.inner().mContents.mRawPtr.is_null());
-        self.0.is_null() || self.raw().mInner.is_null() || self.inner().mContents.mRawPtr.is_null()
+        if self.0.is_null() || self.raw().mInner.is_null() {
+            return true;
+        }
+        let contents = unsafe { bindings::Gecko_StyleSheet_RawContents(self.0) };
+        debug_assert!(!contents.is_null());
+        contents.is_null()
     }
 
     /// Get the raw `StyleSheet` that we're wrapping.
@@ -118,10 +122,11 @@ impl StylesheetInDocument for GeckoStyleSheet {
 
     #[inline]
     fn contents(&self) -> &StylesheetContents {
-        debug_assert!(!self.inner().mContents.mRawPtr.is_null());
         unsafe {
-            let contents =
-                (&**StylesheetContents::as_arc(&&*self.inner().mContents.mRawPtr)) as *const _;
+            let raw_contents = bindings::Gecko_StyleSheet_RawContents(self.0);
+            debug_assert!(!raw_contents.is_null());
+            let raw_contents = &*raw_contents;
+            let contents = (&**StylesheetContents::as_arc(&raw_contents)) as *const _;
             &*contents
         }
     }

@@ -271,8 +271,6 @@ if CONFIG['MOZ_ENABLE_DBUS']:
 
 if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'gtk3'):
     OS_LIBS += CONFIG['TK_LIBS']
-    if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk3':
-        OS_LIBS += CONFIG['MOZ_GTK2_LIBS']
     OS_LIBS += CONFIG['XLDFLAGS']
     OS_LIBS += CONFIG['XLIBS']
     OS_LIBS += CONFIG['XEXT_LIBS']
@@ -332,6 +330,11 @@ if CONFIG['OS_ARCH'] == 'WINNT':
     if CONFIG['CC_TYPE'] == 'clang-cl':
         OS_LIBS += [
             'runtimeobject',
+        ]
+    elif CONFIG['CC_TYPE'] in ('clang', 'gcc'):
+        OS_LIBS += [
+            'stdc++',
+            'winpthread',
         ]
 
     if CONFIG['ACCESSIBILITY']:

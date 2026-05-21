@@ -337,8 +337,8 @@ LIBRARY_NAME_INFOS = {
         'LIB_PREFIX': 'lib',
         'LIB_SUFFIX': 'a',
         'IMPORT_LIB_SUFFIX': 'a',
-        'RUST_LIB_PREFIX': '',
-        'RUST_LIB_SUFFIX': 'lib',
+        'RUST_LIB_PREFIX': 'lib',
+        'RUST_LIB_SUFFIX': 'a',
         'OBJ_SUFFIX': 'o',
     },
     'msvc': {

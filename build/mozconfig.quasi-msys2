@@ -1,0 +1,38 @@
+# Linux-hosted MinGW/UCRT-style cross build.
+#
+# This intentionally avoids the automation tooltool mozconfigs. It uses the
+# host's MinGW-w64 sysroot and a local fxc2 bundle, defaulting to the copy used
+# during local bring-up.
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj-x86_64-w64-mingw32-cross
+
+ac_add_options --target=x86_64-w64-mingw32
+ac_add_options --with-toolchain-prefix=x86_64-w64-mingw32-
+ac_add_options --disable-warnings-as-errors
+ac_add_options --disable-maintenance-service
+ac_add_options --disable-webrtc
+ac_add_options --disable-geckodriver
+
+HOST_CC="${HOST_CC:-clang}"
+HOST_CXX="${HOST_CXX:-clang++}"
+CC="${CC:-clang --target=x86_64-w64-mingw32}"
+CXX="${CXX:-clang++ --target=x86_64-w64-mingw32}"
+AR="${AR:-llvm-ar}"
+RANLIB="${RANLIB:-llvm-ranlib}"
+RC="${RC:-x86_64-w64-mingw32-windres}"
+WINDRES="${WINDRES:-x86_64-w64-mingw32-windres}"
+
+CFLAGS="${CFLAGS:-} -femulated-tls"
+CXXFLAGS="${CXXFLAGS:-} -fms-extensions -femulated-tls"
+BINDGEN_CFLAGS="${BINDGEN_CFLAGS:--I/usr/x86_64-w64-mingw32/include/c++/15.2.0 -I/usr/x86_64-w64-mingw32/include/c++/15.2.0/x86_64-w64-mingw32 -I/usr/x86_64-w64-mingw32/include}"
+
+FXC2_DIR="${FXC2_DIR:-/tmp/mypal-cross-tools/fxc2}"
+FXC="${FXC:-$FXC2_DIR/fxc2.exe}"
+
+PKG_CONFIG_LIBDIR="${PKG_CONFIG_LIBDIR:-/usr/x86_64-w64-mingw32/lib/pkgconfig:/usr/x86_64-w64-mingw32/share/pkgconfig}"
+PKG_CONFIG_SYSROOT_DIR="${PKG_CONFIG_SYSROOT_DIR:-/usr/x86_64-w64-mingw32}"
+EXPAND_LIBS_LIST_STYLE="${EXPAND_LIBS_LIST_STYLE:-list}"
+
+export HOST_CC HOST_CXX CC CXX AR RANLIB RC WINDRES CXXFLAGS BINDGEN_CFLAGS
+export FXC PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR
+export EXPAND_LIBS_LIST_STYLE

@@ -106,21 +106,27 @@ class WebNavigationChild extends ActorChild {
       cancelContentJSEpoch,
     } = params || {};
 
-    if (AppConstants.MOZ_CRASHREPORTER && CrashReporter.enabled) {
-      let annotation = uri;
+    if (AppConstants.MOZ_CRASHREPORTER) {
       try {
-        let url = Services.io.newURI(uri);
-        // If the current URI contains a username/password, remove it.
-        url = url
-          .mutate()
-          .setUserPass("")
-          .finalize();
-        annotation = url.spec;
+        if (CrashReporter.enabled) {
+          let annotation = uri;
+          try {
+            let url = Services.io.newURI(uri);
+            // If the current URI contains a username/password, remove it.
+            url = url
+              .mutate()
+              .setUserPass("")
+              .finalize();
+            annotation = url.spec;
+          } catch (ex) {
+            /* Ignore failures to parse and failures
+                          on about: URIs. */
+          }
+          CrashReporter.annotateCrashReport("URL", annotation);
+        }
       } catch (ex) {
-        /* Ignore failures to parse and failures
-                      on about: URIs. */
+        // Crash report annotation is optional and must not block navigation.
       }
-      CrashReporter.annotateCrashReport("URL", annotation);
     }
     if (postData) {
       postData = E10SUtils.makeInputStream(postData);

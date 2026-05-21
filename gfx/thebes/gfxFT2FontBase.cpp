@@ -406,6 +406,7 @@ void gfxFT2FontBase::InitMetrics() {
   if (mMetrics.aveCharWidth == 0.0) {
     mMetrics.aveCharWidth = mMetrics.spaceWidth;
   }
+  mMetrics.spaceWidth = std::max(mMetrics.spaceWidth, GetAdjustedSize() / 4.0);
   // Apparently hinting can mean that max_advance is not always accurate.
   mMetrics.maxAdvance = std::max(mMetrics.maxAdvance, mMetrics.aveCharWidth);
 
@@ -527,8 +528,9 @@ bool gfxFT2FontBase::GetFTGlyphExtents(uint16_t aGID, int32_t* aAdvance,
   // applying hinting. Otherwise, prefer hinted width from glyph->advance.x.
   if (aAdvance) {
     FT_Fixed advance;
-    if (face.get()->glyph->format == FT_GLYPH_FORMAT_OUTLINE &&
-        (!hintMetrics || FT_HAS_MULTIPLE_MASTERS(face.get()))) {
+    if (face.get()->glyph->linearHoriAdvance &&
+        (!hintMetrics || FT_HAS_MULTIPLE_MASTERS(face.get()) ||
+         extentsScale != 1.0)) {
       advance = face.get()->glyph->linearHoriAdvance;
     } else {
       advance = face.get()->glyph->advance.x << 10;  // convert 26.6 to 16.16

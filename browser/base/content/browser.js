@@ -566,9 +566,11 @@ function showFxaToolbarMenu(enable) {
   const fxaPanelEl = document.getElementById("PanelUI-fxa");
 
   mainWindowEl.setAttribute("fxastatus", "not_configured");
-  fxaPanelEl.addEventListener("ViewShowing", gSync.updateSendToDeviceTitle);
+  if (AppConstants.MOZ_SERVICES_SYNC) {
+    fxaPanelEl.addEventListener("ViewShowing", gSync.updateSendToDeviceTitle);
+  }
 
-  if (enable && syncEnabled) {
+  if (enable && syncEnabled && AppConstants.MOZ_SERVICES_SYNC) {
     mainWindowEl.setAttribute("fxatoolbarmenu", "visible");
 
     // We have to manually update the sync state UI when toggling the FxA toolbar
@@ -1925,7 +1927,10 @@ var gBrowserInit = {
       MenuTouchModeObserver.init();
     }
 
-    if (AppConstants.MOZ_DATA_REPORTING) {
+    if (
+      AppConstants.MOZ_DATA_REPORTING &&
+      typeof gDataNotificationInfoBar != "undefined"
+    ) {
       gDataNotificationInfoBar.init();
     }
 
@@ -2156,10 +2161,12 @@ var gBrowserInit = {
       }, options);
     }
 
-    scheduleIdleTask(() => {
-      // Initialize the Sync UI
-      gSync.init();
-    });
+    if (AppConstants.MOZ_SERVICES_SYNC) {
+      scheduleIdleTask(() => {
+        // Initialize the Sync UI
+        gSync.init();
+      });
+    }
 
     scheduleIdleTask(() => {
       CombinedStopReload.startAnimationPrefMonitoring();
@@ -2299,7 +2306,9 @@ var gBrowserInit = {
 
     FullScreen.uninit();
 
-    gSync.uninit();
+    if (AppConstants.MOZ_SERVICES_SYNC) {
+      gSync.uninit();
+    }
 
     gExtensionsNotifications.uninit();
 

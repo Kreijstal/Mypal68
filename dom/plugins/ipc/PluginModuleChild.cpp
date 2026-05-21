@@ -12,6 +12,7 @@
 
 #ifdef MOZ_WIDGET_GTK
 #  include <gtk/gtk.h>
+#  include <gtk/gtkx.h>
 #endif
 
 #include "nsIFile.h"

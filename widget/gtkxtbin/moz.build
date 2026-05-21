@@ -9,12 +9,13 @@ EXPORTS += [
     'gtk2xtbin.h',
 ]
 
-SOURCES += [
-    'gtk2xtbin.c',
-]
+if CONFIG['MOZ_WIDGET_TOOLKIT'] != 'gtk3':
+    SOURCES += [
+        'gtk2xtbin.c',
+    ]
 
-FINAL_LIBRARY = 'xul'
+    FINAL_LIBRARY = 'xul'
 
-DEFINES['_IMPL_GTKXTBIN_API'] = True
+    DEFINES['_IMPL_GTKXTBIN_API'] = True
 
-CFLAGS += CONFIG['MOZ_GTK2_CFLAGS']
+    CFLAGS += CONFIG['MOZ_GTK2_CFLAGS']

@@ -555,17 +555,41 @@ def omnijar_name(toolkit):
 
 set_config('OMNIJAR_NAME', omnijar_name)
 
-project_flag('MOZ_PLACES',
-             help='Build Places if required',
-             set_as_define=True)
+@depends(build_project)
+def browser_project(build_project):
+    return build_project == 'browser'
+
+
+option(env='MOZ_PLACES', possible_origins=('implied',),
+       help='Build Places if required')
+
+
+@depends('MOZ_PLACES', browser_project)
+def moz_places(value, browser_project):
+    if value or browser_project:
+        return True
+
+
+set_config('MOZ_PLACES', moz_places)
+set_define('MOZ_PLACES', moz_places)
 
 project_flag('MOZ_SERVICES_HEALTHREPORT',
              help='Build Firefox Health Reporter Service',
              set_for_old_configure=True,
              set_as_define=True)
 
-project_flag('MOZ_SERVICES_SYNC',
-             help='Build Sync Services if required')
+option(env='MOZ_SERVICES_SYNC', possible_origins=('implied',),
+       help='Build Sync Services if required')
+
+
+@depends('MOZ_SERVICES_SYNC', browser_project)
+def moz_services_sync(value, browser_project):
+    if value or browser_project:
+        return True
+
+
+set_config('MOZ_SERVICES_SYNC', moz_services_sync)
+set_define('MOZ_SERVICES_SYNC', moz_services_sync)
 
 project_flag('MOZ_ANDROID_HISTORY',
              help='Enable Android History instead of Places',

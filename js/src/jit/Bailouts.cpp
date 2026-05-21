@@ -51,8 +51,10 @@ class js::jit::BailoutStack {
 #endif
 
 // Make sure the compiler doesn't add extra padding on 32-bit platforms.
+#if !defined(JS_CODEGEN_NONE)
 static_assert((sizeof(BailoutStack) % 8) == 0,
               "BailoutStack should be 8-byte aligned.");
+#endif
 
 BailoutFrameInfo::BailoutFrameInfo(const JitActivationIterator& activations,
                                    BailoutStack* bailout)

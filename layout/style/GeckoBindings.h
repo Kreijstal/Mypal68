@@ -108,9 +108,9 @@ void Gecko_ComputedStyle_Destroy(mozilla::ComputedStyle* context);
 // By default, Servo walks the DOM by traversing the siblings of the DOM-view
 // first child. This generally works, but misses anonymous children, which we
 // want to traverse during styling. To support these cases, we create an
-// optional stack-allocated iterator in aIterator for nodes that need it.
-void Gecko_ConstructStyleChildrenIterator(const mozilla::dom::Element*,
-                                          mozilla::dom::StyleChildrenIterator*);
+// optional Gecko-owned iterator for nodes that need it.
+mozilla::dom::StyleChildrenIterator* Gecko_CreateStyleChildrenIterator(
+    const mozilla::dom::Element*);
 
 void Gecko_DestroyStyleChildrenIterator(mozilla::dom::StyleChildrenIterator*);
 
@@ -141,6 +141,9 @@ NS_DECL_THREADSAFE_FFI_REFCOUNTING(mozilla::css::SheetLoadDataHolder,
 void Gecko_StyleSheet_FinishAsyncParse(
     mozilla::css::SheetLoadDataHolder* data,
     mozilla::StyleStrong<RawServoStyleSheetContents> sheet_contents);
+
+const RawServoStyleSheetContents* Gecko_StyleSheet_RawContents(
+    const mozilla::StyleSheet* sheet);
 
 mozilla::StyleSheet* Gecko_LoadStyleSheet(
     mozilla::css::Loader* loader, mozilla::StyleSheet* parent,

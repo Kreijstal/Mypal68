@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <IntSafe.h>
+#include <intsafe.h>
 #include "cubeb/cubeb.h"
 #include "cubeb-internal.h"
 

@@ -264,17 +264,16 @@ void Gecko_ComputedStyle_Destroy(ComputedStyle* aStyle) {
   aStyle->~ComputedStyle();
 }
 
-void Gecko_ConstructStyleChildrenIterator(const Element* aElement,
-                                          StyleChildrenIterator* aIterator) {
+StyleChildrenIterator* Gecko_CreateStyleChildrenIterator(
+    const Element* aElement) {
   MOZ_ASSERT(aElement);
-  MOZ_ASSERT(aIterator);
-  new (aIterator) StyleChildrenIterator(aElement);
+  return new StyleChildrenIterator(aElement);
 }
 
 void Gecko_DestroyStyleChildrenIterator(StyleChildrenIterator* aIterator) {
   MOZ_ASSERT(aIterator);
 
-  aIterator->~StyleChildrenIterator();
+  delete aIterator;
 }
 
 const nsINode* Gecko_GetNextStyleChild(StyleChildrenIterator* aIterator) {
@@ -1591,6 +1590,11 @@ void Gecko_StyleSheet_FinishAsyncParse(
         MOZ_ASSERT(NS_IsMainThread());
         d->get()->mSheet->FinishAsyncParse(s.forget());
       }));
+}
+
+const RawServoStyleSheetContents* Gecko_StyleSheet_RawContents(
+    const StyleSheet* aSheet) {
+  return aSheet->RawContents();
 }
 
 static already_AddRefed<StyleSheet> LoadImportSheet(

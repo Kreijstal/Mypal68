@@ -170,6 +170,12 @@ OS_LIBS += [
     'ws2_32',
 ]
 
+if CONFIG['OS_TARGET'] == 'WINNT' and CONFIG['CC_TYPE'] in ('clang', 'gcc'):
+    OS_LIBS += [
+        'stdc++',
+        'winpthread',
+    ]
+
 #LDFLAGS += [
 #    '/DEBUG',
 #    '/DYNAMICBASE',

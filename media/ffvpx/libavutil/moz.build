@@ -82,7 +82,10 @@ SOURCES += [
     'xtea.c',
 ]
 
-SYMBOLS_FILE =  'avutil.symbols'
+if CONFIG['OS_TARGET'] == 'WINNT' and CONFIG['CC_TYPE'] in ('clang', 'gcc'):
+    SYMBOLS_FILE = 'avutil-mingw.symbols'
+else:
+    SYMBOLS_FILE =  'avutil.symbols'
 NoVisibilityFlags()
 
 OS_LIBS += CONFIG['REALTIME_LIBS']

@@ -763,6 +763,7 @@ host_toolchain_search_path = toolchain_search_path_for(host)
 # variable for the build to contain the toolchain search path.
 @depends(toolchain_search_path, host_toolchain_search_path)
 @imports('os')
+@imports('subprocess')
 @imports(_from='os', _import='environ')
 def altered_path(toolchain_search_path, host_toolchain_search_path):
     path = environ['PATH'].split(os.pathsep)
@@ -773,6 +774,21 @@ def altered_path(toolchain_search_path, host_toolchain_search_path):
     for p in path:
         if p not in altered_path:
             altered_path.append(p)
+    if environ.get('MSYSTEM'):
+        # MSYS2's native Python exposes Windows-style PATH semantics, but the
+        # recursive build uses MSYS make and /bin/sh.  Emit PATH in the format
+        # that shell expects so commands like make and echo remain resolvable.
+        def msys_path(p):
+            try:
+                return subprocess.check_output(
+                    ['cygpath', '-u', p],
+                    universal_newlines=True,
+                    stderr=subprocess.PIPE,
+                ).strip()
+            except Exception:
+                return p.replace('\\', '/')
+
+        return ':'.join(msys_path(p) for p in altered_path)
     return os.pathsep.join(altered_path)
 
 

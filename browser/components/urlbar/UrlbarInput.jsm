@@ -1493,7 +1493,7 @@ class UrlbarInput {
    * @returns {"current" | "tabshifted" | "tab" | "save" | "window"}
    */
   _whereToOpen(event) {
-    let isMouseEvent = event instanceof MouseEvent;
+    let isMouseEvent = event instanceof this.window.MouseEvent;
     let reuseEmpty = !isMouseEvent;
     let where = undefined;
     if (
