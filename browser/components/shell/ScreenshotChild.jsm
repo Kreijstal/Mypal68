@@ -10,12 +10,41 @@ class ScreenshotChild extends JSWindowActorChild {
     return null;
   }
 
-  async takeScreenshot(params) {
+  async waitForReadyToPaint() {
+    let { contentWindow, document } = this;
+
+    let waitForTimeout = delay =>
+      new Promise(resolve => contentWindow.setTimeout(resolve, delay));
+    let boundedWait = (promise, delay) =>
+      Promise.race([promise.catch(() => {}), waitForTimeout(delay)]);
+
     if (this.document.readyState != "complete") {
-      await new Promise(resolve =>
-        this.contentWindow.addEventListener("load", resolve, { once: true })
+      await boundedWait(
+        new Promise(resolve =>
+          contentWindow.addEventListener("load", resolve, { once: true })
+        ),
+        10000
       );
     }
+
+    if (document.fonts) {
+      await boundedWait(document.fonts.ready, 5000);
+    }
+
+    await waitForTimeout(500);
+
+    await boundedWait(
+      new Promise(resolve =>
+        contentWindow.requestAnimationFrame(() =>
+          contentWindow.requestAnimationFrame(resolve)
+        )
+      ),
+      1000
+    );
+  }
+
+  async takeScreenshot(params) {
+    await this.waitForReadyToPaint();
 
     let { fullWidth, fullHeight } = params;
     let { contentWindow } = this;

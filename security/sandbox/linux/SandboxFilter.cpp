@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <linux/ioctl.h>
 #include <linux/ipc.h>
+#include <linux/stat.h>
 #include <linux/net.h>
 #include <linux/sched.h>
 #include <string.h>
@@ -15,6 +16,7 @@
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <sys/socket.h>
+#include <sys/sysmacros.h>
 #include <sys/syscall.h>
 #include <sys/un.h>
 #include <sys/utsname.h>
@@ -69,6 +71,14 @@ using namespace sandbox::bpf_dsl;
 #endif
 #if !defined(__NR_rseq) && defined(__x86_64__)
 #  define __NR_rseq 334
+#endif
+#if !defined(__NR_statx) && defined(__x86_64__)
+#  define __NR_statx 332
+#endif
+#ifdef __NR_fstat64
+#  define FSTAT_SYSCALL __NR_fstat64
+#else
+#  define FSTAT_SYSCALL __NR_fstat
 #endif
 
 // The headers define O_LARGEFILE as 0 on x86_64, but we need the
@@ -215,12 +225,52 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
     return broker->LStat(path, buf);
   }
 
+#ifdef __NR_statx
+  static void CopyStatToStatx(const statstruct& aStat, struct statx* aStatX) {
+    memset(aStatX, 0, sizeof(*aStatX));
+    aStatX->stx_mask = STATX_BASIC_STATS;
+    aStatX->stx_blksize = aStat.st_blksize;
+    aStatX->stx_nlink = aStat.st_nlink;
+    aStatX->stx_uid = aStat.st_uid;
+    aStatX->stx_gid = aStat.st_gid;
+    aStatX->stx_mode = aStat.st_mode;
+    aStatX->stx_ino = aStat.st_ino;
+    aStatX->stx_size = aStat.st_size;
+    aStatX->stx_blocks = aStat.st_blocks;
+    aStatX->stx_atime.tv_sec = aStat.st_atim.tv_sec;
+    aStatX->stx_atime.tv_nsec = aStat.st_atim.tv_nsec;
+    aStatX->stx_ctime.tv_sec = aStat.st_ctim.tv_sec;
+    aStatX->stx_ctime.tv_nsec = aStat.st_ctim.tv_nsec;
+    aStatX->stx_mtime.tv_sec = aStat.st_mtim.tv_sec;
+    aStatX->stx_mtime.tv_nsec = aStat.st_mtim.tv_nsec;
+    aStatX->stx_rdev_major = major(aStat.st_rdev);
+    aStatX->stx_rdev_minor = minor(aStat.st_rdev);
+    aStatX->stx_dev_major = major(aStat.st_dev);
+    aStatX->stx_dev_minor = minor(aStat.st_dev);
+  }
+#endif
+
   static intptr_t StatAtTrap(ArgsRef aArgs, void* aux) {
     auto broker = static_cast<SandboxBrokerClient*>(aux);
     auto fd = static_cast<int>(aArgs.args[0]);
     auto path = reinterpret_cast<const char*>(aArgs.args[1]);
     auto buf = reinterpret_cast<statstruct*>(aArgs.args[2]);
     auto flags = static_cast<int>(aArgs.args[3]);
+    if ((path == nullptr || path[0] == '\0') && (flags & AT_EMPTY_PATH)) {
+      if ((flags & ~(AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)) != 0) {
+        SANDBOX_LOG_ERROR(
+            "unsupported flags %d in empty-path fstatat(%d, %p, %p, %d)",
+            (flags & ~(AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)), fd, path, buf,
+            flags);
+        return BlockedSyscallTrap(aArgs, nullptr);
+      }
+      return DoSyscall(FSTAT_SYSCALL, fd, buf);
+    }
+    if (path == nullptr) {
+      SANDBOX_LOG_ERROR("unsupported null-path fstatat(%d, %p, %p, %d)", fd,
+                        path, buf, flags);
+      return BlockedSyscallTrap(aArgs, nullptr);
+    }
     if (fd != AT_FDCWD && path[0] != '/') {
       SANDBOX_LOG_ERROR("unsupported fd-relative fstatat(%d, \"%s\", %p, %d)",
                         fd, path, buf, flags);
@@ -234,6 +284,39 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
     return (flags & AT_SYMLINK_NOFOLLOW) == 0 ? broker->Stat(path, buf)
                                               : broker->LStat(path, buf);
   }
+
+#ifdef __NR_statx
+  static intptr_t StatXTrap(ArgsRef aArgs, void* aux) {
+    auto fd = static_cast<int>(aArgs.args[0]);
+    auto path = reinterpret_cast<const char*>(aArgs.args[1]);
+    auto flags = static_cast<int>(aArgs.args[2]);
+    if ((path == nullptr || path[0] == '\0') && (flags & AT_EMPTY_PATH)) {
+      if ((flags & ~(AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)) != 0) {
+        SANDBOX_LOG_ERROR(
+            "unsupported flags %d in empty-path statx(%d, %p, %d)",
+            (flags & ~(AT_EMPTY_PATH | AT_SYMLINK_NOFOLLOW)), fd, path, flags);
+        return BlockedSyscallTrap(aArgs, nullptr);
+      }
+      auto statxBuf = reinterpret_cast<struct statx*>(aArgs.args[4]);
+      if (statxBuf == nullptr) {
+        return -EFAULT;
+      }
+      statstruct statBuf;
+      intptr_t rv = DoSyscall(FSTAT_SYSCALL, fd, &statBuf);
+      if (rv < 0) {
+        return rv;
+      }
+      CopyStatToStatx(statBuf, statxBuf);
+      return 0;
+    }
+    if (path == nullptr) {
+      SANDBOX_LOG_ERROR("unsupported null-path statx(%d, %p, %d)", fd, path,
+                        flags);
+      return BlockedSyscallTrap(aArgs, nullptr);
+    }
+    return BlockedSyscallTrap(aArgs, nullptr);
+  }
+#endif
 
   static intptr_t ChmodTrap(ArgsRef aArgs, void* aux) {
     auto broker = static_cast<SandboxBrokerClient*>(aux);
@@ -429,6 +512,10 @@ class SandboxPolicyCommon : public SandboxPolicyBase {
           return Trap(LStatTrap, mBroker);
         CASES_FOR_fstatat:
           return Trap(StatAtTrap, mBroker);
+#ifdef __NR_statx
+        case __NR_statx:
+          return Trap(StatXTrap, mBroker);
+#endif
         case __NR_chmod:
           return Trap(ChmodTrap, mBroker);
         case __NR_link:

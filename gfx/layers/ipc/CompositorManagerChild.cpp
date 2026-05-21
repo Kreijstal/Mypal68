@@ -16,6 +16,7 @@
 #include "mozilla/ipc/Endpoint.h"
 #include "mozilla/dom/TabGroup.h"      // for TabGroup
 #include "VsyncSource.h"
+#include "prenv.h"
 
 namespace mozilla {
 namespace layers {
@@ -252,6 +253,10 @@ CompositorManagerChild::GetSpecificMessageEventTarget(const Message& aMsg) {
 
 void CompositorManagerChild::SetReplyTimeout() {
 #ifndef DEBUG
+  if (PR_GetEnv("MOZ_HEADLESS")) {
+    return;
+  }
+
   // Add a timeout for release builds to kill GPU process when it hangs.
   if (XRE_IsParentProcess() && GPUProcessManager::Get()->GetGPUChild()) {
     int32_t timeout =
@@ -262,6 +267,10 @@ void CompositorManagerChild::SetReplyTimeout() {
 }
 
 bool CompositorManagerChild::ShouldContinueFromReplyTimeout() {
+  if (PR_GetEnv("MOZ_HEADLESS")) {
+    return true;
+  }
+
   if (XRE_IsParentProcess()) {
     gfxCriticalNote << "Killing GPU process due to IPC reply timeout";
     MOZ_DIAGNOSTIC_ASSERT(GPUProcessManager::Get()->GetGPUChild());

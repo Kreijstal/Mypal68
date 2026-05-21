@@ -152,6 +152,11 @@ void GPUProcessManager::OnPreferenceChange(const char16_t* aData) {
 }
 
 void GPUProcessManager::LaunchGPUProcess() {
+  if (gfxPlatform::IsHeadless()) {
+    DisableGPUProcess("Headless mode is enabled");
+    return;
+  }
+
   if (mProcess) {
     return;
   }
@@ -212,6 +217,11 @@ void GPUProcessManager::DisableGPUProcess(const char* aMessage) {
 }
 
 bool GPUProcessManager::EnsureGPUReady() {
+  if (gfxPlatform::IsHeadless()) {
+    DisableGPUProcess("Headless mode is enabled");
+    return false;
+  }
+
   if (mProcess && !mProcess->IsConnected()) {
     if (!mProcess->WaitForLaunch()) {
       // If this fails, we should have fired OnProcessLaunchComplete and

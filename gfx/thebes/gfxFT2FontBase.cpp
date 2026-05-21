@@ -174,8 +174,7 @@ static double FindClosestSize(FT_Face aFace, double aSize) {
 void gfxFT2FontBase::InitMetrics() {
   mFUnitsConvFactor = 0.0;
 
-  if (MOZ_UNLIKELY(GetStyle()->size <= 0.0) ||
-      MOZ_UNLIKELY(GetStyle()->sizeAdjust == 0.0)) {
+  if (MOZ_UNLIKELY(GetStyle()->AdjustedSizeMustBeZero())) {
     memset(&mMetrics, 0, sizeof(mMetrics));  // zero initialize
     mSpaceGlyph = GetGlyph(' ');
     return;

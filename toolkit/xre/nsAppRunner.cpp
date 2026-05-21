@@ -2509,6 +2509,22 @@ int XREMain::XRE_mainInit(bool* aExitFlag) {
     return 1;
   }
 
+  if (CheckArgExists("headless") || CheckArgExists("screenshot")) {
+    // Set this before anything can cache gfxPlatform::IsHeadless().  The
+    // screenshot handler runs without a native window and should also avoid
+    // starting a separate GPU process.
+    PR_SetEnv("MOZ_HEADLESS=1");
+    Preferences::SetBool("layers.gpu-process.enabled", false,
+                         PrefValueKind::Default);
+    Preferences::SetBool("layers.gpu-process.enabled", false);
+    Preferences::SetBool("layers.gpu-process.force-enabled", false,
+                         PrefValueKind::Default);
+    Preferences::SetBool("layers.gpu-process.force-enabled", false);
+    Preferences::SetBool("media.gpu-process-decoder", false,
+                         PrefValueKind::Default);
+    Preferences::SetBool("media.gpu-process-decoder", false);
+  }
+
 #ifdef XP_MACOSX
   DisableAppNap();
 #endif
@@ -2551,10 +2567,6 @@ int XREMain::XRE_mainInit(bool* aExitFlag) {
   if (ChaosMode::isActive(ChaosFeature::Any)) {
     printf_stderr(
         "*** You are running in chaos test mode. See ChaosMode.h. ***\n");
-  }
-
-  if (CheckArg("headless") || CheckArgExists("screenshot")) {
-    PR_SetEnv("MOZ_HEADLESS=1");
   }
 
   if (gfxPlatform::IsHeadless()) {
@@ -3986,6 +3998,12 @@ static already_AddRefed<nsIFile> GreOmniPath() {
 int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
   gArgc = argc;
   gArgv = argv;
+
+  if (CheckArgExists("headless") || CheckArgExists("screenshot")) {
+    // Establish headless mode before logging, profiling, or graphics startup
+    // can query and cache gfxPlatform::IsHeadless().
+    PR_SetEnv("MOZ_HEADLESS=1");
+  }
 
   ScopedLogging log;
 

@@ -214,6 +214,8 @@ let HeadlessShell = {
         dump("expected exactly one URL when using `screenshot`\n");
       }
     } finally {
+      await new Promise(resolve => Services.tm.dispatchToMainThread(resolve));
+      await new Promise(resolve => Services.tm.dispatchToMainThread(resolve));
       Services.startup.exitLastWindowClosingSurvivalArea();
       Services.startup.quit(Ci.nsIAppStartup.eForceQuit);
     }
