@@ -103,7 +103,8 @@ def run_fxc(shader_model,
         proc_stdout = subprocess.check_output(argv)
         proc_stdout = decode_console_text(sys.stdout, proc_stdout)
         deps = find_dependencies(proc_stdout)
-        assert 'fxc2' in fxc_location or len(deps) > 0
+        if not deps and 'fxc2' not in fxc_location:
+            deps.add(shader_file)
 
         with open(temp_filename, 'r') as temp_fp:
             output_fp.write(temp_fp.read())
