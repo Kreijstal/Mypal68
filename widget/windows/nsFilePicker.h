@@ -34,7 +34,38 @@
 
 // IFileOpenDialog is now defined in shobjidl.h
 
-// IFileDialogEvents is now defined in shobjidl.h
+// StaticComponents.cpp can include this after shobjidl.h was already included
+// under the XP target version, leaving only the forward declaration visible.
+#ifndef __IFileDialogEvents_INTERFACE_DEFINED__
+#  define __IFileDialogEvents_INTERFACE_DEFINED__
+
+typedef enum FDE_OVERWRITE_RESPONSE {
+  FDEOR_DEFAULT = 0,
+  FDEOR_ACCEPT = 1,
+  FDEOR_REFUSE = 2
+} FDE_OVERWRITE_RESPONSE;
+
+typedef enum FDE_SHAREVIOLATION_RESPONSE {
+  FDESVR_DEFAULT = 0,
+  FDESVR_ACCEPT = 1,
+  FDESVR_REFUSE = 2
+} FDE_SHAREVIOLATION_RESPONSE;
+
+MIDL_INTERFACE("973510db-7d7f-452b-8975-74a85828d354")
+IFileDialogEvents : public IUnknown {
+  virtual HRESULT STDMETHODCALLTYPE OnFileOk(IFileDialog* pfd) = 0;
+  virtual HRESULT STDMETHODCALLTYPE OnFolderChanging(IFileDialog* pfd,
+                                                     IShellItem* psiFolder) = 0;
+  virtual HRESULT STDMETHODCALLTYPE OnFolderChange(IFileDialog* pfd) = 0;
+  virtual HRESULT STDMETHODCALLTYPE OnSelectionChange(IFileDialog* pfd) = 0;
+  virtual HRESULT STDMETHODCALLTYPE
+  OnShareViolation(IFileDialog* pfd, IShellItem* psi,
+                   FDE_SHAREVIOLATION_RESPONSE* pResponse) = 0;
+  virtual HRESULT STDMETHODCALLTYPE OnTypeChange(IFileDialog* pfd) = 0;
+  virtual HRESULT STDMETHODCALLTYPE OnOverwrite(
+      IFileDialog* pfd, IShellItem* psi, FDE_OVERWRITE_RESPONSE* pResponse) = 0;
+};
+#endif
 
 EXTERN_C const IID IID_IFileSaveDialog;
 
