@@ -326,7 +326,7 @@ class AsyncIterableIteratorNoReturn : public AsyncIterableIterator<T>,
                             AsyncIterableIteratorNoReturn<T>* aObject,
                             JS::Handle<JSObject*> aGivenProto,
                             JS::MutableHandle<JSObject*> aReflector);
-  using AsyncIterableIteratorBase::IteratorType;
+  typedef IterableIteratorBase::IteratorType IteratorType;
 
   AsyncIterableIteratorNoReturn(T* aIterableObj, IteratorType aIteratorType,
                                 WrapFunc aWrapFunc)

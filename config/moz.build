@@ -39,10 +39,10 @@ HOST_DEFINES = {
 include('stl-headers.mozbuild')
 if CONFIG['WRAP_STL_INCLUDES']:
     stl_compiler = None
-    if CONFIG['OS_TARGET'] == 'WINNT':
-        stl_compiler = 'msvc'
-    else:
+    if CONFIG['CC_TYPE'] in ('gcc', 'clang'):
         stl_compiler = 'gcc'
+    elif CONFIG['OS_TARGET'] == 'WINNT':
+        stl_compiler = 'msvc'
 
     if stl_compiler:
         # Note that the 'stl_wrappers' folder is known to the build system as

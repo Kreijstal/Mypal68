@@ -45,6 +45,18 @@ def generate_symbols_file(output, *args):
     libname, ext = os.path.splitext(os.path.basename(output.name))
 
     if buildconfig.substs['OS_TARGET'] == 'WINNT':
+        if buildconfig.substs.get('CC_TYPE') == 'gcc':
+            # MinGW ld does not accept the semicolon-prefixed multi-platform
+            # directives that MSVC link.exe accepts in NSS .def inputs.
+            cleaned = []
+            for symbol in symbols:
+                symbol = symbol.split(';', 1)[0].strip()
+                if not symbol:
+                    continue
+                if symbol in ('EXPORTS',) or symbol.startswith('LIBRARY '):
+                    continue
+                cleaned.append(symbol)
+            symbols = cleaned
         # A def file is generated for MSVC link.exe that looks like the
         # following:
         # LIBRARY library.dll

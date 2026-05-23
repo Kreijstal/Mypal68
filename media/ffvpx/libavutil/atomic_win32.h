@@ -41,7 +41,7 @@ static inline void atomic_int_set_win32(volatile int *ptr, int val)
 #define avpriv_atomic_int_add_and_fetch atomic_int_add_and_fetch_win32
 static inline int atomic_int_add_and_fetch_win32(volatile int *ptr, int inc)
 {
-    return inc + InterlockedExchangeAdd(ptr, inc);
+    return inc + InterlockedExchangeAdd((volatile LONG *)ptr, inc);
 }
 
 #define avpriv_atomic_ptr_cas atomic_ptr_cas_win32

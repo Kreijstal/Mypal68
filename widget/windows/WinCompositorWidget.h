@@ -5,12 +5,12 @@
 #ifndef widget_windows_WinCompositorWidget_h
 #define widget_windows_WinCompositorWidget_h
 
-#include "CompositorWidget.h"
 #include "gfxASurface.h"
 #include "mozilla/Atomics.h"
 #include "mozilla/gfx/CriticalSection.h"
 #include "mozilla/gfx/Point.h"
 #include "mozilla/Mutex.h"
+#include "mozilla/widget/CompositorWidget.h"
 #include "mozilla/widget/WinCompositorWindowThread.h"
 #include "nsIWidget.h"
 

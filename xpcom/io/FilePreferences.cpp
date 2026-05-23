@@ -31,7 +31,7 @@ static WinPaths& PathWhitelist() {
 }
 
 #ifdef XP_WIN
-const auto kDevicePathSpecifier = u"\\\\?\\"_ns;
+const nsLiteralString kDevicePathSpecifier = u"\\\\?\\"_ns;
 
 typedef char16_t char_path_t;
 #else

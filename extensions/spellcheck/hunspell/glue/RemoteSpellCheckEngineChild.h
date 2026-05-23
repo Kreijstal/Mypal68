@@ -7,7 +7,7 @@
 
 #include "mozilla/MozPromise.h"
 #include "mozilla/PRemoteSpellcheckEngineChild.h"
-#include "mozSpellChecker.h"
+#include "mozilla/mozSpellChecker.h"
 
 class mozSpellChecker;
 

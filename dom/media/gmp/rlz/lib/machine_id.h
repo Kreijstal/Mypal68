@@ -5,6 +5,7 @@
 #ifndef RLZ_LIB_MACHINE_ID_H_
 #define RLZ_LIB_MACHINE_ID_H_
 
+#include <cstdint>
 #include <string>
 #include <vector>
 

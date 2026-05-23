@@ -20,6 +20,7 @@
 //#include "UntrustedDllsHandler.h"
 #include "nsAutoPtr.h"
 #include "nsWindowsDllInterceptor.h"
+#include "mozilla/Assertions.h"
 #include "mozilla/CmdLineAndEnvUtils.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/ScopeExit.h"
@@ -62,8 +63,14 @@ static bool sUser32BeforeBlocklist;
 #endif
 }*/
 
+#if defined(__GNUC__) && !defined(__clang__)
+typedef void(__fastcall* BaseThreadInitThunk_func)(BOOL aIsInitialThread,
+                                                   void* aStartAddress,
+                                                   void* aThreadParam);
+#else
 typedef MOZ_NORETURN_PTR void(__fastcall* BaseThreadInitThunk_func)(
     BOOL aIsInitialThread, void* aStartAddress, void* aThreadParam);
+#endif
 static WindowsDllInterceptor::FuncHookType<BaseThreadInitThunk_func>
     stub_BaseThreadInitThunk;
 
@@ -617,6 +624,7 @@ static MOZ_NORETURN void __fastcall patched_BaseThreadInitThunk(
   }
 
   stub_BaseThreadInitThunk(aIsInitialThread, aStartAddress, aThreadParam);
+  MOZ_CRASH("BaseThreadInitThunk returned unexpectedly");
 }
 
 static WindowsDllInterceptor NtDllIntercept;

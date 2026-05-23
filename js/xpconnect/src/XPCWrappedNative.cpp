@@ -30,6 +30,14 @@
 #include "mozilla/dom/BindingUtils.h"
 #include <algorithm>
 
+#ifdef XP_WIN
+// Unified builds can include Windows headers from another source file before
+// this one, which defines GetClassInfo as GetClassInfoW.
+#  ifdef GetClassInfo
+#    undef GetClassInfo
+#  endif
+#endif
+
 using namespace xpc;
 using namespace mozilla;
 using namespace mozilla::dom;

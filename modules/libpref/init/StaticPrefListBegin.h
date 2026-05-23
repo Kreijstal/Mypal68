@@ -6,7 +6,7 @@
 // StaticPrefsListEnd.h in all headers that contribute prefs to the StaticPrefs
 // namespace.
 
-#include "StaticPrefsBase.h"
+#include "mozilla/StaticPrefsBase.h"
 #include "MainThreadUtils.h"  // for NS_IsMainThread()
 
 namespace mozilla {

@@ -10,6 +10,7 @@
 #ifndef COMPILER_TRANSLATOR_IMMUTABLESTRING_H_
 #define COMPILER_TRANSLATOR_IMMUTABLESTRING_H_
 
+#include <cstdint>
 #include <string>
 
 #include "common/string_utils.h"

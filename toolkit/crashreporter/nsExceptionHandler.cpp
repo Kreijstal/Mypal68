@@ -1258,7 +1258,7 @@ static bool FPEFilter(void* context, EXCEPTION_POINTERS* exinfo,
   }
 
   PEXCEPTION_RECORD e = (PEXCEPTION_RECORD)exinfo->ExceptionRecord;
-  switch (e->ExceptionCode) {
+  switch (static_cast<NTSTATUS>(e->ExceptionCode)) {
     case STATUS_FLOAT_DENORMAL_OPERAND:
     case STATUS_FLOAT_DIVIDE_BY_ZERO:
     case STATUS_FLOAT_INEXACT_RESULT:

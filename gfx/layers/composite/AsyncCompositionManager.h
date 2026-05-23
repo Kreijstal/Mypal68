@@ -16,9 +16,9 @@
 #include "mozilla/HalScreenConfiguration.h"        // For ScreenOrientation
 #include "mozilla/layers/FrameUniformityData.h"    // For FrameUniformityData
 #include "mozilla/layers/LayersMessages.h"         // for TargetConfig
+#include "mozilla/layers/CompositorBridgeParent.h"  // for TransformsToSkip
 #include "mozilla/RefPtr.h"                        // for nsRefPtr
 #include "nsISupportsImpl.h"         // for LayerManager::AddRef, etc
-#include "CompositorBridgeParent.h"  // for TransformsToSkip
 
 namespace mozilla {
 namespace layers {

@@ -13,7 +13,7 @@
 #include "mozilla/TextEventDispatcherListener.h"
 #include "mozilla/TextRange.h"
 #include "mozilla/widget/IMEData.h"
-#include "WritingModes.h"
+#include "mozilla/WritingModes.h"
 
 class nsIWidget;
 

@@ -7,6 +7,7 @@
 #ifndef mozilla_EnumTypeTraits_h
 #define mozilla_EnumTypeTraits_h
 
+#include <cstddef>
 #include <type_traits>
 
 namespace mozilla {

@@ -7,6 +7,7 @@
 
 #if XP_WIN && HAVE_64BIT_BUILD
 
+#  include <cstdint>
 #  include <functional>
 #  include <map>
 #  include <string>

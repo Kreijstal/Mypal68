@@ -17,6 +17,7 @@
 #include "mozilla/dom/CacheBinding.h"
 #include "mozilla/dom/cache/CacheTypes.h"
 #include "mozilla/dom/Response.h"
+#include "mozilla/dom/ScriptLoader.h"
 #include "mozilla/dom/ServiceWorkerBinding.h"  // ServiceWorkerState
 #include "mozilla/UniquePtr.h"
 #include "mozilla/dom/Document.h"

@@ -6,6 +6,7 @@
 #define nsASCIIMask_h_
 
 #include <array>
+#include <cstdint>
 #include <utility>
 
 #include "mozilla/Attributes.h"

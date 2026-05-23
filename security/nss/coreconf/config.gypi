@@ -244,15 +244,14 @@
           ],
         },
         'conditions': [
-          [ 'cc_use_gnu_ld==1', {
-            'ldflags': [
-              '-Wl,--version-script,<(INTERMEDIATE_DIR)/out.>(mapfile)',
-            ],
-          }],
-          [ 'cc_use_gnu_ld!=1 and OS=="win"', {
+          [ 'OS=="win"', {
             # On Windows, .def files are used directly as sources.
             'sources': [
               '>(mapfile)',
+            ],
+          }, 'cc_use_gnu_ld==1', {
+            'ldflags': [
+              '-Wl,--version-script,<(INTERMEDIATE_DIR)/out.>(mapfile)',
             ],
           }, {
             # On other platforms, .def files need processing.

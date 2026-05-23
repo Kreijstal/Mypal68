@@ -17,6 +17,14 @@
 #include "mozIStorageStatementCallback.h"
 #include "mozStorageHelper.h"
 
+#ifdef XP_WIN
+// Unified builds can include Windows headers before this header, where ERROR
+// is defined as a macro and conflicts with ExecutionState::ERROR below.
+#  ifdef ERROR
+#    undef ERROR
+#  endif
+#endif
+
 struct sqlite3_stmt;
 
 namespace mozilla {

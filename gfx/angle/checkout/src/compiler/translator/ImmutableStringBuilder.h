@@ -10,6 +10,8 @@
 #ifndef COMPILER_TRANSLATOR_IMMUTABLESTRINGBUILDER_H_
 #define COMPILER_TRANSLATOR_IMMUTABLESTRINGBUILDER_H_
 
+#include <cstdint>
+
 #include "compiler/translator/ImmutableString.h"
 
 namespace sh

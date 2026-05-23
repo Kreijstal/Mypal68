@@ -108,6 +108,10 @@ else:
 # anyway.
 if CONFIG['CC_TYPE'] in ('clang', 'clang-cl'):
     gyp_vars['cc_is_clang'] = 1
+if CONFIG['CC_TYPE'] == 'gcc':
+    gyp_vars['cc_is_gcc'] = 1
+    if CONFIG['OS_TARGET'] == 'WINNT':
+        gyp_vars['cc_use_gnu_ld'] = 1
 if CONFIG['GCC_USE_GNU_LD']:
     gyp_vars['cc_use_gnu_ld'] = 1
 

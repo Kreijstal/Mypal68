@@ -12,7 +12,7 @@
     #if defined(SK_BUILD_FOR_WIN)
         #include <intrin.h>
         static void cpuid (uint32_t abcd[4]) { __cpuid  ((int*)abcd, 1);    }
-        #if defined(__clang__)
+        #if defined(__clang__) || defined(__GNUC__)
             static void cpuid7(uint32_t abcd[4]) {
                 __asm__("cpuid" : "=a"(abcd[0]), "=b"(abcd[1]), "=c"(abcd[2]), "=d"(abcd[3]) : "0"(7), "2"(0));
             }

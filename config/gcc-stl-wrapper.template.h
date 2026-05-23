@@ -58,7 +58,13 @@
 // -fshort-wchar).  We don't want that and so define our own inlined
 // __throw_*().
 #ifndef mozilla_throw_gcc_h
+#  ifdef __cplusplus
+extern "C++" {
+#  endif
 #  include "mozilla/throw_gcc.h"
+#  ifdef __cplusplus
+}
+#  endif
 #endif
 
 #endif  // if mozilla_${HEADER}_h

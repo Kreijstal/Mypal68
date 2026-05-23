@@ -42,7 +42,7 @@
 #include <stddef.h>
 #include <string>
 
-#include "snappy-stubs-public.h"
+#include "../snappy-stubs-public.h"
 
 namespace snappy {
   class Source;
